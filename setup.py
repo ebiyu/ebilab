@@ -2,6 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name="ebilab",
+    author="Yusuke Ebihara",
+    author_email="yusuke@ebihara.me",
+    url="https://github.com/ebiyuu1121/ebilab",
     install_requires=[
         "tqdm",
         "numpy",
@@ -31,4 +34,9 @@ setup(
     packages=find_packages(
         include=["ebilab", "ebilab.*"],
     ),
+    classifiers=[
+        "Programming Language :: Python :: 3.8",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
 )
