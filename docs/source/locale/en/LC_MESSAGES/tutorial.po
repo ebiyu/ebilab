@@ -1,0 +1,297 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Yusuke Ebihara
+# This file is distributed under the same license as the ebilab package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: ebilab \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-11-17 01:38+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.11.0\n"
+
+#: ../../source/tutorial/analysis.rst:3
+msgid "データの解析"
+msgstr ""
+
+#: ../../source/tutorial/analysis.rst:7
+msgid ":py:mod:`ebilab.analysis` モジュールは完成していません。 今後のバージョンでは後方互換性がない場合があります。"
+msgstr ""
+
+#: ../../source/tutorial/analysis.rst:10
+msgid ""
+"計測などの実験で得たデータには、データの整形やフィッティング・グラフ化など、さまざまな処理を行なうことが少なくありません。 "
+"また、処理を変えながらデータ解析を行うなど、そのような処理のスクリプトは往々にして複雑になり、整理することも困難になります。"
+msgstr ""
+
+#: ../../source/tutorial/analysis.rst:13
+msgid "本パッケージを使うと、ソースコードの整理が容易になります。また、生成したデータにも自動で名前が付き、整理が容易になります。"
+msgstr ""
+
+#: ../../source/tutorial/analysis.rst:15
+msgid "イメージとしては以下のコードです。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:3
+msgid "実験の設計"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:5
+msgid ""
+"実験中には、測定値をグラフによって可視化したいことがあります。 これを実現するために、 "
+":py:mod:`ebilab.experiment.core` モジュールを用いることができます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:10
+msgid "簡易的な実装"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:12
+msgid ""
+"簡易的には、 :code:`matplotlib` を用いて、以下のようなコードで実現することができます。 "
+"これは、マルチメーターを用いて抵抗を測定してプロットするプログラムです。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:45
+msgid "実際にこのようなコードで運用するには、いくつか問題があります。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:47
+msgid "このコードにはいくつか問題があります。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:49
+msgid "実験のロジックを定義するコードと可視化のためのコードが混在している"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:51
+msgid "外れ値をフィルタリングしてプロットしたい場合など、どこまでが実験のロジックでどこからが可視化のためのロジックなのかが分かりづらくなる。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:53
+msgid "matplotlibの描画によってデータの取得がブロッキングされ、データの取得速度に影響する。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:54
+msgid "プログラムファイルへのデータ保存やグラフでの可視化のコードに関して、プログラムを作成する際に同じようなコードを何度も書く必要がある。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:58
+msgid ""
+":py:class:`Experiment <ebilab.experiment.core.Experiment>` ・ "
+":py:class:`Plotter <ebilab.experiment.core.Plotter>` を利用した実装"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:60
+msgid ""
+":py:mod:`ebilab.experiment.core` モジュール に含まれる :py:class:`Experiment "
+"<ebilab.experiment.core.Experiment>` クラス、 :py:class:`Plotter "
+"<ebilab.experiment.core.Plotter>` クラスを用いることで、 これらの問題を解決することができます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:64
+msgid "上記のコードは、以下のように書き変えることができます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:71
+msgid ""
+":py:class:`Experiment <ebilab.experiment.core.Experiment>` クラス、 "
+":py:class:`Plotter <ebilab.experiment.core.Plotter>` クラスを継承し、 "
+"実験のロジックと可視化のロジックをそれぞれ定義することで、実験を設計することができます。 "
+"これにより、ロジックを適切に分割し、読みやすいコードを実現することができます。 "
+"また、クラス単位で定義することにより、同じ実験で可視化の方法だけを変更したり、別の実験でも同一の可視化方法を用いるなど、 "
+"それぞれのコンポーネントを再利用しやすくなります。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:77
+msgid ""
+"ファイルへの保存やプロット用プログラムへのデータの受け渡しに関して考慮する必要はありません。 "
+"また、matplotlibの描画中にもデータの取得を継続するため、マルチスレッド処理を行なっていますが、その制御に関しては考慮する必要はありません。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:82
+msgid "実際の実装"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:84
+msgid "ユーザーは以下のクラスを実装する必要があります。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:87
+msgid "Experient クラス"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:89
+msgid "実験のロジックは、以下のように定義されます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:96
+msgid "クラスの :code:`columns` プロパティを用いて、記録用のcsvファイルの列を指定します。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:97
+msgid "steps関数に、実際の実験の処理を定義します。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:99
+msgid ""
+"実験を途中で中断できるようにするため、 :code:`self.running` をチェックして :code:`False` "
+"だった場合はスクリプトを終了してください。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:100
+msgid ":code:`self.send_row()` メソッドを用いて、測定結果のデータを記録することができます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:102
+msgid "メソッド実行1回あたり、csvファイル1行になります。省略された項目の列は空欄となります。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:103
+msgid "ファイルへの保存やタイムスタンプの挿入などは、自動で行なわれます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:105
+msgid ""
+"スクリプト実行時のカレントディレクトリ配下に :code:`data` ディレクトリが作成され、csvファイルが保存されます。 クラスの "
+":code:`filename` プロパティで指定した名前に、自動で日時が記録され、ファイル名となります。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:109
+msgid "Plotter クラス"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:111
+msgid "可視化のロジックは、以下のように定義されます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:115
+msgid "リアルタイムプロットが必要ない場合は実装を省略することができます。 その場合でも、ファイルへの自動保存などの恩恵を得ることができます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:122
+msgid "prepareコマンドは初回のみ実行されます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:123
+msgid "updateコマンドは、定期的に実行されます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:126
+msgid "実験の実行"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:128
+msgid "定義したクラスを用いて、以下のように実験を実行できます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment.rst:137
+msgid "リアルタイムプロットが必要ない場合はplotterの指定は必要ありません。"
+msgstr ""
+
+#: ../../source/tutorial/experiment_device.rst:3
+msgid "実験装置の制御"
+msgstr ""
+
+#: ../../source/tutorial/experiment_device.rst:5
+msgid ":py:mod:`ebilab.experiment.devices` モジュールを用いることで、実験装置の制御ができます。"
+msgstr ""
+
+#: ../../source/tutorial/experiment_device.rst:7
+msgid "以下のコードは、デジタルマルチメーターを用いて抵抗の測定を行なうサンプルです。"
+msgstr ""
+
+#: ../../source/tutorial/experiment_device.rst:13
+msgid ""
+"実験装置の制御を行なうには、 :py:mod:`ebilab.experiment.devices` モジュールに含まれる該当デバイスのクラスを "
+"import してください。"
+msgstr ""
+
+#: ../../source/tutorial/experiment_device.rst:15
+msgid ""
+"クラスのインスタンスを初期化したタイミングで、自動的に接続されているデバイスを検出します。 デバイスを検出できなかった場合、 "
+":py:class:`DeviceNotFoundError "
+"<ebilab.experiment.devices.visa.VisaDevice.DeviceNotFoundError>` を送出します。"
+msgstr ""
+
+#: ../../source/tutorial/experiment_device.rst:20
+msgid "デバイスの全ての操作が実装されているわけではありません。 対応していない操作が必要な場合の手順は、後ほどドキュメントに追記します。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:3
+msgid "バージョンについて"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:5
+msgid "このライブラリは随時アップデートしています。 バージョンは :code:`a.b.c` の形式で定義され、以下のポリシーで更新されます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:8
+msgid "a (Major version): 破壊的な変更があった場合に更新されます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:9
+msgid "b (Minor version): 新機能の追加など、破壊的でない変更があった場合に更新されます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:10
+msgid "c (Patch version): バグ修正など、機能に変更がない場合に更新されます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:12
+msgid ""
+"異なるメジャーバージョンの間では機能やメソッド名などが変更になっている可能性があり、メジャーバージョンを更新した場合は過去のコードの動作は保証されません。"
+" "
+"一方で、マイナーバージョンやパッチバージョンを更新した場合は過去のコードの動作は保証されます。ただし、バグなどの想定外の原因によって破壊されることがあります。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:17
+msgid "実験の再現性のために"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:19
+msgid ""
+":code:`ebilab` "
+"のバージョンを更新した場合、過去の実験コードの動作が変化し、実験を再現できなくなる可能性があります。それを防止するには、何らかの方法でバージョンを固定することを推奨します。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:21
+msgid ""
+":code:`venv` や :code:`pipenv` "
+"など、ライブラリの管理のために慣れているのであれば、そのようなツールを使用するのが確実でしょう。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:23
+msgid ""
+"一方で、そのようなツールの使用に慣れていない場合や、たった1ファイルのスクリプトなど仮想環境を導入するのが煩雑だと感じる場合もあるでしょう。 "
+"その場合では、 :py:func:`assert_ebilab_version() <ebilab.assert_ebilab_version>`"
+" 関数を用いて簡易的にバージョンのチェックを行なうことができます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:26
+msgid "例えば、以下のようなコードを実験コードの最上部に記述してください。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:33
+msgid ""
+"もしインストールされている :code:`ebilab` のバージョンが指定したものと一致しなかった場合は、 "
+":py:class:`VersionDidNotMatch <ebilab.VersionDidNotMatch>` が送出されます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:35
+msgid "その場合は該当するバージョン手動でをインストールする必要があります。このように、簡易的な動作保証のチェックとして利用することができます。"
+msgstr ""
+
+#: ../../source/tutorial/version.rst:39
+msgid ""
+"基本的にはメジャーバージョンのみの指定で十分ですが、ドキュメントに記載されていないクラスを利用している場合などはそれ以上の指定が有効となる場合があります。"
+" 厳密にバージョンを指定したい場合は、以下のような構文を利用することができます。"
+msgstr ""
+
