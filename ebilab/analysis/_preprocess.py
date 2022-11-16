@@ -4,9 +4,9 @@ from typing import Callable, Optional, Union
 
 import pandas as pd
 
-from .paths import paths
+from ebilab.project import get_current_project
 
-class DfData:
+class PreprocessDfData:
     _df: pd.DataFrame
 
     def __init__(self, df):
@@ -21,7 +21,7 @@ class DfData:
         return self
 
     def toInput(self, file):
-        path = paths.input / file
+        path = get_current_project().path.data_input / file
         if path.exists():
             if os.environ.get("EBILAB_SOURCE") != "WATCH":
                 print(f"Already exists: {path.name}")
@@ -30,7 +30,7 @@ class DfData:
             print(f"Written to: {path.name}")
         return self
 
-class FileData:
+class PreprocessFileData:
     _filename: Union[str, Path]
     _skip_rows: Optional[int] = None
     def __init__(self, filename: Union[str, Path]):
@@ -40,10 +40,11 @@ class FileData:
         self._skip_rows = skip
         return self
 
-    def csv(self) -> DfData:
+    def csv(self) -> PreprocessDfData:
         df = pd.read_csv(self._filename, skiprows=self._skip_rows)
-        return DfData(df)
+        return PreprocessDfData(df)
 
-def original(filename: str) -> FileData:
-    return FileData(paths.original / filename)
+def original(filename: str) -> PreprocessFileData:
+    path = get_current_project().path.data_original / filename
+    return PreprocessFileData(path)
 

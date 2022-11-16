@@ -3,53 +3,12 @@ from __future__ import annotations
 import re
 import os
 from pathlib import Path
-from typing import Union, Callable, List
-from dataclasses import dataclass
+from typing import Union, List
 
 import pandas as pd
 
-from .paths import paths
-
-@dataclass
-class DfAction:
-    handler: Callable[[pd.DataFrame], pd.DataFrame]
-    key: str
-
-    def get_key(self):
-        return self.key
-
-@dataclass
-class DfPlotter:
-    handler: Callable[[pd.DataFrame, Union[str, Path]], None]
-    key: str
-
-    def get_key(self):
-        return self.key
-
-@dataclass
-class AggregatedDfPlotter:
-    handler: Callable[[List[pd.DataFrame], Union[str, Path]], None]
-    key: str
-
-    def get_key(self):
-        return self.key
-
-
-def df_action(key: str):
-    def decorator(func: Callable[[pd.DataFrame], pd.DataFrame]):
-        return DfAction(handler=func, key=key)
-    return decorator
-
-def df_plotter(key: str):
-    def decorator(func: Callable[[pd.DataFrame, Union[str, Path]], None]):
-        return DfPlotter(handler=func, key=key)
-    return decorator
-
-def agg_df_plotter(key: str):
-    def decorator(func: Callable[[List[pd.DataFrame], Union[str, Path]], None]):
-        return AggregatedDfPlotter(handler=func, key=key)
-    return decorator
-
+from ebilab.project import get_current_project
+from ._actions import DfAction, DfPlotter, AggregatedDfPlotter
 
 class ProcessingData:
     _df: pd.DataFrame
@@ -90,21 +49,21 @@ class ProcessingData:
     def _load_csv(self):
         if not self._use_cache:
             return None
-        path = paths.output / (self._key + ".csv")
+        dir = get_current_project().path.data_output
+        path = dir / (self._key + ".csv")
         if path.exists():
             return pd.read_csv(path)
         return None
 
-    def _check_png(self) -> bool:
-        path = paths.output / (self._key + ".png")
-        return self._use_cache and path.exists()
-
     def _save(self):
-        self._df.to_csv(paths.output / (self._key + ".csv"), index=False)
+        dir = get_current_project().path.data_output
+        self._df.to_csv(dir / (self._key + ".csv"), index=False)
         return self
 
     def plot(self, plotter: DfPlotter):
-        filename = paths.plot / (self._key + "__" + plotter.key + ".png")
+
+        dir = get_current_project().path.data_plot
+        filename = dir / (self._key + "__" + plotter.key + ".png")
 
         # cache
         if self._use_cache and filename.exists():
@@ -137,7 +96,8 @@ class AggregatedProcessingData:
         self._use_cache = all(map(lambda d:d._use_cache, data))
 
     def plot(self, plotter: AggregatedDfPlotter):
-        filename = paths.plot / ("[" + ",".join(self._keys) + "]__" + plotter.key + ".png")
+        dir = get_current_project().path.data_plot
+        filename = dir / (f"[{','.join(self._keys)}]__{plotter.key}.png")
 
         # cache
         if self._use_cache and filename.exists():
@@ -153,14 +113,14 @@ class AggregatedProcessingData:
         self._use_cache = False
         return self
 
-def aggregate(data: List[ProcessingData]):
+def aggregate(data: List[ProcessingData]) -> AggregatedProcessingData:
     return AggregatedProcessingData(data)
 
-def input(filename: str):
-    return ProcessingData.fromCsv(paths.input / filename)
+def input(filename: str) -> ProcessingData:
+    return ProcessingData.fromCsv(get_current_project().path.data_input / filename)
 
-def output(filename: str):
-    return ProcessingData.fromCsv(paths.output / filename)
+def output(filename: str) -> ProcessingData:
+    return ProcessingData.fromCsv(get_current_project().path.data_output / filename)
 
-def fromDf(df: pd.DataFrame, key: str):
+def from_df(df: pd.DataFrame, key: str) -> ProcessingData:
     return ProcessingData(df, key)
