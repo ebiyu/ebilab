@@ -28,3 +28,18 @@ pip install -e .
 This repository requires VISA driver.
 Please install Keysight-VISA or NI-VISA.
 
+
+# translation
+
+Translation is conducted under transifex: https://www.transifex.com/ebilab/ebilab/
+
+
+(To maintainer)
+
+```bash
+cd doc
+make tx-push
+# translate
+make tx-pull
+```
+

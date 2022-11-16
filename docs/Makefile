@@ -15,7 +15,7 @@ help:
 .PHONY: help Makefile po ja en watch
 
 po: gettext
-	sphinx-intl update -p build/gettext -l en
+	sphinx-intl update -p build/gettext -l ja
 
 ja:
 	make html
@@ -28,6 +28,16 @@ watch:
 
 watch-en:
 	sphinx-autobuild -b html $(SPHINXOPTS) -D language="en" "$(SOURCEDIR)" $(BUILDDIR)/html
+
+tx-push:
+	sphinx-intl update-txconfig-resources --pot-dir build/gettext --transifex-project-name=ebilab
+	sed -i -e "s/source_lang = en/source_lang = ja/" .tx/config
+	tx push -s
+
+tx-pull:
+	sphinx-intl update-txconfig-resources --pot-dir build/gettext --transifex-project-name=ebilab
+	sed -i -e "s/source_lang = en/source_lang = ja/" .tx/config
+	tx pull -l en
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

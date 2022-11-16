@@ -1,35 +1,32 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) 2022, Yusuke Ebihara
 # This file is distributed under the same license as the ebilab package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
-#
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: ebilab \n"
+"Project-Id-Version: ebilab\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-11-17 01:38+0900\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2022-11-16 17:52+0000\n"
+"Language-Team: English (https://www.transifex.com/ebilab/teams/156842/en/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.11.0\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../../source/installation.rst:3
 msgid "インストール"
-msgstr "Installation"
+msgstr ""
 
 #: ../../source/installation.rst:11
 msgid "ドライバの設定"
-msgstr "Installing drivers"
+msgstr ""
 
 #: ../../source/installation.rst:13
 msgid ""
-"実験装置の制御を行うには、VISAドライバーが必要になります。 一般的には、制御対象のメーカーに応じて Keysight-VISA か NI-"
-"VISA をインストールすれば問題ありません。 なお、両方ともにインストールする必要がある場合があります。"
+"実験装置の制御を行うには、VISAドライバーが必要になります。 一般的には、制御対象のメーカーに応じて Keysight-VISA か NI-VISA "
+"をインストールすれば問題ありません。 なお、両方ともにインストールする必要がある場合があります。"
 msgstr ""
-"VISA driver is necessaty to control experimental devices."
-"Installing Keysight-VISA or NI-VISA will work. In some cases, both must be installed."
-

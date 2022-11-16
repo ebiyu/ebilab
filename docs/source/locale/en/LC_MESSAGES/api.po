@@ -1,35 +1,38 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) 2022, Yusuke Ebihara
 # This file is distributed under the same license as the ebilab package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
-#
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: ebilab \n"
+"Project-Id-Version: ebilab\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-11-17 01:38+0900\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2022-11-16 17:52+0000\n"
+"Language-Team: English (https://www.transifex.com/ebilab/teams/156842/en/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.11.0\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../../source/api/ebilab.rst:2
 msgid "ebilab package"
 msgstr ""
 
-#: ebilab.VersionDidNotMatch:1 ebilab.analysis.paths.DataDirNotFoundDirection:1
-#: ebilab.experiment.devices.visa.DeviceNotFoundError:1 of
+#: ../../../ebilab/__init__.pydocstring of ebilab.VersionDidNotMatch:1
+#: ../../../ebilab/analysis/paths.pydocstring of
+#: ebilab.analysis.paths.DataDirNotFoundDirection:1
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.DeviceNotFoundError:1
 msgid "ベースクラス: :py:class:`Exception`"
 msgstr ""
 
-#: ebilab.assert_ebilab_version:1 of
+#: ../../../ebilab/__init__.pydocstring of ebilab.assert_ebilab_version:1
 msgid ""
-"This raises the VersionDidNotMatch exception if versison did not match. "
-"If the version of package is \"dev\", this always raise the exception"
+"This raises the VersionDidNotMatch exception if versison did not match. If "
+"the version of package is \"dev\", this always raise the exception"
 msgstr ""
 
 #: ../../source/api/ebilab.analysis.rst:2
@@ -49,20 +52,35 @@ msgstr ""
 msgid "ebilab.analysis.paths module"
 msgstr ""
 
-#: ebilab.analysis.paths.AnalysisPath:1 ebilab.analysis.preprocess.DfData:1
+#: ../../../ebilab/analysis/paths.pydocstring of
+#: ebilab.analysis.paths.AnalysisPath:1
+#: ../../../ebilab/analysis/preprocess.pydocstring of
+#: ebilab.analysis.preprocess.DfData:1
+#: ../../../ebilab/analysis/preprocess.pydocstring of
 #: ebilab.analysis.preprocess.FileData:1
+#: ../../../ebilab/analysis/process_util.pydocstring of
 #: ebilab.analysis.process_util.AggregatedDfPlotter:1
+#: ../../../ebilab/analysis/process_util.pydocstring of
 #: ebilab.analysis.process_util.AggregatedProcessingData:1
+#: ../../../ebilab/analysis/process_util.pydocstring of
 #: ebilab.analysis.process_util.DfAction:1
+#: ../../../ebilab/analysis/process_util.pydocstring of
 #: ebilab.analysis.process_util.DfPlotter:1
+#: ../../../ebilab/analysis/process_util.pydocstring of
 #: ebilab.analysis.process_util.ProcessingData:1
-#: ebilab.experiment.core.Experiment:1 ebilab.experiment.core.Plotter:1
+#: ../../../ebilab/experiment/core.pydocstring of
+#: ebilab.experiment.core.Experiment:1
+#: ../../../ebilab/experiment/core.pydocstring of
+#: ebilab.experiment.core.Plotter:1
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
 #: ebilab.experiment.devices.visa.VisaDevice:1
-#: ebilab.experiment.devices.visa.VisaManager:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager:1
 msgid "ベースクラス: :py:class:`object`"
 msgstr ""
 
-#: ebilab.analysis.paths.DataDirNotFoundDirection:1 of
+#: ../../../ebilab/analysis/paths.pydocstring of
+#: ebilab.analysis.paths.DataDirNotFoundDirection:1
 msgid "This exception is thrown if directory structure is not correct"
 msgstr ""
 
@@ -99,112 +117,152 @@ msgstr ""
 msgid "利用可能なデバイスのクラス。"
 msgstr ""
 
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
 #: ebilab.experiment.devices._visa.A707.A707:1
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
 #: ebilab.experiment.devices._visa.E4980.E4980:1
-#: ebilab.experiment.devices._visa.K34411A.K34411A:1 of
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A:1
 msgid "ベースクラス: :py:class:`~ebilab.experiment.devices.visa.VisaDevice`"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.A707.A707:1 of
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
+#: ebilab.experiment.devices._visa.A707.A707:1
 msgid "Keithley 707A Switching Matrix"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.A707.A707.close_only:1 of
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
+#: ebilab.experiment.devices._visa.A707.A707.close_only:1
 msgid "Open all switch and close only specified switch"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.A707.A707.close_only
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger
-#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_resistance
-#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage
-#: ebilab.experiment.devices.visa.VisaManager.get_inst of
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
+#: ebilab.experiment.devices._visa.A707.A707.close_only:0
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:0
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_resistance:0
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:0
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager.get_inst:0
 msgid "パラメータ"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.A707.A707.close_only:3 of
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
+#: ebilab.experiment.devices._visa.A707.A707.close_only:3
 msgid "like `[\"A2\", \"B4\", \"C5\"]`"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaDevice.visa_query:1 of
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_query:1
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_query:1
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_query:1
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_query:1
 msgid ""
 "Send command to visa device and read output from device Equivalent to "
 ":py:func:`inst.query` in pyvisa class"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaDevice.visa_write:1 of
+#: ../../../ebilab/experiment/devices/_visa/A707.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_write:1
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_write:1
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_write:1
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice.visa_write:1
 msgid ""
-"Send command to visa device Equivalent to :py:func:`inst.write` in pyvisa"
-" class"
+"Send command to visa device Equivalent to :py:func:`inst.write` in pyvisa "
+"class"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980:1 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980:1
 msgid "Keysight E4980A Precision LCR Meter"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger:1 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:1
 msgid "measure impedance"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger:3 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:3
 msgid "frequency to measure"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:0
 msgid "キーワード引数"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger:6 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:6
 msgid "measurement amplitude [V]"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger:8 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:8
 msgid "measurement time from {\"LONG\", \"MED\", \"SHORT\"}"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger:10 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:10
 msgid ""
-"format of return value from {\"CPD\", \"CPQ\", \"CPG\", \"CPRP\", "
-"\"CSD\", \"CSQ\", \"CSRS\", \"LPD\", \"LPQ\", \"LPG\", \"LPRP\", \"LSD\","
-" \"LSQ\", \"LSRS\", \"RX\", \"ZTD\", \"ZTR\", \"GB\", \"YTD\", \"YTR\"}"
+"format of return value from {\"CPD\", \"CPQ\", \"CPG\", \"CPRP\", \"CSD\", "
+"\"CSQ\", \"CSRS\", \"LPD\", \"LPQ\", \"LPG\", \"LPRP\", \"LSD\", \"LSQ\", "
+"\"LSRS\", \"RX\", \"ZTD\", \"ZTR\", \"GB\", \"YTD\", \"YTR\"}"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger
-#: ebilab.experiment.devices.visa.VisaManager.get_inst
-#: ebilab.experiment.devices.visa.get_visa_manager of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:0
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager.get_inst:0
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.get_visa_manager:0
 msgid "戻り値"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger:14 of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:14
 msgid "Measured impedance value"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.E4980.E4980.trigger of
+#: ../../../ebilab/experiment/devices/_visa/E4980.pydocstring of
+#: ebilab.experiment.devices._visa.E4980.E4980.trigger:0
 msgid "戻り値の型"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.K34411A.K34411A:1 of
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A:1
 msgid "Keysight 6½ Digit Digital Multimeter 34411A"
 msgstr ""
 
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
 #: ebilab.experiment.devices._visa.K34411A.K34411A.measure_resistance:1
-#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:1 of
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:1
 msgid "Measure resistance once"
 msgstr ""
 
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
 #: ebilab.experiment.devices._visa.K34411A.K34411A.measure_resistance:3
-#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:3 of
-msgid ""
-"String from {\"0.001\", \"0.002\", \"0.006\", \"0.02\", \"0.06\", "
-"\"0.2\", \"1\", \"2\", \"10\", \"100\"}"
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:3
+msgid "String from {\"0.001\", \"0.002\", \"0.006\", \"0.02\", \"0.06\", \"0.2\", \"1\", \"2\", \"10\", \"100\"}"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_resistance:6 of
-msgid ""
-"String from {\"auto\", \"1E+2\", \"1E+3\", \"1E+4\", \"1E+5\", \"1E+6\", "
-"\"1E+7\", \"1E+8\", \"1E+9\"}"
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_resistance:6
+msgid "String from {\"auto\", \"1E+2\", \"1E+3\", \"1E+4\", \"1E+5\", \"1E+6\", \"1E+7\", \"1E+8\", \"1E+9\"}"
 msgstr ""
 
-#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:6 of
+#: ../../../ebilab/experiment/devices/_visa/K34411A.pydocstring of
+#: ebilab.experiment.devices._visa.K34411A.K34411A.measure_voltage:6
 msgid "String from {\"auto\", \"1E-1\", \"1E+0\", \"1E+1\", \"1E+2\", \"1E+3\"}"
 msgstr ""
 
@@ -212,58 +270,69 @@ msgstr ""
 msgid "ebilab.experiment.devices.visa"
 msgstr ""
 
-#: ebilab.experiment.devices.visa:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa:1
 msgid "Utility and base class related to visa"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaDevice:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice:1
 msgid "Base class of visa device."
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaDevice:3 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice:3
 msgid "You can inherit this class and implement class to new device."
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaDevice:7 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaDevice:7
 msgid ""
-"instance from `ResourceManager.open_resource` of pyvisa module Please use"
-" this only when you use method which is not supported in VisaDevice class"
+"instance from `ResourceManager.open_resource` of pyvisa module Please use "
+"this only when you use method which is not supported in VisaDevice class"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaManager:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager:1
 msgid "Manager class of visa device based on pyvisa module"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaManager:3 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager:3
 msgid ""
 "Do not intialize directory, use :py:meth:`get_visa_manager() "
 "<ebilab.experiment.devices.visa.get_visa_manager>` method instead."
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaManager.get_inst:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager.get_inst:1
 msgid "Get pyvisa instance from pattern that matches *IDN? result."
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaManager.get_inst:3 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager.get_inst:3
 msgid "regex pattern"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaManager.get_inst:6 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager.get_inst:6
 msgid "pyvisa Resource"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.VisaManager.rm:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.VisaManager.rm:1
 msgid "ResourceManager of pyvisa module"
 msgstr ""
 
-#: ebilab.experiment.devices.visa.get_visa_manager:1 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.get_visa_manager:1
 msgid ""
 "Function to get :py:class:`VisaManager "
-"<ebilab.experiment.devices.visa.VisaManager>` class. Many times of call "
-"of this function returns same VisaManager."
+"<ebilab.experiment.devices.visa.VisaManager>` class. Many times of call of "
+"this function returns same VisaManager."
 msgstr ""
 
-#: ebilab.experiment.devices.visa.get_visa_manager:4 of
+#: ../../../ebilab/experiment/devices/visa.pydocstring of
+#: ebilab.experiment.devices.visa.get_visa_manager:4
 msgid "VisaManager class"
 msgstr ""
-

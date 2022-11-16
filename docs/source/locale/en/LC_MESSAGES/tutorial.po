@@ -1,21 +1,21 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) 2022, Yusuke Ebihara
 # This file is distributed under the same license as the ebilab package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2022.
-#
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# 
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: ebilab \n"
+"Project-Id-Version: ebilab\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-11-17 01:38+0900\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2022-11-16 17:52+0000\n"
+"Language-Team: English (https://www.transifex.com/ebilab/teams/156842/en/)\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.11.0\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: ../../source/tutorial/analysis.rst:3
 msgid "データの解析"
@@ -45,8 +45,8 @@ msgstr ""
 
 #: ../../source/tutorial/experiment.rst:5
 msgid ""
-"実験中には、測定値をグラフによって可視化したいことがあります。 これを実現するために、 "
-":py:mod:`ebilab.experiment.core` モジュールを用いることができます。"
+"実験中には、測定値をグラフによって可視化したいことがあります。 これを実現するために、 :py:mod:`ebilab.experiment.core`"
+" モジュールを用いることができます。"
 msgstr ""
 
 #: ../../source/tutorial/experiment.rst:10
@@ -271,8 +271,8 @@ msgstr ""
 #: ../../source/tutorial/version.rst:23
 msgid ""
 "一方で、そのようなツールの使用に慣れていない場合や、たった1ファイルのスクリプトなど仮想環境を導入するのが煩雑だと感じる場合もあるでしょう。 "
-"その場合では、 :py:func:`assert_ebilab_version() <ebilab.assert_ebilab_version>`"
-" 関数を用いて簡易的にバージョンのチェックを行なうことができます。"
+"その場合では、 :py:func:`assert_ebilab_version() <ebilab.assert_ebilab_version>` "
+"関数を用いて簡易的にバージョンのチェックを行なうことができます。"
 msgstr ""
 
 #: ../../source/tutorial/version.rst:26
@@ -294,4 +294,3 @@ msgid ""
 "基本的にはメジャーバージョンのみの指定で十分ですが、ドキュメントに記載されていないクラスを利用している場合などはそれ以上の指定が有効となる場合があります。"
 " 厳密にバージョンを指定したい場合は、以下のような構文を利用することができます。"
 msgstr ""
-
