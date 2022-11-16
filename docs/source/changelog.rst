@@ -3,8 +3,10 @@
 ####################
 
 
-Next version
+v2.0.0-alpha
 ===================
 
 * :py:func:`E4980.trigger() <ebilab.experiment.devices.visa.E4980.E4980.trigger()>` メソッドで出力フォーマットを指定できるようになりました。
+* いくつかのデバイスの測定メソッドで、オプションをenumではなくstringで指定するようになりました。
+
 
