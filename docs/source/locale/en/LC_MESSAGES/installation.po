@@ -19,15 +19,17 @@ msgstr ""
 
 #: ../../source/installation.rst:3
 msgid "インストール"
-msgstr ""
+msgstr "Installation"
 
 #: ../../source/installation.rst:11
 msgid "ドライバの設定"
-msgstr ""
+msgstr "Installing drivers"
 
 #: ../../source/installation.rst:13
 msgid ""
 "実験装置の制御を行うには、VISAドライバーが必要になります。 一般的には、制御対象のメーカーに応じて Keysight-VISA か NI-"
 "VISA をインストールすれば問題ありません。 なお、両方ともにインストールする必要がある場合があります。"
 msgstr ""
+"VISA driver is necessaty to control experimental devices."
+"Installing Keysight-VISA or NI-VISA will work. In some cases, both must be installed."
 
