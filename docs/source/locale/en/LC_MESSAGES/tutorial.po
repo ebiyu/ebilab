@@ -3,6 +3,9 @@
 # This file is distributed under the same license as the ebilab package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 # 
+# Translators:
+# Yusuke Ebihara <ebiyuu1121@gmail.com>, 2022
+# 
 #, fuzzy
 msgid ""
 msgstr ""
@@ -10,6 +13,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-11-17 01:38+0900\n"
 "PO-Revision-Date: 2022-11-16 17:52+0000\n"
+"Last-Translator: Yusuke Ebihara <ebiyuu1121@gmail.com>, 2022\n"
 "Language-Team: English (https://www.transifex.com/ebilab/teams/156842/en/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -19,11 +23,13 @@ msgstr ""
 
 #: ../../source/tutorial/analysis.rst:3
 msgid "データの解析"
-msgstr ""
+msgstr "Analyzing experimental data"
 
 #: ../../source/tutorial/analysis.rst:7
 msgid ":py:mod:`ebilab.analysis` モジュールは完成していません。 今後のバージョンでは後方互換性がない場合があります。"
 msgstr ""
+":py:mod:`ebilab.analysis` module is under development. Backward "
+"compatibility is not supported."
 
 #: ../../source/tutorial/analysis.rst:10
 msgid ""
@@ -34,42 +40,50 @@ msgstr ""
 #: ../../source/tutorial/analysis.rst:13
 msgid "本パッケージを使うと、ソースコードの整理が容易になります。また、生成したデータにも自動で名前が付き、整理が容易になります。"
 msgstr ""
+"You can keep the source code tidy with this package, and all generated files"
+" are automatically named."
 
 #: ../../source/tutorial/analysis.rst:15
 msgid "イメージとしては以下のコードです。"
-msgstr ""
+msgstr "Please see code below,"
 
 #: ../../source/tutorial/experiment.rst:3
 msgid "実験の設計"
-msgstr ""
+msgstr "Desigining experiments"
 
 #: ../../source/tutorial/experiment.rst:5
 msgid ""
 "実験中には、測定値をグラフによって可視化したいことがあります。 これを実現するために、 :py:mod:`ebilab.experiment.core`"
 " モジュールを用いることができます。"
 msgstr ""
+"You may want to visualize acquired data during measurement, and you can "
+"realize it with  :py:mod:`ebilab.experiment.core` module."
 
 #: ../../source/tutorial/experiment.rst:10
 msgid "簡易的な実装"
-msgstr ""
+msgstr "Simple implementation"
 
 #: ../../source/tutorial/experiment.rst:12
 msgid ""
 "簡易的には、 :code:`matplotlib` を用いて、以下のようなコードで実現することができます。 "
 "これは、マルチメーターを用いて抵抗を測定してプロットするプログラムです。"
 msgstr ""
+"You can implement code like below with :code:`matplotlib`. This program "
+"measures resistance by digital multimeter and plot it to a chart."
 
 #: ../../source/tutorial/experiment.rst:45
 msgid "実際にこのようなコードで運用するには、いくつか問題があります。"
-msgstr ""
+msgstr "This code has some problems."
 
 #: ../../source/tutorial/experiment.rst:47
 msgid "このコードにはいくつか問題があります。"
-msgstr ""
+msgstr "This code has some problems."
 
 #: ../../source/tutorial/experiment.rst:49
 msgid "実験のロジックを定義するコードと可視化のためのコードが混在している"
 msgstr ""
+"This code includes both a part which describe a logic of the experiment and "
+"a part for visualization."
 
 #: ../../source/tutorial/experiment.rst:51
 msgid "外れ値をフィルタリングしてプロットしたい場合など、どこまでが実験のロジックでどこからが可視化のためのロジックなのかが分かりづらくなる。"
@@ -78,16 +92,22 @@ msgstr ""
 #: ../../source/tutorial/experiment.rst:53
 msgid "matplotlibの描画によってデータの取得がブロッキングされ、データの取得速度に影響する。"
 msgstr ""
+"Data acquision rate is lowered becaues the rendering of matplotlib blocks "
+"data acquision."
 
 #: ../../source/tutorial/experiment.rst:54
 msgid "プログラムファイルへのデータ保存やグラフでの可視化のコードに関して、プログラムを作成する際に同じようなコードを何度も書く必要がある。"
 msgstr ""
+"You have to write similar code many times like saving data or visualizing."
 
 #: ../../source/tutorial/experiment.rst:58
 msgid ""
 ":py:class:`Experiment <ebilab.experiment.core.Experiment>` ・ "
 ":py:class:`Plotter <ebilab.experiment.core.Plotter>` を利用した実装"
 msgstr ""
+"Implementation with :py:class:`Experiment "
+"<ebilab.experiment.core.Experiment>` and :py:class:`Plotter "
+"<ebilab.experiment.core.Plotter>`"
 
 #: ../../source/tutorial/experiment.rst:60
 msgid ""
@@ -95,10 +115,14 @@ msgid ""
 "<ebilab.experiment.core.Experiment>` クラス、 :py:class:`Plotter "
 "<ebilab.experiment.core.Plotter>` クラスを用いることで、 これらの問題を解決することができます。"
 msgstr ""
+"You can solve these problems by using :py:class:`Experiment "
+"<ebilab.experiment.core.Experiment>` class and :py:class:`Plotter "
+"<ebilab.experiment.core.Plotter>` class in :py:mod:`ebilab.experiment.core` "
+"module."
 
 #: ../../source/tutorial/experiment.rst:64
 msgid "上記のコードは、以下のように書き変えることができます。"
-msgstr ""
+msgstr "The preceding code can be refactored as below,"
 
 #: ../../source/tutorial/experiment.rst:71
 msgid ""
