@@ -4,7 +4,7 @@
 
 .. code-block:: bash
 
-    pip install git+https://github.com/ebiyuu1121/ebilab
+    pip install ebilab
 
 ****************************************
 ドライバの設定

@@ -12,7 +12,7 @@ Utility python library for lab experiment (for me)
 Please execute the command below in this directory.
 
 ```
-pip install git+https://github.com/ebiyuu1121/ebilab
+pip install ebilab
 ```
 
 ### Development install
