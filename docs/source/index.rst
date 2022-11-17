@@ -35,6 +35,7 @@ Python 3.10.7 で動作確認されています。
     :maxdepth: 1
 
     api/ebilab
+    api/ebilab.experiment
     api/ebilab.experiment.devices
     api/ebilab.experiment.devices.visa
     api/ebilab.analysis
@@ -44,6 +45,4 @@ Python 3.10.7 で動作確認されています。
     :maxdepth: 1
 
     genindex
-    modindex
-    search
 
