@@ -2,8 +2,11 @@ from pathlib import Path
 import sys
 import time
 import os
+import shutil
 from subprocess import PIPE, STDOUT, Popen
 
+from git import Repo
+from git.exc import GitCommandNotFound
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import click
@@ -79,14 +82,23 @@ def watch(path: str):
 def init(name: str):
     path = Path(name)
     if path.exists():
-        print(f"file or directory {path} already exists.")
+        print(f"file or directory \"{path}\" already exists.")
         exit(1)
 
-    path.mkdir()
-    for dir in ["original", "input", "output", "plot"]:
-        (path / dir).mkdir()
-        with open(path / dir/ ".gitignore", "w") as f:
-            f.write("*\n!.gitignore")
+    template_dir = Path(__file__).resolve().parent / "data" / "project-template"
+    shutil.copytree(template_dir, path)
 
-    (path / "main.py").touch()
+    # git initialization
+    try:
+        repo = Repo.init(path)
+        if input("Will you track original data by git? (Y/n) > ") != "n":
+            os.remove(path / "data" / "original" / ".gitignore")
+        repo.git.add(A=True)
+        repo.git.commit(m="init: initialized by `ebilab init`")
+    except GitCommandNotFound:
+        print("Git command not found, skipping...")
+    except:
+        print("Git initialization failed, skipping...")
+
+    print(f"Initialized project \"{name}\"")
 

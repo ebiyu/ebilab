@@ -13,7 +13,9 @@ setup(
         "watchdog",
         "click",
         "pyvisa",
+        "GitPython",
     ],
+    include_package_data=True,
     setup_requires=[
         "setuptools_scm"
     ],
@@ -28,7 +30,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "ebilab=ebilab.cli:cli",
+            "ebilab=ebilab._cli:cli",
         ],
     },
     packages=find_packages(
