@@ -31,14 +31,10 @@ Python 3.10.7 で動作確認されています。
     tutorial/analysis
 
 .. toctree::
-    :caption: API document
+    :caption: Reference
     :maxdepth: 1
 
-    api/ebilab
-    api/ebilab.experiment
-    api/ebilab.experiment.devices
-    api/ebilab.experiment.devices.visa
-    api/ebilab.analysis
+    api/index
 
 .. toctree::
     :caption: 索引

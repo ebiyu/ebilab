@@ -36,6 +36,8 @@ extensions = [
     'sphinx.ext.autodoc',  # ソースコード読み込み用
     'sphinx.ext.viewcode',  # ハイライト済みのソースコードへのリンクを追加
     'sphinx.ext.todo',  # ToDoアイテムのサポート
-    'sphinx.ext.napoleon' #googleスタイルやNumpyスタイルでdocstringを記述した際に必要
+    'sphinx.ext.napoleon', #googleスタイルやNumpyスタイルでdocstringを記述した際に必要
+    'sphinx.ext.autosummary',
 ]
 
+autosummary_generate = False

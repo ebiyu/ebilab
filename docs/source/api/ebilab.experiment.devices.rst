@@ -1,7 +1,5 @@
-ebilab.experiment.devices
+ebilab.experiment.devices package
 =================================
-
-利用可能なデバイスのクラス。
 
 .. automodule:: ebilab.experiment.devices
    :members:

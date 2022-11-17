@@ -1,3 +1,7 @@
+"""
+Module to manage ebilab project directory.
+"""
+
 from pathlib import Path
 from typing import Union
 from dataclasses import dataclass
