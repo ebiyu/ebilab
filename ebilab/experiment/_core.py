@@ -74,8 +74,11 @@ class Experiment:
                     df = pd.DataFrame(self._data)
                     self._plotter.update(df)
 
-                plt.gcf().canvas.draw_idle()
-                plt.gcf().canvas.flush_events()
+                if sys.platform == "darwin":
+                    plt.pause(0.1) # workaround for macOS
+                else:
+                    plt.gcf().canvas.draw_idle()
+                    plt.gcf().canvas.flush_events()
 
     def start(self):
         if self.columns is None:
