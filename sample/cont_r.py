@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from ebilab.experiment.core import Plotter, Experiment
+from ebilab.experiment import Plotter, Experiment
 from ebilab.experiment.devices import K34411A
 
 class ContinuousResistanceMesurement(Experiment):

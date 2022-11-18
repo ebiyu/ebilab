@@ -10,6 +10,13 @@ Breaking Changes
 ===================
 
 * フォルダ探索の際に、 :code:`ebilab.ini` ファイルを探索するように変更しました。
+* :code:`ebilab.experiment.core` モジュールが廃止されました。互換性のためにしばらくは残されますが、
+
+  .. code-block:: python
+
+      from ebilab.experiment import Plotter, Experiment
+
+  を使用してください。
 
 Features
 ===================

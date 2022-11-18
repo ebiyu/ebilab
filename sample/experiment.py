@@ -5,7 +5,7 @@ import random
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from ebilab.experiment.core import Plotter, Experiment
+from ebilab.experiment import Plotter, Experiment
 
 # class to decide steps of experiment
 class MyExperiment(Experiment):

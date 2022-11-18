@@ -1,7 +1,7 @@
 # sample of capturing local variable
 import time
 
-from ebilab.experiment.core import Experiment
+from ebilab.experiment import Experiment
 
 class SampleExperiment(Experiment):
     columns = ["var1", "var2"]
