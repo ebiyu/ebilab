@@ -4,7 +4,7 @@ import os
 import tempfile
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Union, Dict
 
 import pandas as pd
 
@@ -22,6 +22,10 @@ class PreprocessDfData:
 
     def apply(self, func: Callable[[pd.DataFrame], pd.DataFrame]):
         self._df = func(self._df)
+        return self
+    
+    def rename_cols(self, mapper: Dict[str, str]):
+        self._df = self._df.rename(columns=mapper)
         return self
 
     def toInput(self, file):

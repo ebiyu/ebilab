@@ -14,9 +14,11 @@ class ProcessingData:
     _df: pd.DataFrame
     _key: str
     _use_cache = True
-    def __init__(self, df: pd.DataFrame, key: str):
+    def __init__(self, df: pd.DataFrame, key: str, *, save=True):
         self._df = df
         self._key = key
+        if save:
+            self._save()
 
     def apply(self, action: DfAction):
         self._key += "__" + action.key
@@ -83,7 +85,7 @@ class ProcessingData:
     def fromCsv(cls, filename: Union[str, Path]):
         path = Path(filename)
         df = pd.read_csv(path)
-        return cls(df, path.stem)
+        return cls(df, path.stem, save=False)
 
 class AggregatedProcessingData:
     _dfs: List[pd.DataFrame]
@@ -108,6 +110,15 @@ class AggregatedProcessingData:
             print(f"Saved plot: {filename.name}")
 
         return self  
+
+    def combine(self, varname: str, values: list):
+        dfs_copy = [df.copy() for df in self._dfs]
+        for df, val in zip(dfs_copy, values):
+            df[varname] = val
+        return ProcessingData(
+            df=pd.concat(dfs_copy),
+            key=f"{varname}[{','.join(self._keys)}]"
+        )
 
     def nocache(self):
         self._use_cache = False
