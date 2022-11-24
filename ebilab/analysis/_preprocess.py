@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import os
+import tempfile
+from io import TextIOWrapper
 from pathlib import Path
 from typing import Callable, Optional, Union
 
@@ -32,6 +36,7 @@ class PreprocessDfData:
 
 class PreprocessFileData:
     _filename: Union[str, Path]
+    _tmp_filename: Optional[Union[str, Path]] = None
     _skip_rows: Optional[int] = None
     def __init__(self, filename: Union[str, Path]):
         self._filename = filename
@@ -40,9 +45,24 @@ class PreprocessFileData:
         self._skip_rows = skip
         return self
 
+    def apply(self, func: Callable[[TextIOWrapper, TextIOWrapper], PreprocessFileData]):
+        with open(self._filename) as fin:
+            fd, tmpfile = tempfile.mkstemp()
+            os.close(fd)
+            with open(tmpfile, 'w') as fout:
+                func(fin, fout)
+            self._tmp_filename = tmpfile
+        return self
+
     def csv(self) -> PreprocessDfData:
-        df = pd.read_csv(self._filename, skiprows=self._skip_rows)
+        filename = self._tmp_filename or self._filename
+        df = pd.read_csv(filename, skiprows=self._skip_rows)
         return PreprocessDfData(df)
+
+    def __del__(self):
+        if self._tmp_filename is not None:
+            os.remove(self._tmp_filename)
+
 
 def original(filename: str) -> PreprocessFileData:
     path = get_current_project().path.data_original / filename
