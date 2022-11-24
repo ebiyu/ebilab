@@ -5,6 +5,8 @@ Module to manage ebilab project directory.
 from pathlib import Path
 from typing import Union
 from dataclasses import dataclass
+import itertools
+import os
 
 @dataclass(frozen=True)
 class ProjectPath:
@@ -40,6 +42,18 @@ class Project:
             data_output=self._root_dir / "data" / "output",
             data_plot=self._root_dir / "data" / "plot",
         )
+    
+    def clean_files(self, *, dry: bool):
+        dirs = [self.path.data_input, self.path.data_output, self.path.data_plot]
+        files = itertools.chain(*[dir.glob("*") for dir in dirs])
+        for file in files:
+            if file.name == ".gitignore":
+                continue
+            if dry:
+                print(f"Would remove {file.relative_to(self.path.root)}")
+            else:
+                os.remove(file)
+                print(f"Removing {file.relative_to(self.path.root)}")
 
 def _get_current_project() -> Project:
     _paths = [Path(".").resolve()] + list(Path(".").resolve().parents)

@@ -5,6 +5,8 @@ import os
 import shutil
 from subprocess import PIPE, STDOUT, Popen
 
+from .project import get_current_project
+
 from git import Repo
 from git.exc import GitCommandNotFound
 from watchdog.observers import Observer
@@ -102,3 +104,10 @@ def init(name: str):
 
     print(f"Initialized project \"{name}\"")
 
+
+
+@cli.command()
+@click.option("-f", is_flag=True, default=False, help="Delete files actually.")
+def clean(f):
+    project = get_current_project()
+    project.clean_files(dry=not f)
