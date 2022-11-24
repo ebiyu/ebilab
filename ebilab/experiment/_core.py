@@ -51,7 +51,7 @@ class Experiment:
                 return d
 
     def _write_to_file(self, row):
-        row_list = [str(row["t"])]
+        row_list = [str(row["t"]), str(row["time"])]
         for col in self.columns:
             if col in row:
                 row_list.append(str(row[col]))
@@ -133,7 +133,7 @@ class Experiment:
     def send_row(self, row, *, capture: List[str] = None):
         row = copy.copy(row)
         row["t"] = self.get_t()
-        row["time"] = time.time()
+        row["time"] = datetime.datetime.now()
 
         if capture:
             frame = inspect.currentframe()
