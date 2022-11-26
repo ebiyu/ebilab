@@ -6,12 +6,40 @@ import sys
 from threading import Thread
 import time
 import datetime
-from typing import Optional, List
+from typing import Optional, List, Callable
 import os
+import abc
 
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import pandas as pd
+
+class ExperimentContextDelegate(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def experiment_ctx_send_row(self, row=None):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def experiment_ctx_get_t(self) -> float:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def experiment_ctx_is_running(self) -> bool:
+        raise NotImplementedError()
+
+class ExperimentContext:
+    delegate: ExperimentContextDelegate
+    def __init__(self, delegate: ExperimentContextDelegate):
+        self.delegate = delegate
+
+    def send_row(self, row=None):
+        self.delegate.experiment_ctx_send_row(row)
+
+    def get_t(self) -> float:
+        return self.delegate.experiment_ctx_get_t()
+
+    def is_running(self) -> bool:
+        return self.delegate.experiment_ctx_is_running()
 
 class Plotter:
     def prepare(self):
@@ -22,7 +50,7 @@ class Plotter:
 
 class Experiment:
     started_time: float # in sec
-    running = False
+    _running = False
     columns = None
     filename = "experiment"
 
@@ -32,13 +60,22 @@ class Experiment:
     _experiment_thread = None
     _completed = False
 
+    delegate: Optional[ExperimentContextDelegate] = None
+
+    @property
+    def running(self) -> bool:
+        if self.delegate is None:
+            return self._running
+        else:
+            return self.delegate.experiment_ctx_is_running()
+
     @property
     def plotter(self) -> Optional[Plotter]:
         return self._plotter
     
     @plotter.setter
     def plotter(self, plotter: Optional[Plotter]):
-        if self.running:
+        if self._running:
             raise RuntimeError("Plotter cannnot be set during experiment!!")
         self._plotter = plotter
 
@@ -88,7 +125,7 @@ class Experiment:
             self._plotter.prepare()
             plt.pause(0.01)
 
-        self.running = True
+        self._running = True
 
         self.started_time = time.perf_counter()
         self._data_queue = queue.Queue()
@@ -127,7 +164,7 @@ class Experiment:
                             self._plotter.update(df)
                         plt.show()
             finally:
-                self.running = False
+                self._running = False
                 plt.close()
     
     def get_t(self):
@@ -135,8 +172,6 @@ class Experiment:
 
     def send_row(self, row, *, capture: List[str] = None):
         row = copy.copy(row)
-        row["t"] = self.get_t()
-        row["time"] = datetime.datetime.now()
 
         if capture:
             frame = inspect.currentframe()
@@ -152,7 +187,13 @@ class Experiment:
                     raise RuntimeError(f"No local variable `{var}` is found.")
                 row[var] = local_vars[var]
 
-        self._data_queue.put(row)
+        if self.delegate is not None:
+            self.delegate.experiment_ctx_send_row(row)
+        else:
+            row["t"] = self.get_t()
+            row["time"] = datetime.datetime.now()
+
+            self._data_queue.put(row)
 
     def steps(self):
         raise NotImplementedError("Experiment::steps() must be implemented")
