@@ -1,6 +1,7 @@
 import time
 import copy
 import queue
+import os
 import datetime
 from threading import Thread
 import tkinter as tk
@@ -24,6 +25,8 @@ class GUIExperimentApp(ExperimentContextDelegate):
     _running_plotter_class = None
     _running_experiment = None # instantiated
     _running_plotter = None # instantiated
+
+    _file = None
 
     def __init__(self, experiments: list):
         self._experiments = experiments
@@ -118,10 +121,23 @@ class GUIExperimentApp(ExperimentContextDelegate):
         self._running_plotter_class = self._experiments[self._running_experiment_idx][1][self._running_plotter_idx]
         self._running_experiment = self._running_experiment_class()
         self._running_plotter = self._running_plotter_class()
-        self._running = True
 
-        # start
-        # TODO: plot
+
+        dir = "data"
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        self._filename = dir + "/" + self._running_experiment.filename + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        self._file = open(self._filename, "w")
+
+            # write headers
+        header = ["t", "time"] + self._running_experiment.columns
+        self._file.write(",".join(header) + "\n")
+
+        self._fig.clf()
+        self._running_plotter.fig = self._fig
+        self._running_plotter.prepare()
+        for i in self._result_tree.get_children():
+           self._result_tree.delete(i)
 
         self._running_experiment.delegate = self
 
@@ -130,21 +146,14 @@ class GUIExperimentApp(ExperimentContextDelegate):
             time.sleep(1)
             self._completed = True
 
-
         self._started_time = time.perf_counter()
         self._data_queue = queue.Queue()
         self._data = []
 
+        self._running = True
         self._experiment_thread = Thread(target=run)
         self._experiment_thread.daemon = True
         self._experiment_thread.start()
-
-        self._fig.clf()
-        self._running_plotter.fig = self._fig
-        self._running_plotter.prepare()
-
-        for i in self._result_tree.get_children():
-           self._result_tree.delete(i)
 
     def _handle_stop_experiment(self):
         self._stop_button["text"] = "stopping"
@@ -192,6 +201,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
                         row_list.append("")
                 self._result_tree.insert("", tk.END, values=row_list)
                 self._result_tree.yview_moveto(1)
+                self._file.write(",".join(row_list) + "\n")
 
             if len(self._data) > 0:
                 df = pd.DataFrame(self._data)
@@ -221,3 +231,6 @@ class GUIExperimentApp(ExperimentContextDelegate):
     def experiment_ctx_is_running(self) -> bool:
         return self._running
 
+    def __del__(self):
+        if self._file is not None:
+            self._file.close()
