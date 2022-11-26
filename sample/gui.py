@@ -1,4 +1,4 @@
-# sample of multi-thread plotting using Plotter / Experiment class
+# sample of GUI app
 import time
 import random
 
@@ -44,7 +44,5 @@ class MyPlotter(Plotter):
         self._ax.grid()
 
 if __name__ == "__main__":
-    # experiment = RandomWalkExperiment()
-    #experiment.plotter = MyPlotter() # Optional
     app = GUIExperimentApp([[RandomWalkExperiment, [MyPlotter]], [RandomWalkExperiment, [MyPlotter, MyPlotter]]])
     app.start()
