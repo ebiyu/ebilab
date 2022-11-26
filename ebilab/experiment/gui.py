@@ -112,6 +112,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
     def _handle_start_experiment(self):
         self._start_button["state"] = "disabled"
         self._stop_button["state"] = "normal"
+        self._quit_button["state"] = "disabled"
         self._experiment_list["state"] = "disabled"
         self._plotter_list["state"] = "disabled"
 
@@ -158,6 +159,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
     def _handle_stop_experiment(self):
         self._stop_button["text"] = "stopping"
         self._stop_button["state"] = "disabled"
+        self._quit_button["state"] = "normal"
         self._root.update()
 
         self._running = False
