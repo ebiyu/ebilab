@@ -28,9 +28,9 @@ class MyPlotter(Plotter):
     def prepare(self):
         # this method is executed before starting experiment
         # e.g. initializing Figure
-        # figure must be stored `fig` for GUI support
+        # figure is stored in `fig` for GUI support
 
-        self.fig, self._ax = plt.subplots(1, 1)
+        self._ax = self.fig.add_subplot(111)
 
     def update(self, df):
         # this method is executed many times during experiment

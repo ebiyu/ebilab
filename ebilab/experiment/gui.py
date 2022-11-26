@@ -7,6 +7,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import List, Tuple, Optional
 
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+
 from ._core import ExperimentContextDelegate, Experiment, Plotter
 
 class GUIExperimentApp(ExperimentContextDelegate):
@@ -63,6 +67,10 @@ class GUIExperimentApp(ExperimentContextDelegate):
         self._stop_button.grid(column=0, row=1)
         self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._root.destroy)
         self._quit_button.grid(column=0, row=2)
+
+        self._fig = plt.figure(figsize=(2, 1), constrained_layout=True)
+        self._canvas = FigureCanvasTkAgg(self._fig, master=plot_frm)
+        self._canvas.get_tk_widget().grid(column=0, row=0)
 
         self._result_tree = ttk.Treeview(table_frm)
         self._result_tree.grid()
@@ -122,6 +130,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
             time.sleep(1)
             self._completed = True
 
+
         self._started_time = time.perf_counter()
         self._data_queue = queue.Queue()
         self._data = []
@@ -130,6 +139,12 @@ class GUIExperimentApp(ExperimentContextDelegate):
         self._experiment_thread.daemon = True
         self._experiment_thread.start()
 
+        self._fig.clf()
+        self._running_plotter.fig = self._fig
+        self._running_plotter.prepare()
+
+        for i in self._result_tree.get_children():
+           self._result_tree.delete(i)
 
     def _handle_stop_experiment(self):
         self._stop_button["text"] = "stopping"
@@ -177,6 +192,11 @@ class GUIExperimentApp(ExperimentContextDelegate):
                         row_list.append("")
                 self._result_tree.insert("", tk.END, values=row_list)
                 self._result_tree.yview_moveto(1)
+
+            if len(self._data) > 0:
+                df = pd.DataFrame(self._data)
+                self._running_plotter.update(df)
+                self._canvas.draw()
 
         finally:
             self._root.after(30, self._update_experiment_loop)

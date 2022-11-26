@@ -62,6 +62,8 @@ class Experiment:
 
     delegate: Optional[ExperimentContextDelegate] = None
 
+    fig: plt.Figure
+
     @property
     def running(self) -> bool:
         if self.delegate is None:
