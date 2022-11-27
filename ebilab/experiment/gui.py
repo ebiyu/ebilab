@@ -167,7 +167,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
         self._experiment_thread.start()
 
     def _handle_stop_experiment(self):
-        self._stop_button["text"] = "stopping"
+        self._stop_button["text"] = "Stopping..."
         self._stop_button["state"] = "disabled"
         self._quit_button["state"] = "normal"
         self._root.update()
@@ -175,7 +175,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
         self._running = False
         self._experiment_thread.join()
 
-        self._stop_button["text"] = "stop"
+        self._stop_button["text"] = "Stop"
         self._start_button["state"] = "normal"
 
     def _get_data_from_queue(self):
