@@ -33,15 +33,18 @@ class GUIExperimentApp(ExperimentContextDelegate):
 
     def _create_ui(self):
         self._root = tk.Tk()
+        self._root.state("zoomed")
+        self._root.columnconfigure(0, weight=1)
+        self._root.rowconfigure(0, weight=1)
+
         frm = ttk.Frame(self._root, padding=10)
         frm.grid()
+        #frm.rowconfigure(0, weight=0)
+        #frm.rowconfigure(1, weight=1)
+        #frm.rowconfigure(2, weight=0)
 
         ctrl_frm = ttk.Frame(frm, padding=10)
         ctrl_frm.grid(column=0, row=0)
-        plot_frm = ttk.Frame(frm, padding=10)
-        plot_frm.grid(column=0, row=1)
-        table_frm = ttk.Frame(frm, padding=10)
-        table_frm.grid(column=0, row=2)
 
         experiment_list_pane = ttk.Frame(ctrl_frm, padding=10)
         experiment_list_pane.grid(column=0, row=0)
@@ -71,11 +74,18 @@ class GUIExperimentApp(ExperimentContextDelegate):
         self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._root.destroy)
         self._quit_button.grid(column=0, row=2)
 
-        self._fig = plt.figure(figsize=(2, 1), constrained_layout=True)
+        plot_frm = ttk.Frame(frm, padding=10)
+        plot_frm.grid(column=0, row=1)
+
+        self._fig = plt.figure(figsize=(6, 3), dpi=30, constrained_layout=True)
         self._canvas = FigureCanvasTkAgg(self._fig, master=plot_frm)
         self._canvas.get_tk_widget().grid(column=0, row=0)
 
+        table_frm = ttk.Frame(frm, padding=10)
+        table_frm.grid(column=0, row=2)
+
         self._result_tree = ttk.Treeview(table_frm)
+        self._result_tree.column("#0", width=0)
         self._result_tree.grid()
 
     def start(self):
@@ -98,7 +108,7 @@ class GUIExperimentApp(ExperimentContextDelegate):
         Experiment = self._experiments[idx][0]
         columns = ["t", "time"] + Experiment.columns
         self._result_tree["columns"] = columns
-        self._result_tree.heading('#0',text='')
+        #self._result_tree.heading('#0',text='')
         for col in columns:
             self._result_tree.heading(col, text=col)
 
