@@ -13,6 +13,7 @@ class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
     _state: Literal["running", "stopping", "stopped"] = "stopped"
     _plotter: Optional[IExperimentPlotter] = None
+    _update_experiment_loop_id: Optional[str] = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -56,7 +57,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._start_button.grid(column=0, row=0)
         self._stop_button = ttk.Button(buttons_pane, text="Stop", command=self._handle_stop_experiment, state="disabled")
         self._stop_button.grid(column=0, row=1)
-        self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._root.destroy)
+        self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._handle_quit)
         self._quit_button.grid(column=0, row=2)
 
         plot_frm = ttk.Frame(frm, padding=10)
@@ -72,6 +73,11 @@ class ExperimentUITkinter(IExperimentUI):
         self._result_tree = ttk.Treeview(table_frm)
         self._result_tree.column("#0", width=0)
         self._result_tree.grid()
+    
+    def _handle_quit(self):
+        if self._update_experiment_loop_id is not None:
+            self._root.after_cancel(self._update_experiment_loop_id)
+        self._root.destroy()
 
     def _handle_experiment_change(self, _):
         if not self._experiment_list.curselection():
@@ -101,7 +107,7 @@ class ExperimentUITkinter(IExperimentUI):
         # insert data
         self._experiment_list_var.set(list(map(lambda cls:cls.name, self.experiments)))
 
-        self._root.after(30, self._update_experiment_loop)
+        self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
         self._root.mainloop()
 
     def _get_data_from_queue(self):
@@ -113,10 +119,7 @@ class ExperimentUITkinter(IExperimentUI):
                 return d
 
     def _update_experiment_loop(self):
-        try:
-            if self._state == "stopped":
-                return
-
+        if self._state != "stopped":
             data = self._get_data_from_queue()
 
             for d in data:
@@ -140,8 +143,7 @@ class ExperimentUITkinter(IExperimentUI):
                 self._plotter.update(df)
                 self._canvas.draw()
 
-        finally:
-            self._root.after(30, self._update_experiment_loop)
+        self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
     
     def _handle_start_experiment(self):
         experiment_idx = self._experiment_list.curselection()[0]
