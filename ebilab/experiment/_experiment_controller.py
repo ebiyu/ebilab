@@ -1,4 +1,6 @@
 import datetime
+import numbers
+import os
 import sys
 import abc
 import copy
@@ -11,7 +13,7 @@ from threading import Thread
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def experiment_ctx_delegate_send_row(self, row=None):
+    def experiment_ctx_delegate_send_row(self, row):
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -117,26 +119,18 @@ class IExperimentUI(metaclass=abc.ABCMeta):
     def reset_data(self):
         raise NotImplementedError()
 
-class IFileManager(metaclass=abc.ABCMeta):
-    @property
-    def data_queue(self) -> queue.Queue:
-        raise NotImplementedError()
-
 class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _experiments: List[Type[IExperimentProtocol]]
     _ui: IExperimentUI
-    _file_manager: IFileManager
     _ctx: ExperimentContext
     _running = False
 
-    def __init__(self, *, experiments=List[Type[IExperimentProtocol]], ui: IExperimentUI, file_manager: IFileManager):
+    def __init__(self, *, experiments: List[Type[IExperimentProtocol]], ui: IExperimentUI):
         self._experiments = experiments
 
         self._ui = ui
         self._ui.delegate = self
         self._ui.experiments = experiments
-
-        self._file_manager = file_manager
 
     def launch(self):
         self._ui.launch()
@@ -151,6 +145,15 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._running_experiment = self._running_experiment_class()
         self._running_plotter = self._running_plotter_class()
         self._ui.set_plotter(self._running_plotter)
+
+        # file
+        dir = "data"
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        self._filename = dir + "/" + self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        self._file = open(self._filename, "w")
+        header = ["t", "time"] + self._running_experiment.columns
+        self._file.write(",".join(header) + "\n")
 
         self._ui.reset_data()
 
@@ -173,17 +176,31 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._experiment_thread.join()
         self._ui.update_state("stopped")
 
+        if self._file is not None:
+            self._file.close()
+
     def _get_t(self) -> float:
         return time.perf_counter() - self._started_time
 
     # ExperimentContextDelegate
-    def experiment_ctx_delegate_send_row(self, row=None):
+    def experiment_ctx_delegate_send_row(self, row):
         row = copy.copy(row)
         row["t"] = self._get_t()
         row["time"] = datetime.datetime.now()
 
         self._ui.data_queue.put(row)
-        self._file_manager.data_queue.put(row)
+
+        # write to file
+        row_list = []
+        for col in ["t", "time"] + self._running_experiment.columns:
+            if col in row:
+                if isinstance(row[col], numbers.Number):
+                    row_list.append(str(row[col]))
+                else:
+                    row_list.append(f'"{str(row[col])}"')
+            else:
+                row_list.append("")
+        self._file.write(",".join(row_list) + "\n")
 
     def experiment_ctx_delegate_get_t(self) -> float:
         return self._get_t()
@@ -199,12 +216,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     def handle_ui_stop(self):
         self._stop()
 
-class FileManagerStub(IFileManager):
-    _data_queue: queue.Queue
-    def __init__(self) -> None:
-        super().__init__()
-        self._data_queue = queue.Queue()
+    def __del__(self):
+        if self._file is not None:
+            self._file.close()
 
-    @property
-    def data_queue(self) -> queue.Queue:
-        return self._data_queue
