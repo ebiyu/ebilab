@@ -2,19 +2,15 @@
 import time
 import random
 
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-
 from ebilab.experiment import IExperimentProtocol, IExperimentPlotter, ExperimentContext, launch_experiment
-
 
 #  class to decide how to plot during experiment
 class MyPlotter(IExperimentPlotter):
     name = "simple"
     def prepare(self):
         # this method is executed before starting experiment
-        # e.g. initializing Figure
-        # figure is stored in `fig` for GUI support
+        # e.g. adding Axes to Figure
+        # figure is stored in `self.fig`
 
         self._ax = self.fig.add_subplot(111)
 
@@ -37,7 +33,7 @@ class RandomWalkExperiment(IExperimentProtocol):
 
     def steps(self, ctx: ExperimentContext) -> None: # step of measurement
         v = 0
-        while True: # please check self.running in every loop
+        while True:
             time.sleep(0.2)
 
             v += 1 if random.random() < 0.5 else -1
@@ -49,5 +45,4 @@ class RandomWalkExperiment(IExperimentProtocol):
 
 if __name__ == "__main__":
     launch_experiment([RandomWalkExperiment])
-    # app = GUIExperimentApp([[, [MyPlotter]], [RandomWalkExperiment, [MyPlotter, MyPlotter]]])
-    # app.start()
+

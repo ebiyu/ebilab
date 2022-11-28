@@ -1,4 +1,4 @@
-# sample of multi-thread measuremnt & plotting
+# for backward compatibility
 import queue
 import inspect
 import copy
@@ -10,38 +10,15 @@ from typing import Optional, List, Callable
 import os
 import abc
 
+from ._experiment_controller import IExperimentProtocol, IExperimentPlotter, ExperimentContext, ExperimentController
+from ._ui_tkinter import ExperimentUITkinter
+
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 import pandas as pd
 
-class ExperimentContextDelegate(metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def experiment_ctx_send_row(self, row=None):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def experiment_ctx_get_t(self) -> float:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def experiment_ctx_is_running(self) -> bool:
-        raise NotImplementedError()
-
-class ExperimentContext:
-    delegate: ExperimentContextDelegate
-    def __init__(self, delegate: ExperimentContextDelegate):
-        self.delegate = delegate
-
-    def send_row(self, row=None):
-        self.delegate.experiment_ctx_send_row(row)
-
-    def get_t(self) -> float:
-        return self.delegate.experiment_ctx_get_t()
-
-    def is_running(self) -> bool:
-        return self.delegate.experiment_ctx_is_running()
-
 class Plotter:
+    fig: plt.Figure
     def prepare(self):
         raise NotImplementedError("Plotter::prepare() must be implemented")
 
@@ -49,153 +26,81 @@ class Plotter:
         raise NotImplementedError("Plotter::update() must be implemented")
 
 class Experiment:
-    started_time: float # in sec
-    _running = False
-    columns = None
-    filename = "experiment"
+    columns: List[str]
+    filename: str
 
     _plotter: Optional[Plotter] = None
-    _data_queue: queue.Queue
-    _data = []
-    _experiment_thread = None
-    _completed = False
 
-    delegate: Optional[ExperimentContextDelegate] = None
-
-    fig: plt.Figure
+    def _loop(self):
+        raise NotImplementedError()
 
     @property
     def running(self) -> bool:
-        if self.delegate is None:
-            return self._running
-        else:
-            return self.delegate.experiment_ctx_is_running()
+        self._loop()
+        return True
 
     @property
     def plotter(self) -> Optional[Plotter]:
         return self._plotter
-    
+
     @plotter.setter
     def plotter(self, plotter: Optional[Plotter]):
-        if self._running:
-            raise RuntimeError("Plotter cannnot be set during experiment!!")
         self._plotter = plotter
 
-    def _get_data_from_queue(self):
-        d = []
-        while True:
-            try:
-                d.append(self._data_queue.get(False))
-            except queue.Empty:
-                return d
-
-    def _write_to_file(self, row):
-        row_list = [str(row["t"]), str(row["time"])]
-        for col in self.columns:
-            if col in row:
-                row_list.append(str(row[col]))
-            else:
-                row_list.append("")
-        self._f.write(",".join(row_list)+ "\n")
-        print(",\t".join(row_list))
-
-    def _main_loop(self):
-        while self._experiment_thread is not None and self._experiment_thread.is_alive():
-            # get data from experiment thread
-            data = self._get_data_from_queue()
-
-            for d in data:
-                self._data.append(d)
-                self._write_to_file(d)
-
-            if self._plotter is not None:
-                if len(self._data) > 0:
-                    df = pd.DataFrame(self._data)
-                    self._plotter.update(df)
-
-                if sys.platform == "darwin":
-                    plt.pause(0.1) # workaround for macOS
-                else:
-                    plt.gcf().canvas.draw_idle()
-                    plt.gcf().canvas.flush_events()
-
     def start(self):
-        if self.columns is None:
-            raise NotImplementedError("Experiment::columns is not specified")
+        self_outer = self
+        if self_outer._plotter is None:
+            raise NotImplementedError()
+        class ExperimentPlotter(IExperimentPlotter):
+            name = "plot"
+            _original: Plotter
 
-        if self._plotter is not None:
-            self._plotter.prepare()
-            plt.pause(0.01)
+            def __init__(self) -> None:
+                self._original = self_outer._plotter
 
-        self._running = True
+            def prepare(self):
+                self._original.fig = self.fig
+                self._original.prepare()
 
-        self.started_time = time.perf_counter()
-        self._data_queue = queue.Queue()
+            def update(self, df):
+                self._original.update(df)
 
-        # start experiment thread
-        def run():
-            self.steps()
-            time.sleep(1)
-            self._completed = True
+        class ExperimentProtocol(IExperimentProtocol):
+            plotter_classes = [ExperimentPlotter]
+            name = self_outer.filename
+            columns = self_outer.columns
 
-        self._experiment_thread = Thread(target=run)
-        self._experiment_thread.daemon = True
-        self._experiment_thread.start()
+            def steps(self, ctx: ExperimentContext) -> None: # step of measurement
+                def send_row(row, *, capture: Optional[List[str]] = None):
+                    row = copy.copy(row)
 
-        dir = "data"
-        if not os.path.exists(dir):
-            os.mkdir(dir)
+                    if capture:
+                        frame = inspect.currentframe()
+                        try:
+                            local_vars = frame.f_back.f_locals
+                        finally:
+                            del frame
 
-        filename = dir + "/" + self.filename + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+                        for var in capture:
+                            if var in row:
+                                raise ValueError(f"Duplicate key: `{var}` is defined in row and capture.")
+                            if var not in local_vars:
+                                raise RuntimeError(f"No local variable `{var}` is found.")
+                            row[var] = local_vars[var]
+                    ctx.send_row(row)
+                self_outer.send_row = send_row
 
-        with open(filename, "w") as self._f:
-            # write headers
-            header = ["t", "time"] + self.columns
-            self._f.write(",".join(header) + "\n")
-            print(",\t".join(header))
+                self_outer._loop = ctx.loop
 
-            try:
-                self._main_loop()
+                self_outer.steps()
 
-                # show plot in successful exit
-                if self._completed:
-                    print("Measurement completed.", file=sys.stderr)
-                    if self._plotter is not None:
-                        if len(self._data) > 0:
-                            df = pd.DataFrame(self._data)
-                            self._plotter.update(df)
-                        plt.show()
-            finally:
-                self._running = False
-                plt.close()
-    
-    def get_t(self):
-        return time.perf_counter() - self.started_time
+        ui = ExperimentUITkinter()
+        app = ExperimentController(experiments=[ExperimentProtocol], ui=ui)
+        app.launch()
 
-    def send_row(self, row, *, capture: List[str] = None):
-        row = copy.copy(row)
-
-        if capture:
-            frame = inspect.currentframe()
-            try:
-                local_vars = frame.f_back.f_locals
-            finally:
-                del frame
-
-            for var in capture:
-                if var in row:
-                    raise ValueError(f"Duplicate key: `{var}` is defined in row and capture.")
-                if var not in local_vars:
-                    raise RuntimeError(f"No local variable `{var}` is found.")
-                row[var] = local_vars[var]
-
-        if self.delegate is not None:
-            self.delegate.experiment_ctx_send_row(row)
-        else:
-            row["t"] = self.get_t()
-            row["time"] = datetime.datetime.now()
-
-            self._data_queue.put(row)
+    def send_row(self, row, *, capture: Optional[List[str]] = None):
+        raise NotImplementedError()
 
     def steps(self):
         raise NotImplementedError("Experiment::steps() must be implemented")
+

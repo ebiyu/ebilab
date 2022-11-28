@@ -2,8 +2,6 @@
 import time
 import random
 
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
 
 from ebilab.experiment import Plotter, Experiment
 
@@ -21,13 +19,11 @@ class MyExperiment(Experiment):
 
 # (Optional) class to decide how to plot during experiment
 class MyPlotter(Plotter):
-    _fig: Figure
-
     def prepare(self):
         # this method is executed before starting experiment
         # e.g. initializing Figure
 
-        self._fig, self._ax = plt.subplots(1, 1)
+        self._ax = self.fig.add_subplot(111)
 
     def update(self, df):
         # this method is executed many times during experiment

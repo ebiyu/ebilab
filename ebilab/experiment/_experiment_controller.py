@@ -10,6 +10,8 @@ from typing import List, Optional, Type, Literal
 import weakref
 from threading import Thread
 
+import matplotlib.pyplot as plt
+
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -40,10 +42,8 @@ class ExperimentContext:
         self._delegate.experiment_ctx_delegate_loop()
 
 class IExperimentPlotter(metaclass=abc.ABCMeta):
-    @property
-    @abc.abstractmethod
-    def name(self) -> str:
-        raise NotImplementedError()
+    fig: plt.Figure
+    name: str
 
     @abc.abstractmethod
     def prepare(self):
@@ -54,20 +54,9 @@ class IExperimentPlotter(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 class IExperimentProtocol(metaclass=abc.ABCMeta):
-    @property
-    @abc.abstractmethod
-    def plotter_classes(self) -> List[Type[IExperimentPlotter]]:
-        raise NotImplementedError()
-
-    @property
-    @abc.abstractmethod
-    def name(self) -> str:
-        raise NotImplementedError()
-
-    @property
-    @abc.abstractmethod
-    def columns(self) -> List[str]:
-        raise NotImplementedError()
+    name: str
+    columns: List[str]
+    plotter_classes: List[Type[IExperimentPlotter]]
 
     @abc.abstractmethod
     def steps(self, ctx: ExperimentContext) -> None:
@@ -124,6 +113,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _ui: IExperimentUI
     _ctx: ExperimentContext
     _running = False
+    _file = None
 
     def __init__(self, *, experiments: List[Type[IExperimentProtocol]], ui: IExperimentUI):
         self._experiments = experiments
