@@ -6,7 +6,7 @@ import abc
 import copy
 import time
 import queue
-from typing import List, Optional, Type, Literal, Dict
+from typing import List, Optional, Type, Dict
 import weakref
 from threading import Thread
 
@@ -105,7 +105,7 @@ class IExperimentUI(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def update_state(self, state: Literal["running", "stopping", "stopped"]):
+    def update_state(self, state: str):
         raise NotImplementedError()
 
     @abc.abstractmethod

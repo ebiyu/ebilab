@@ -1,5 +1,5 @@
 import queue
-from typing import List, Optional, Type, Literal
+from typing import List, Optional, Type
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font as tkf
@@ -22,7 +22,7 @@ except:
 
 class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
-    _state: Literal["running", "stopping", "stopped"] = "stopped"
+    _state: str = "stopped"
     _plotter: Optional[IExperimentPlotter] = None
     _update_experiment_loop_id: Optional[str] = None
     _options_widget = []
@@ -292,7 +292,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
 
-    def update_state(self, state: Literal["running", "stopping", "stopped"]):
+    def update_state(self, state: str):
         self._state = state
 
     def reset_data(self):
