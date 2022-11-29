@@ -3,7 +3,7 @@
 ####################
 
 実験中には、測定値をグラフによって可視化したいことがあります。
-これを実現するために、 :py:mod:`ebilab.experiment.core` モジュールを用いることができます。
+これを実現するために、 :py:mod:`ebilab.experiment` モジュールを用いることができます。
 
 ***************
 簡易的な実装
@@ -57,8 +57,7 @@
 :py:class:`Experiment <ebilab.experiment.core.Experiment>` ・ :py:class:`Plotter <ebilab.experiment.core.Plotter>` を利用した実装
 **********************************************************************************************************************************
 
-:py:mod:`ebilab.experiment.core` モジュール に含まれる
-:py:class:`Experiment <ebilab.experiment.core.Experiment>` クラス、 :py:class:`Plotter <ebilab.experiment.core.Plotter>` クラスを用いることで、
+:py:mod:`ebilab.experiment` モジュールを用いることで、
 これらの問題を解決することができます。
 
 上記のコードは、以下のように書き変えることができます。
@@ -68,8 +67,8 @@
    :language: python
    :linenos:
 
-:py:class:`Experiment <ebilab.experiment.core.Experiment>` クラス、 :py:class:`Plotter <ebilab.experiment.core.Plotter>` クラスを継承し、
-実験のロジックと可視化のロジックをそれぞれ定義することで、実験を設計することができます。
+:py:class:`IExperimentProtocol <ebilab.experiment.core.IExperimentProtocol>` クラス、 :py:class:`IExperimentPlotter <ebilab.experiment.core.IExperimentPlotter>` クラスを継承し、
+実験のロジックと可視化のロジックをそれぞれ実装することで、実験を設計することができます。
 これにより、ロジックを適切に分割し、読みやすいコードを実現することができます。
 また、クラス単位で定義することにより、同じ実験で可視化の方法だけを変更したり、別の実験でも同一の可視化方法を用いるなど、
 それぞれのコンポーネントを再利用しやすくなります。
@@ -83,7 +82,20 @@
 
 ユーザーは以下のクラスを実装する必要があります。
 
-Experient クラス
+ExperimentPlotter クラス
+====================
+
+可視化のロジックは、以下のように定義されます。
+
+.. literalinclude:: ../../../sample/cont_r.py
+   :language: python
+   :lines: 7-19
+
+* :code:`name` プロパティは、可視化のロジックの区別に用います。
+* prepareコマンドは初回のみ実行されます。
+* updateコマンドは、定期的に実行されます。
+
+ExperientProtocol クラス
 ====================
 
 実験のロジックは、以下のように定義されます。
@@ -91,36 +103,21 @@ Experient クラス
 
 .. literalinclude:: ../../../sample/cont_r.py
    :language: python
-   :lines: 8-16
+   :lines: 21-31
 
 * クラスの :code:`columns` プロパティを用いて、記録用のcsvファイルの列を指定します。
+* スクリプト実行時のカレントディレクトリ配下に :code:`data` ディレクトリが作成され、csvファイルが保存されます。
+  クラスの :code:`name` プロパティで指定した名前に、自動で日時が記録され、ファイル名となります。
+* クラスの :code:`plotter_classes` プロパティで、定義したExperimentPlotterの **クラス名** を指定してください。
 * steps関数に、実際の実験の処理を定義します。
 
-    * 実験を途中で中断できるようにするため、 :code:`self.running` をチェックして :code:`False` だった場合はスクリプトを終了してください。
-    * :code:`self.send_row()` メソッドを用いて、測定結果のデータを記録することができます。
+    * 適切に実験を制御できるようにするため、実験中のループ内で :code:`ctx.loop()` を毎回呼び出してください。
+    * :code:`ctx.send_row()` メソッドを用いて、測定結果のデータを記録することができます。
 
       * メソッド実行1回あたり、csvファイル1行になります。省略された項目の列は空欄となります。
       * ファイルへの保存やタイムスタンプの挿入などは、自動で行なわれます。
 
-* スクリプト実行時のカレントディレクトリ配下に :code:`data` ディレクトリが作成され、csvファイルが保存されます。
-  クラスの :code:`filename` プロパティで指定した名前に、自動で日時が記録され、ファイル名となります。
 
-Plotter クラス
-====================
-
-可視化のロジックは、以下のように定義されます。
-
-.. note::
-
-    リアルタイムプロットが必要ない場合は実装を省略することができます。
-    その場合でも、ファイルへの自動保存などの恩恵を得ることができます。
-
-.. literalinclude:: ../../../sample/cont_r.py
-   :language: python
-   :lines: 18-32
-
-* prepareコマンドは初回のみ実行されます。
-* updateコマンドは、定期的に実行されます。
 
 実験の実行
 ====================
@@ -130,9 +127,9 @@ Plotter クラス
 
 .. literalinclude:: ../../../sample/cont_r.py
    :language: python
-   :lines: 34-
+   :lines: 33-
 
 .. note::
 
-    リアルタイムプロットが必要ない場合はplotterの指定は必要ありません。
+    複数の実験を指定することができます。
 
