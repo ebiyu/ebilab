@@ -34,6 +34,8 @@ class VisaManager:
         return self._rm
 
     def __del__(self):
+        for _, device in self._devices.items():
+            device.inst.close()
         if self.rm:
             self.rm.close()
 
@@ -126,8 +128,3 @@ class VisaDevice:
         Equivalent to :py:func:`inst.query` in pyvisa class
         """
         return self.pyvisa_inst.query(cmd)
-    
-    def __del__(self) -> None:
-        if hasattr(self, "pyvisa_inst") and self.pyvisa_inst is not None:
-            self.pyvisa_inst.close()
-
