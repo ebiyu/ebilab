@@ -2,6 +2,7 @@
 import time
 import random
 
+import matplotlib.pyplot as plt
 
 from ebilab.experiment import Plotter, Experiment
 
@@ -24,6 +25,9 @@ class MyPlotter(Plotter):
         # e.g. initializing Figure
 
         self._ax = self.fig.add_subplot(111)
+
+        # or specify number
+        # _, self._ax = plt.subplots(constrained_layout=True, num=self.fig.number)
 
     def update(self, df):
         # this method is executed many times during experiment
