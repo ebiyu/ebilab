@@ -6,11 +6,13 @@ import abc
 import copy
 import time
 import queue
-from typing import List, Optional, Type, Literal
+from typing import List, Optional, Type, Literal, Dict
 import weakref
 from threading import Thread
 
 import matplotlib.pyplot as plt
+
+from .options import OptionField
 
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
@@ -45,6 +47,8 @@ class IExperimentPlotter(metaclass=abc.ABCMeta):
     fig: plt.Figure
     name: str
 
+    options: Optional[Dict[str, OptionField]]
+
     @abc.abstractmethod
     def prepare(self):
         raise NotImplementedError()
@@ -59,7 +63,7 @@ class IExperimentProtocol(metaclass=abc.ABCMeta):
     plotter_classes: List[Type[IExperimentPlotter]]
 
     @abc.abstractmethod
-    def steps(self, ctx: ExperimentContext) -> None:
+    def steps(self, ctx: ExperimentContext, options: dict) -> None:
         raise NotImplementedError()
 
 class ExperimentUIDelegate(metaclass=abc.ABCMeta):
@@ -108,12 +112,18 @@ class IExperimentUI(metaclass=abc.ABCMeta):
     def reset_data(self):
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_options(self) -> dict:
+        raise NotImplementedError()
+
 class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _experiments: List[Type[IExperimentProtocol]]
     _ui: IExperimentUI
     _ctx: ExperimentContext
     _running = False
     _file = None
+
+    _experiment_thread = None
 
     def __init__(self, *, experiments: List[Type[IExperimentProtocol]], ui: IExperimentUI):
         self._experiments = experiments
@@ -149,8 +159,10 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
         self._ctx = ExperimentContext(delegate=self)
 
+        options = self._ui.get_options()
+
         def run():
-            self._running_experiment.steps(self._ctx)
+            self._running_experiment.steps(self._ctx, options)
             time.sleep(1)
             self._running = False
             self._ui.update_state("stopped")
@@ -162,9 +174,11 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._experiment_thread.start()
 
     def _stop(self):
+
         self._ui.update_state("stopping")
         self._running = False
-        self._experiment_thread.join()
+        if self._experiment_thread is not None:
+            self._experiment_thread.join()
         self._ui.update_state("stopped")
 
         if self._file is not None:

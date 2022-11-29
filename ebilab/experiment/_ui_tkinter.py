@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol
+from .options import FloatField
 
 try:
     import ctypes
@@ -24,6 +25,8 @@ class ExperimentUITkinter(IExperimentUI):
     _state: Literal["running", "stopping", "stopped"] = "stopped"
     _plotter: Optional[IExperimentPlotter] = None
     _update_experiment_loop_id: Optional[str] = None
+    _options_widget = []
+    _options_textvars = []
 
     def __init__(self) -> None:
         super().__init__()
@@ -47,23 +50,29 @@ class ExperimentUITkinter(IExperimentUI):
         ctrl_frm.rowconfigure(0, weight=1)
         ctrl_frm.columnconfigure(0, weight=1)
         ctrl_frm.columnconfigure(1, weight=1)
+        ctrl_frm.columnconfigure(2, weight=1)
 
         experiment_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
         experiment_list_pane.grid(column=0, row=0, sticky=tk.NSEW)
         experiment_list_pane.columnconfigure(0, weight=1)
         experiment_list_pane.rowconfigure(1, weight=1)
-        tk.Label(experiment_list_pane, justify="center", text="Experiment List").grid(column=0, row=0)
+        tk.Label(experiment_list_pane, justify="center", text="Experiment List").grid(column=0, row=0, sticky=tk.N)
 
         self._experiment_list_var = tk.StringVar(value=[])
         self._experiment_list = tk.Listbox(experiment_list_pane, listvariable=self._experiment_list_var, exportselection=False, height=5)
         self._experiment_list.grid(column=0, row=1, sticky=tk.NSEW)
         self._experiment_list.bind("<<ListboxSelect>>", self._handle_experiment_change)
 
+        self._options_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
+        self._options_pane.grid(column=1, row=0, sticky=tk.NSEW)
+        self._options_pane.columnconfigure(0, weight=1)
+        tk.Label(self._options_pane, justify="center", text="Options").grid(column=0, row=0, sticky=tk.N)
+
         plotter_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        plotter_list_pane.grid(column=1, row=0, sticky=tk.NSEW)
+        plotter_list_pane.grid(column=2, row=0, sticky=tk.NSEW)
         plotter_list_pane.columnconfigure(0, weight=1)
         plotter_list_pane.rowconfigure(1, weight=1)
-        tk.Label(plotter_list_pane, justify="center", text="Plotter List").grid(column=0, row=0)
+        tk.Label(plotter_list_pane, justify="center", text="Plotter List").grid(column=0, row=0, sticky=tk.N)
 
         self._plotter_list_var = tk.StringVar(value=[])
         self._plotter_list = tk.Listbox(plotter_list_pane, listvariable=self._plotter_list_var, exportselection=False, height=5)
@@ -71,7 +80,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._plotter_list.bind("<<ListboxSelect>>", self._handle_plotter_change)
 
         buttons_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        buttons_pane.grid(column=2, row=0, sticky="nes")
+        buttons_pane.grid(column=3, row=0, sticky="nes")
 
         self._start_button = ttk.Button(buttons_pane, text="Start", command=self._handle_start_experiment, state="disabled")
         self._start_button.grid(column=0, row=0)
@@ -109,6 +118,10 @@ class ExperimentUITkinter(IExperimentUI):
         self._root.quit()
         self._root.destroy()
 
+    def _get_current_experiment(self) -> Type[IExperimentProtocol]:
+        idx = self._experiment_list.curselection()[0]
+        return self.experiments[idx]
+
     def _handle_experiment_change(self, _):
         if not self._experiment_list.curselection():
             return
@@ -117,6 +130,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._plotter_list_var.set(list(map(lambda cls:cls.name, self.experiments[idx].plotter_classes)))
         self._plotter_list.select_clear(0, tk.END)
 
+        # update cols
         Experiment = self.experiments[idx]
         columns = ["t", "time"] + Experiment.columns
         self._result_tree["columns"] = columns
@@ -125,12 +139,69 @@ class ExperimentUITkinter(IExperimentUI):
             self._result_tree.heading(col, text=col)
             self._result_tree.column(col, minwidth=100, anchor='c', stretch=True)
 
+        # update options
+        for widgets in self._options_pane.winfo_children():
+            widgets.destroy()
+
+        tk.Label(self._options_pane, justify="center", text="Options").grid(column=0, row=0, sticky=tk.N)
+
+        self._options_widget = []
+        self._options_textvars = []
+
+        for i, (key, field) in enumerate(Experiment.options.items() or []):
+            if isinstance(field, FloatField):
+                label = tk.Label(self._options_pane, text=key)
+                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
+
+                var = tk.StringVar(value=str(field.default))
+                var.trace("w", self._validate_options_and_update_ui)
+                widget = tk.Entry(self._options_pane, textvariable=var)
+                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
+
+                self._options_textvars.append(var)
+                self._options_widget.append(widget)
+                continue
+            raise ValueError("Unknown field type.")
+
+        self._validate_options_and_update_ui()
+
+    def _get_options(self) -> Optional[dict]:
+        Experiment = self._get_current_experiment()
+        if Experiment.options.items() is None:
+            return {}
+        ret = {}
+        for (key, field), widget, var in zip(Experiment.options.items(), self._options_widget, self._options_textvars):
+            if isinstance(field, FloatField):
+                if not var.get().isnumeric():
+                    return None
+                val = float(var.get())
+                if field.min is not None and val < field.min:
+                    return None
+                if field.max is not None and val > field.max:
+                    return None
+                ret[key] = val
+                continue
+            raise ValueError("Unknown field type.")
+        return ret
+
+    def _options_is_valid(self):
+        return self._get_options() is not None
+
+    def _validate_options_and_update_ui(self, *_):
+        if self._state != "stopped":
+            return
+        if self._options_is_valid():
+            self._start_button["state"] = "normal"
+        else:
+            self._start_button["state"] = "disabled"
+
     def _handle_plotter_change(self, _):
         if not self._plotter_list.curselection():
             return
 
         if self._experiment_list.curselection() and self._plotter_list.curselection():
             self._start_button["state"] = "normal"
+            self._validate_options_and_update_ui(self)
 
     def launch(self):
         self._create_ui()
@@ -200,16 +271,23 @@ class ExperimentUITkinter(IExperimentUI):
             self._stop_button["state"] = "normal"
             self._quit_button["state"] = "disabled"
             self._stop_button["text"] = "Stop"
+            for widget in self._options_widget:
+                widget["state"] = "disabled" 
         elif self._state == "stopping":
             self._start_button["state"] = "disabled"
             self._stop_button["state"] = "normal"
             self._quit_button["state"] = "normal"
             self._stop_button["text"] = "Stopping..."
+            for widget in self._options_widget:
+                widget["state"] = "disabled" 
         else:
             if self._experiment_list.curselection() and self._plotter_list.curselection():
                 self._start_button["state"] = "normal"
+                self._validate_options_and_update_ui()
             else:
                 self._start_button["state"] = "disabled"
+            for widget in self._options_widget:
+                widget["state"] = "normal" 
             self._stop_button["state"] = "disabled"
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
@@ -223,3 +301,9 @@ class ExperimentUITkinter(IExperimentUI):
         if self._plotter is not None:
             self._plotter.fig = self._fig
             self._plotter.prepare()
+
+    def get_options(self) -> dict:
+        options = self._get_options()
+        if options is None:
+            raise RuntimeError()
+        return options

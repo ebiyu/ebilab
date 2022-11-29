@@ -70,7 +70,7 @@ class Experiment:
             name = self_outer.filename
             columns = self_outer.columns
 
-            def steps(self, ctx: ExperimentContext) -> None: # step of measurement
+            def steps(self, ctx: ExperimentContext, options: dict) -> None: # step of measurement
                 def send_row(row, *, capture: Optional[List[str]] = None):
                     row = copy.copy(row)
 
