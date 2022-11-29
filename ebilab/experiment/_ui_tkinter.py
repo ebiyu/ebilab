@@ -36,32 +36,42 @@ class ExperimentUITkinter(IExperimentUI):
         self._root.columnconfigure(0, weight=1)
         self._root.rowconfigure(0, weight=1)
 
-        frm = ttk.Frame(self._root, padding=10)
-        frm.grid()
+        frm = ttk.Frame(self._root, padding=10, relief="solid")
+        frm.grid(sticky="nsew")
+        frm.columnconfigure(0, weight=1)
+        frm.rowconfigure(1, weight=1)
+        frm.rowconfigure(2, weight=1)
 
-        ctrl_frm = ttk.Frame(frm, padding=10)
-        ctrl_frm.grid(column=0, row=0)
+        ctrl_frm = ttk.Frame(frm, padding=10, relief="solid")
+        ctrl_frm.grid(column=0, row=0, sticky="new")
+        ctrl_frm.rowconfigure(0, weight=1)
+        ctrl_frm.columnconfigure(0, weight=1)
+        ctrl_frm.columnconfigure(1, weight=1)
 
-        experiment_list_pane = ttk.Frame(ctrl_frm, padding=10)
-        experiment_list_pane.grid(column=0, row=0)
+        experiment_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
+        experiment_list_pane.grid(column=0, row=0, sticky=tk.NSEW)
+        experiment_list_pane.columnconfigure(0, weight=1)
+        experiment_list_pane.rowconfigure(1, weight=1)
         tk.Label(experiment_list_pane, justify="center", text="Experiment List").grid(column=0, row=0)
 
         self._experiment_list_var = tk.StringVar(value=[])
-        self._experiment_list = tk.Listbox(experiment_list_pane, listvariable=self._experiment_list_var, exportselection=False)
-        self._experiment_list.grid(column=0, row=1)
+        self._experiment_list = tk.Listbox(experiment_list_pane, listvariable=self._experiment_list_var, exportselection=False, height=5)
+        self._experiment_list.grid(column=0, row=1, sticky=tk.NSEW)
         self._experiment_list.bind("<<ListboxSelect>>", self._handle_experiment_change)
 
-        plotter_list_pane = ttk.Frame(ctrl_frm, padding=10)
-        plotter_list_pane.grid(column=1, row=0)
+        plotter_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
+        plotter_list_pane.grid(column=1, row=0, sticky=tk.NSEW)
+        plotter_list_pane.columnconfigure(0, weight=1)
+        plotter_list_pane.rowconfigure(1, weight=1)
         tk.Label(plotter_list_pane, justify="center", text="Plotter List").grid(column=0, row=0)
 
         self._plotter_list_var = tk.StringVar(value=[])
-        self._plotter_list = tk.Listbox(plotter_list_pane, listvariable=self._plotter_list_var, exportselection=False)
-        self._plotter_list.grid(column=0, row=1)
+        self._plotter_list = tk.Listbox(plotter_list_pane, listvariable=self._plotter_list_var, exportselection=False, height=5)
+        self._plotter_list.grid(column=0, row=1, sticky=tk.NSEW)
         self._plotter_list.bind("<<ListboxSelect>>", self._handle_plotter_change)
 
-        buttons_pane = ttk.Frame(ctrl_frm, padding=10)
-        buttons_pane.grid(column=2, row=0)
+        buttons_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
+        buttons_pane.grid(column=2, row=0, sticky="nes")
 
         self._start_button = ttk.Button(buttons_pane, text="Start", command=self._handle_start_experiment, state="disabled")
         self._start_button.grid(column=0, row=0)
@@ -70,19 +80,24 @@ class ExperimentUITkinter(IExperimentUI):
         self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._handle_quit)
         self._quit_button.grid(column=0, row=2)
 
-        plot_frm = ttk.Frame(frm, padding=10)
-        plot_frm.grid(column=0, row=1)
+        plot_frm = ttk.Frame(frm, padding=10, relief="solid")
+        plot_frm.grid(column=0, row=1, sticky=tk.NSEW)
+        plot_frm.columnconfigure(0, weight=1)
+        plot_frm.rowconfigure(0, weight=1)
 
-        self._fig = plt.figure(figsize=(6, 3), dpi=30, constrained_layout=True)
+        self._fig = plt.figure(figsize=(6, 3), dpi=100, constrained_layout=True)
         self._canvas = FigureCanvasTkAgg(self._fig, master=plot_frm)
-        self._canvas.get_tk_widget().grid(column=0, row=0)
+        self._canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
 
-        table_frm = ttk.Frame(frm, padding=10)
-        table_frm.grid(column=0, row=2)
+        table_frm = ttk.Frame(frm, padding=10, relief="solid")
+        table_frm.grid(column=0, row=2, sticky="wes")
+        table_frm.columnconfigure(0, weight=1)
+        table_frm.rowconfigure(0, weight=1)
 
         self._result_tree = ttk.Treeview(table_frm)
         self._result_tree.column("#0", width=0)
-        self._result_tree.grid()
+        self._result_tree.grid(row=0, column=0, sticky=tk.NSEW)
+        #self._result_tree.grid()
 
         lh = tkf.Font(font='TkDefaultFont').metrics('linespace')
         style = ttk.Style()
@@ -105,9 +120,10 @@ class ExperimentUITkinter(IExperimentUI):
         Experiment = self.experiments[idx]
         columns = ["t", "time"] + Experiment.columns
         self._result_tree["columns"] = columns
-        #self._result_tree.heading('#0',text='')
+        self._result_tree.column("#0", width=0, stretch=False)
         for col in columns:
             self._result_tree.heading(col, text=col)
+            self._result_tree.column(col, minwidth=100, anchor='c', stretch=True)
 
     def _handle_plotter_change(self, _):
         if not self._plotter_list.curselection():
