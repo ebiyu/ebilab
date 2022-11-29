@@ -77,6 +77,7 @@ class ExperimentUITkinter(IExperimentUI):
     def _handle_quit(self):
         if self._update_experiment_loop_id is not None:
             self._root.after_cancel(self._update_experiment_loop_id)
+        self._root.quit()
         self._root.destroy()
 
     def _handle_experiment_change(self, _):
