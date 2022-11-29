@@ -1,6 +1,5 @@
 from typing import List, Type
 
-from ._core import Experiment, Plotter
 from ._experiment_controller import IExperimentProtocol, ExperimentContext, ExperimentController, IExperimentPlotter
 
 def launch_experiment(experiments: List[Type[IExperimentProtocol]]):

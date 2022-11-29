@@ -32,6 +32,7 @@ class RandomWalkExperiment(IExperimentProtocol):
     name = "random-walk" # filename is suffixed by datetime
     plotter_classes = [MyPlotter]
 
+    # available in GUI
     options = {
         "initial": FloatField(default=2),
     }
