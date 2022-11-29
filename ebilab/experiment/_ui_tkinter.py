@@ -2,12 +2,22 @@ import queue
 from typing import List, Optional, Type, Literal
 import tkinter as tk
 from tkinter import ttk
+import tkinter.font as tkf
 
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol
+
+try:
+    import ctypes
+    ctypes.windll.shcore.SetProcessDpiAwareness(2) 
+except:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except:
+        pass
 
 class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
@@ -73,6 +83,10 @@ class ExperimentUITkinter(IExperimentUI):
         self._result_tree = ttk.Treeview(table_frm)
         self._result_tree.column("#0", width=0)
         self._result_tree.grid()
+
+        lh = tkf.Font(font='TkDefaultFont').metrics('linespace')
+        style = ttk.Style()
+        style.configure('Treeview', rowheight=lh)
     
     def _handle_quit(self):
         if self._update_experiment_loop_id is not None:
