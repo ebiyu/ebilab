@@ -152,7 +152,8 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         def run():
             self._running_experiment.steps(self._ctx)
             time.sleep(1)
-            self._completed = True
+            self._running = False
+            self._ui.update_state("stopped")
 
         self._started_time = time.perf_counter()
         self._running = True

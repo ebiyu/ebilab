@@ -150,6 +150,7 @@ class ExperimentUITkinter(IExperimentUI):
                 return d
 
     def _update_experiment_loop(self):
+        self._update_ui_from_state()
         if self._state != "stopped":
             data = self._get_data_from_queue()
 
@@ -193,9 +194,7 @@ class ExperimentUITkinter(IExperimentUI):
     def set_plotter(self, plotter: Optional[IExperimentPlotter]):
         self._plotter = plotter
 
-    def update_state(self, state: Literal["running", "stopping", "stopped"]):
-        self._state = state
-
+    def _update_ui_from_state(self):
         if self._state == "running":
             self._start_button["state"] = "disabled"
             self._stop_button["state"] = "normal"
@@ -214,6 +213,9 @@ class ExperimentUITkinter(IExperimentUI):
             self._stop_button["state"] = "disabled"
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
+
+    def update_state(self, state: Literal["running", "stopping", "stopped"]):
+        self._state = state
 
     def reset_data(self):
         self._fig.clf()
