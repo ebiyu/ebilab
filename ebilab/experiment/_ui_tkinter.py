@@ -11,6 +11,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol
 from .options import FloatField
 
+# windows dpi workaround
 try:
     import ctypes
     ctypes.windll.shcore.SetProcessDpiAwareness(2) 
