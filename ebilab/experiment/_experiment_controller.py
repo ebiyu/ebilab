@@ -8,6 +8,7 @@ import socket
 import copy
 import time
 import queue
+from pathlib import Path
 from typing import List, Optional, Type, Dict
 import weakref
 from threading import Thread
@@ -172,10 +173,10 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
 
         # file
-        dir = "data"
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-        self._filename = dir + "/" + self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        dir = Path(".") / "data" / datetime.datetime.now().strftime("%y%m%d")
+        os.makedirs(dir, exist_ok=True)
+        filename = self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        self._filename = dir / filename
         self._file = open(self._filename, "w", newline="")
         self._csv_writer = csv.writer(self._file, quoting=csv.QUOTE_NONNUMERIC)
 
