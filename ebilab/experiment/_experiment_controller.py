@@ -2,6 +2,7 @@ import datetime
 import numbers
 import os
 import sys
+import csv
 import abc
 import socket
 import copy
@@ -175,13 +176,14 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         if not os.path.exists(dir):
             os.mkdir(dir)
         self._filename = dir + "/" + self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
-        self._file = open(self._filename, "w")
+        self._file = open(self._filename, "w", newline="")
+        self._csv_writer = csv.writer(self._file, quoting=csv.QUOTE_NONNUMERIC)
 
         comment_lines = self._get_comment_line(self._running_experiment, options)
         self._file.write(comment_lines)
 
         header = ["t", "time"] + self._running_experiment.columns
-        self._file.write(",".join(header) + "\n")
+        self._csv_writer.writerow(header)
 
         def run():
             self._running_experiment.steps(self._ctx, options)
@@ -218,16 +220,9 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._ui.data_queue.put(row)
 
         # write to file
-        row_list = []
-        for col in ["t", "time"] + self._running_experiment.columns:
-            if col in row:
-                if isinstance(row[col], numbers.Number):
-                    row_list.append(str(row[col]))
-                else:
-                    row_list.append(f'"{str(row[col])}"')
-            else:
-                row_list.append("")
-        self._file.write(",".join(row_list) + "\n")
+        cols = ["t", "time"] + self._running_experiment.columns
+        row_list = [row.get(col) for col in cols]
+        self._csv_writer.writerow(row_list)
 
     def experiment_ctx_delegate_get_t(self) -> float:
         return self._get_t()
