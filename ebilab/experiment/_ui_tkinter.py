@@ -30,8 +30,6 @@ class ExperimentUITkinter(IExperimentUI):
 
     def __init__(self) -> None:
         super().__init__()
-        self._data_queue = queue.Queue()
-        self._data = []
 
     def _create_ui(self):
         self._root = tk.Tk()
@@ -298,6 +296,7 @@ class ExperimentUITkinter(IExperimentUI):
     def reset_data(self):
         self._fig.clf()
         self._data = []
+        self._data_queue = queue.Queue()
         if self._plotter is not None:
             self._plotter.fig = self._fig
             self._plotter.prepare()
