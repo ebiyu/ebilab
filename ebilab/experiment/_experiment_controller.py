@@ -16,6 +16,7 @@ from threading import Thread
 import matplotlib.pyplot as plt
 
 from .options import OptionField
+from ..project import get_current_project
 
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
@@ -173,7 +174,11 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
 
         # file
-        dir = Path(".") / "data" / datetime.datetime.now().strftime("%y%m%d")
+        try:
+            data_dir = get_current_project().path.data_original
+        except:
+            data_dir = Path(".") / "data"
+        dir = data_dir / datetime.datetime.now().strftime("%y%m%d")
         os.makedirs(dir, exist_ok=True)
         filename = self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
         self._filename = dir / filename
