@@ -128,6 +128,7 @@ class ExperimentUITkinter(IExperimentUI):
         idx = self._experiment_list.curselection()[0]
         self._plotter_list_var.set(list(map(lambda cls:cls.name, self.experiments[idx].plotter_classes)))
         self._plotter_list.select_clear(0, tk.END)
+        self._plotter_list.selection_set(0)
 
         # update cols
         Experiment = self.experiments[idx]
