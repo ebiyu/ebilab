@@ -1,6 +1,7 @@
 from enum import Enum
 
 from ..visa import VisaDevice
+from .. import is_mock_enabled
 
 class E4980(VisaDevice):
     """
@@ -47,3 +48,11 @@ class E4980(VisaDevice):
         ret = self.visa_query(f'*TRG')
         Z, t, *_ = map(float, ret.split(","))
         return (Z, t)
+
+if is_mock_enabled:
+    class E4980:
+        def trigger(self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"):
+            from time import sleep
+            from random import random
+            sleep(0.4)
+            return 1e6 / f * (0.9 + random() * 0.2), random() * 20 - 10

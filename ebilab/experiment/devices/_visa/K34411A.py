@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ..visa import VisaDevice
+from .. import is_mock_enabled
 
 class K34411A(VisaDevice):
     """
@@ -77,3 +78,15 @@ class K34411A(VisaDevice):
         val = self.visa_query("READ?")
         return float(val)
 
+
+if is_mock_enabled:
+    from time import sleep
+    from random import random
+    class K34411A:
+        def measure_resistance(self, *, nplc: Optional[str]=None, range: str="auto"):
+            sleep(0.4)
+            return random() * 1e3
+
+        def measure_voltage(self, *, nplc: Optional[str]=None, range: str = "auto"):
+            sleep(0.4)
+            return random() * 10

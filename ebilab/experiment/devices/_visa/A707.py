@@ -1,7 +1,7 @@
-from enum import Enum
-
 from typing import List
+
 from ..visa import VisaDevice
+from .. import is_mock_enabled
 
 class A707(VisaDevice):
     """
@@ -24,3 +24,7 @@ class A707(VisaDevice):
         string = "".join(["C" + contact for contact in contacts])
         self.visa_write(f'E0P0{string}X')
 
+if is_mock_enabled:
+    class A707:
+        def close_only(self, contacts: List[str]):
+            pass
