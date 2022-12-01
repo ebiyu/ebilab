@@ -81,12 +81,18 @@ class ExperimentUITkinter(IExperimentUI):
         buttons_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
         buttons_pane.grid(column=3, row=0, sticky="nes")
 
+        self._experiment_label_var = tk.StringVar(value="")
+        self._experiment_label_var.trace("w", self._validate_options_and_update_ui)
+        tk.Label(buttons_pane, justify=tk.LEFT, text="Filename:").grid(column=0, row=0, sticky=tk.W)
+        self._experiment_label_entry = tk.Entry(buttons_pane, textvariable=self._experiment_label_var)
+        self._experiment_label_entry.grid(column=0, row=1)
+
         self._start_button = ttk.Button(buttons_pane, text="Start", command=self._handle_start_experiment, state="disabled")
-        self._start_button.grid(column=0, row=0)
+        self._start_button.grid(column=0, row=2)
         self._stop_button = ttk.Button(buttons_pane, text="Stop", command=self._handle_stop_experiment, state="disabled")
-        self._stop_button.grid(column=0, row=1)
+        self._stop_button.grid(column=0, row=3)
         self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._handle_quit)
-        self._quit_button.grid(column=0, row=2)
+        self._quit_button.grid(column=0, row=4)
 
         plot_frm = ttk.Frame(frm, padding=10, relief="solid")
         plot_frm.grid(column=0, row=1, sticky=tk.NSEW)
@@ -138,6 +144,8 @@ class ExperimentUITkinter(IExperimentUI):
         for col in columns:
             self._result_tree.heading(col, text=col)
             self._result_tree.column(col, minwidth=100, anchor='c', stretch=True)
+
+        self._experiment_label_var.set(Experiment.name)
 
         # update options
         for widgets in self._options_pane.winfo_children():
@@ -214,7 +222,7 @@ class ExperimentUITkinter(IExperimentUI):
     def _validate_options_and_update_ui(self, *_):
         if self._state != "stopped":
             return
-        if self._options_is_valid():
+        if self._options_is_valid() and self._experiment_label_var.get() != "":
             self._start_button["state"] = "normal"
         else:
             self._start_button["state"] = "disabled"
@@ -295,6 +303,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._stop_button["state"] = "normal"
             self._quit_button["state"] = "disabled"
             self._stop_button["text"] = "Stop"
+            self._experiment_label_entry["state"] = "disabled"
             for widget in self._options_widget:
                 widget["state"] = "disabled" 
         elif self._state == "stopping":
@@ -302,6 +311,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._stop_button["state"] = "normal"
             self._quit_button["state"] = "normal"
             self._stop_button["text"] = "Stopping..."
+            self._experiment_label_entry["state"] = "disabled"
             for widget in self._options_widget:
                 widget["state"] = "disabled" 
         else:
@@ -310,6 +320,7 @@ class ExperimentUITkinter(IExperimentUI):
                 self._validate_options_and_update_ui()
             else:
                 self._start_button["state"] = "disabled"
+            self._experiment_label_entry["state"] = "normal"
             for widget in self._options_widget:
                 if isinstance(widget, ttk.Combobox):
                     widget["state"] = "readonly" 
@@ -335,3 +346,7 @@ class ExperimentUITkinter(IExperimentUI):
         if options is None:
             raise RuntimeError()
         return options
+
+    @property
+    def experiment_label(self) -> str:
+        return self._experiment_label_var.get()

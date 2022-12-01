@@ -128,6 +128,10 @@ class IExperimentUI(metaclass=abc.ABCMeta):
     def get_options(self) -> dict:
         raise NotImplementedError()
 
+    @property
+    def experiment_label(self) -> str:
+        return NotImplementedError()
+
 class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _experiments: List[Type[IExperimentProtocol]]
     _ui: IExperimentUI
@@ -187,7 +191,8 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
             data_dir = Path(".") / "data"
         dir = data_dir / datetime.datetime.now().strftime("%y%m%d")
         os.makedirs(dir, exist_ok=True)
-        filename = self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        label = self._ui.experiment_label or self._running_experiment.name
+        filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
         self._filename = dir / filename
         self._file = open(self._filename, "w", newline="")
         self._csv_writer = csv.writer(self._file, quoting=csv.QUOTE_NONNUMERIC)
