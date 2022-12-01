@@ -183,9 +183,10 @@ class ExperimentUITkinter(IExperimentUI):
         ret = {}
         for (key, field), widget, var in zip(Experiment.options.items(), self._options_widget, self._options_textvars):
             if isinstance(field, FloatField):
-                if not var.get().isnumeric():
+                try:
+                    val = float(var.get())
+                except ValueError:
                     return None
-                val = float(var.get())
                 if field.min is not None and val < field.min:
                     return None
                 if field.max is not None and val > field.max:
@@ -194,8 +195,7 @@ class ExperimentUITkinter(IExperimentUI):
                 continue
             elif isinstance(field, SelectField):
                 if len(field.choices) == 0:
-                    return None
-
+                    return ValueError("Field has no choices.")
                 if isinstance(field.choices[0], int):
                     val = int(var.get())
                 elif isinstance(field.choices[0], float):
