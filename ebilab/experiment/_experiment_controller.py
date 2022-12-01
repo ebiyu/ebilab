@@ -3,6 +3,7 @@ import numbers
 import os
 import sys
 import abc
+import socket
 import copy
 import time
 import queue
@@ -135,6 +136,22 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     def launch(self):
         self._ui.launch()
 
+    def _get_comment_line(self, experiment: IExperimentProtocol, options: dict) -> str:
+        """
+        Returns: 
+            str: includes trailing NL
+        """
+        exp_name = experiment.name
+        date = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+        pc_name = socket.gethostname()
+        options_str = ", ".join([f"{k}: {v}" for k, v in options.items()]) if options else ""
+
+        comment_str = ""
+        comment_str += f"# {exp_name} experiment: Ran at {date} in {pc_name}\n"
+        comment_str += f"# {options_str}\n"
+        comment_str += f"#\n"
+        return comment_str
+
     def _run(self, experiment_index: int, plotter_index: int):
         self._ui.update_state("running")
 
@@ -146,20 +163,25 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._running_plotter = self._running_plotter_class()
         self._ui.set_plotter(self._running_plotter)
 
+        self._ui.reset_data()
+
+        self._ctx = ExperimentContext(delegate=self)
+
+        options = self._ui.get_options()
+
+
         # file
         dir = "data"
         if not os.path.exists(dir):
             os.mkdir(dir)
         self._filename = dir + "/" + self._running_experiment.name + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
         self._file = open(self._filename, "w")
+
+        comment_lines = self._get_comment_line(self._running_experiment, options)
+        self._file.write(comment_lines)
+
         header = ["t", "time"] + self._running_experiment.columns
         self._file.write(",".join(header) + "\n")
-
-        self._ui.reset_data()
-
-        self._ctx = ExperimentContext(delegate=self)
-
-        options = self._ui.get_options()
 
         def run():
             self._running_experiment.steps(self._ctx, options)
