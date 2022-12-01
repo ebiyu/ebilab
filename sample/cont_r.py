@@ -23,7 +23,7 @@ class ContinuousResistanceMesurement(IExperimentProtocol):
     columns = ["R"]
     plotter_classes = [ResistancePlotter]
 
-    def steps(self, ctx: ExperimentContext, options: dict):
+    def steps(self, ctx: ExperimentContext):
         multimeter = K34411A()
         while True:
             r = multimeter.measure_resistance()
