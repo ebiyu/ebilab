@@ -3,7 +3,7 @@ import time
 import random
 
 from ebilab.experiment import IExperimentProtocol, IExperimentPlotter, ExperimentContext, launch_experiment
-from ebilab.experiment.options import FloatField
+from ebilab.experiment.options import FloatField, SelectField
 
 #  class to decide how to plot during experiment
 class MyPlotter(IExperimentPlotter):
@@ -35,16 +35,18 @@ class RandomWalkExperiment(IExperimentProtocol):
     # available in GUI
     options = {
         "initial": FloatField(default=2),
+        "step": SelectField(choices=[1, 2, 4], default_index=1),
     }
 
     def steps(self, ctx: ExperimentContext, options: dict) -> None: # step of measurement
         v = options["initial"]
+        step = options["step"]
         while True:
             # you can use ctx.send_row() to plot and save data
             ctx.send_row({"v": v})
 
             time.sleep(0.2)
-            v += 1 if random.random() < 0.5 else -1
+            v += step if random.random() < 0.5 else -step
 
             ctx.loop() # you must run ctx.loop() in every loop
 

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol
-from .options import FloatField
+from .options import FloatField, SelectField
 
 # windows dpi workaround
 try:
@@ -160,6 +160,18 @@ class ExperimentUITkinter(IExperimentUI):
                 self._options_textvars.append(var)
                 self._options_widget.append(widget)
                 continue
+            elif isinstance(field, SelectField):
+                label = tk.Label(self._options_pane, text=key)
+                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
+
+                var = tk.StringVar(value=str(field.choices[field.default_index]))
+                var.trace("w", self._validate_options_and_update_ui)
+                widget = ttk.Combobox(self._options_pane, textvariable=var, state="readonly", values=field.choices)
+                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
+
+                self._options_textvars.append(var)
+                self._options_widget.append(widget)
+                continue
             raise ValueError("Unknown field type.")
 
         self._validate_options_and_update_ui()
@@ -178,6 +190,18 @@ class ExperimentUITkinter(IExperimentUI):
                     return None
                 if field.max is not None and val > field.max:
                     return None
+                ret[key] = val
+                continue
+            elif isinstance(field, SelectField):
+                if len(field.choices) == 0:
+                    return None
+
+                if isinstance(field.choices[0], int):
+                    val = int(var.get())
+                elif isinstance(field.choices[0], float):
+                    val = float(var.get())
+                else:
+                    val = var.get()
                 ret[key] = val
                 continue
             raise ValueError("Unknown field type.")
@@ -286,7 +310,10 @@ class ExperimentUITkinter(IExperimentUI):
             else:
                 self._start_button["state"] = "disabled"
             for widget in self._options_widget:
-                widget["state"] = "normal" 
+                if isinstance(widget, ttk.Combobox):
+                    widget["state"] = "readonly" 
+                else:
+                    widget["state"] = "normal" 
             self._stop_button["state"] = "disabled"
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
