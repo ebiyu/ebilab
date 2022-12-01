@@ -29,6 +29,10 @@ class ExperimentContextDelegate(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def experiment_ctx_delegate_get_options(self) -> None:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def experiment_ctx_delegate_loop(self) -> None:
         raise NotImplementedError()
 
@@ -43,6 +47,10 @@ class ExperimentContext:
     @property
     def t(self) -> float:
         return self._delegate.experiment_ctx_delegate_get_t()
+
+    @property
+    def options(self) -> dict:
+        return self._delegate.experiment_ctx_delegate_get_options()
 
     def loop(self) -> None:
         self._delegate.experiment_ctx_delegate_loop()
@@ -67,7 +75,7 @@ class IExperimentProtocol(metaclass=abc.ABCMeta):
     plotter_classes: List[Type[IExperimentPlotter]]
 
     @abc.abstractmethod
-    def steps(self, ctx: ExperimentContext, options: dict) -> None:
+    def steps(self, ctx: ExperimentContext) -> None:
         raise NotImplementedError()
 
 class ExperimentUIDelegate(metaclass=abc.ABCMeta):
@@ -168,10 +176,9 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
         self._ui.reset_data()
 
+        self._options = self._ui.get_options()
+
         self._ctx = ExperimentContext(delegate=self)
-
-        options = self._ui.get_options()
-
 
         # file
         try:
@@ -185,14 +192,14 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._file = open(self._filename, "w", newline="")
         self._csv_writer = csv.writer(self._file, quoting=csv.QUOTE_NONNUMERIC)
 
-        comment_lines = self._get_comment_line(self._running_experiment, options)
+        comment_lines = self._get_comment_line(self._running_experiment, self._options)
         self._file.write(comment_lines)
 
         header = ["t", "time"] + self._running_experiment.columns
         self._csv_writer.writerow(header)
 
         def run():
-            self._running_experiment.steps(self._ctx, options)
+            self._running_experiment.steps(self._ctx)
             time.sleep(1)
             self._running = False
             self._ui.update_state("stopped")
@@ -232,6 +239,9 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
     def experiment_ctx_delegate_get_t(self) -> float:
         return self._get_t()
+
+    def experiment_ctx_delegate_get_options(self) -> None:
+        return self._options
 
     def experiment_ctx_delegate_loop(self) -> None:
         if not self._running:

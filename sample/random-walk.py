@@ -38,9 +38,9 @@ class RandomWalkExperiment(IExperimentProtocol):
         "step": SelectField(choices=[1, 2, 4], default_index=1),
     }
 
-    def steps(self, ctx: ExperimentContext, options: dict) -> None: # step of measurement
-        v = options["initial"]
-        step = options["step"]
+    def steps(self, ctx: ExperimentContext) -> None: # step of measurement
+        v = ctx.options["initial"]
+        step = ctx.options["step"]
         while True:
             # you can use ctx.send_row() to plot and save data
             ctx.send_row({"v": v})
