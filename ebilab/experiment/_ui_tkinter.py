@@ -111,7 +111,6 @@ class ExperimentUITkinter(IExperimentUI):
         self._result_tree = ttk.Treeview(table_frm)
         self._result_tree.column("#0", width=0)
         self._result_tree.grid(row=0, column=0, sticky=tk.NSEW)
-        #self._result_tree.grid()
 
         lh = tkf.Font(font='TkDefaultFont').metrics('linespace')
         style = ttk.Style()
@@ -130,6 +129,8 @@ class ExperimentUITkinter(IExperimentUI):
     def _handle_experiment_change(self, _):
         if not self._experiment_list.curselection():
             return
+
+        self.reset_data()
 
         idx = self._experiment_list.curselection()[0]
         self._plotter_list_var.set(list(map(lambda cls:cls.name, self.experiments[idx].plotter_classes)))
@@ -228,8 +229,8 @@ class ExperimentUITkinter(IExperimentUI):
             self._start_button["state"] = "disabled"
 
     def _handle_plotter_change(self, _):
-        if self._state == "running":
-            self._reset_plotter()
+        self._reset_plotter()
+        self._draw_plot()
 
     def launch(self):
         self._create_ui()
@@ -268,13 +269,15 @@ class ExperimentUITkinter(IExperimentUI):
                         row_list.append("")
                 self._result_tree.insert("", tk.END, values=row_list)
                 self._result_tree.yview_moveto(1)
-
-            if len(self._data) > 0 and self._plotter:
-                df = pd.DataFrame(self._data)
-                self._plotter.update(df)
-                self._canvas.draw()
+            self._draw_plot()
 
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
+    
+    def _draw_plot(self):
+        if len(self._data) > 0 and self._plotter:
+            df = pd.DataFrame(self._data)
+            self._plotter.update(df)
+            self._canvas.draw()
     
     def _handle_start_experiment(self):
         experiment_idx = self._experiment_list.curselection()[0]
@@ -334,19 +337,22 @@ class ExperimentUITkinter(IExperimentUI):
     def reset_data(self):
         self._data = []
         self._data_queue = queue.Queue()
+        self._result_tree.delete(*self._result_tree.get_children())
         self._reset_plotter()
 
     def _reset_plotter(self):
-        exp_idx = self._experiment_list.curselection()[0]
-        Experiment = self.experiments[exp_idx]
-        if self._plotter_list.curselection() is None:
+        self._fig.clf()
+
+        try:
+            exp_idx = self._experiment_list.curselection()[0]
+            Experiment = self.experiments[exp_idx]
+            plotter_idx = self._plotter_list.curselection()[0]
+            Plotter = Experiment.plotter_classes[plotter_idx]
+        except IndexError:
             self._plotter = None
             return
 
-        plotter_idx = self._plotter_list.curselection()[0]
-        Plotter = Experiment.plotter_classes[plotter_idx]
         self._plotter = Plotter()
-        self._fig.clf()
         self._plotter.fig = self._fig
         self._plotter.prepare()
 
