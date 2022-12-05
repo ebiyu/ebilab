@@ -143,7 +143,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._result_tree.column("#0", width=0, stretch=False)
         for col in columns:
             self._result_tree.heading(col, text=col)
-            self._result_tree.column(col, minwidth=100, anchor='c', stretch=True)
+            self._result_tree.column(col, minwidth=100, anchor='center', stretch=True)
 
         self._experiment_label_var.set(Experiment.name)
 
@@ -228,12 +228,8 @@ class ExperimentUITkinter(IExperimentUI):
             self._start_button["state"] = "disabled"
 
     def _handle_plotter_change(self, _):
-        if not self._plotter_list.curselection():
-            return
-
-        if self._experiment_list.curselection() and self._plotter_list.curselection():
-            self._start_button["state"] = "normal"
-            self._validate_options_and_update_ui(self)
+        if self._state == "running":
+            self._reset_plotter()
 
     def launch(self):
         self._create_ui()
@@ -273,7 +269,7 @@ class ExperimentUITkinter(IExperimentUI):
                 self._result_tree.insert("", tk.END, values=row_list)
                 self._result_tree.yview_moveto(1)
 
-            if len(self._data) > 0:
+            if len(self._data) > 0 and self._plotter:
                 df = pd.DataFrame(self._data)
                 self._plotter.update(df)
                 self._canvas.draw()
@@ -282,8 +278,7 @@ class ExperimentUITkinter(IExperimentUI):
     
     def _handle_start_experiment(self):
         experiment_idx = self._experiment_list.curselection()[0]
-        plotter_idx = self._plotter_list.curselection()[0]
-        self.delegate.handle_ui_start(experiment_idx, plotter_idx)
+        self.delegate.handle_ui_start(experiment_idx)
 
     def _handle_stop_experiment(self):
         self.delegate.handle_ui_stop()
@@ -304,28 +299,31 @@ class ExperimentUITkinter(IExperimentUI):
             self._quit_button["state"] = "disabled"
             self._stop_button["text"] = "Stop"
             self._experiment_label_entry["state"] = "disabled"
+            self._experiment_list["state"] = "disabled"
             for widget in self._options_widget:
-                widget["state"] = "disabled" 
+                widget["state"] = "disabled"
         elif self._state == "stopping":
             self._start_button["state"] = "disabled"
             self._stop_button["state"] = "normal"
             self._quit_button["state"] = "normal"
             self._stop_button["text"] = "Stopping..."
             self._experiment_label_entry["state"] = "disabled"
+            self._experiment_list["state"] = "disabled"
             for widget in self._options_widget:
-                widget["state"] = "disabled" 
+                widget["state"] = "disabled"
         else:
-            if self._experiment_list.curselection() and self._plotter_list.curselection():
+            if self._experiment_list.curselection():
                 self._start_button["state"] = "normal"
                 self._validate_options_and_update_ui()
             else:
                 self._start_button["state"] = "disabled"
             self._experiment_label_entry["state"] = "normal"
+            self._experiment_list["state"] = "normal"
             for widget in self._options_widget:
                 if isinstance(widget, ttk.Combobox):
-                    widget["state"] = "readonly" 
+                    widget["state"] = "readonly"
                 else:
-                    widget["state"] = "normal" 
+                    widget["state"] = "normal"
             self._stop_button["state"] = "disabled"
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
@@ -334,12 +332,23 @@ class ExperimentUITkinter(IExperimentUI):
         self._state = state
 
     def reset_data(self):
-        self._fig.clf()
         self._data = []
         self._data_queue = queue.Queue()
-        if self._plotter is not None:
-            self._plotter.fig = self._fig
-            self._plotter.prepare()
+        self._reset_plotter()
+
+    def _reset_plotter(self):
+        exp_idx = self._experiment_list.curselection()[0]
+        Experiment = self.experiments[exp_idx]
+        if self._plotter_list.curselection() is None:
+            self._plotter = None
+            return
+
+        plotter_idx = self._plotter_list.curselection()[0]
+        Plotter = Experiment.plotter_classes[plotter_idx]
+        self._plotter = Plotter()
+        self._fig.clf()
+        self._plotter.fig = self._fig
+        self._plotter.prepare()
 
     def get_options(self) -> dict:
         options = self._get_options()

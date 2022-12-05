@@ -29,7 +29,7 @@ class ExperimentContextDelegate(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def experiment_ctx_delegate_get_options(self) -> None:
+    def experiment_ctx_delegate_get_options(self) -> dict:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -81,7 +81,7 @@ class IExperimentProtocol(metaclass=abc.ABCMeta):
 class ExperimentUIDelegate(metaclass=abc.ABCMeta):
     # UI -> Coreの操作
     @abc.abstractmethod
-    def handle_ui_start(self, experiment_index: int, plotter_index: int):
+    def handle_ui_start(self, experiment_index: int):
         raise NotImplementedError
 
     @abc.abstractmethod
@@ -113,10 +113,6 @@ class IExperimentUI(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def set_plotter(self, plotter: Optional[IExperimentPlotter]):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
     def update_state(self, state: str):
         raise NotImplementedError()
 
@@ -130,7 +126,7 @@ class IExperimentUI(metaclass=abc.ABCMeta):
 
     @property
     def experiment_label(self) -> str:
-        return NotImplementedError()
+        raise NotImplementedError()
 
 class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _experiments: List[Type[IExperimentProtocol]]
@@ -167,16 +163,12 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         comment_str += f"#\n"
         return comment_str
 
-    def _run(self, experiment_index: int, plotter_index: int):
+    def _run(self, experiment_index: int):
         self._ui.update_state("running")
 
         self._running_experiment_idx = experiment_index
-        self._running_plotter_idx = plotter_index
         self._running_experiment_class = self._experiments[experiment_index]
-        self._running_plotter_class = self._running_experiment_class.plotter_classes[plotter_index]
         self._running_experiment = self._running_experiment_class()
-        self._running_plotter = self._running_plotter_class()
-        self._ui.set_plotter(self._running_plotter)
 
         self._ui.reset_data()
 
@@ -245,7 +237,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     def experiment_ctx_delegate_get_t(self) -> float:
         return self._get_t()
 
-    def experiment_ctx_delegate_get_options(self) -> None:
+    def experiment_ctx_delegate_get_options(self) -> dict:
         return self._options
 
     def experiment_ctx_delegate_loop(self) -> None:
@@ -253,8 +245,8 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
             sys.exit()
 
     # ExperimentUIDelegate
-    def handle_ui_start(self, experiment_index: int, plotter_index: int):
-        self._run(experiment_index, plotter_index)
+    def handle_ui_start(self, experiment_index: int):
+        self._run(experiment_index)
 
     def handle_ui_stop(self):
         self._stop()
