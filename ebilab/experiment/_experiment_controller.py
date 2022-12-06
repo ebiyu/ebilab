@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import List, Optional, Type, Dict
 import weakref
 from threading import Thread
+import dataclasses
 
 import matplotlib.pyplot as plt
 
@@ -54,6 +55,11 @@ class ExperimentContext:
 
     def loop(self) -> None:
         self._delegate.experiment_ctx_delegate_loop()
+        
+@dataclasses.dataclass
+class PlotterContext:
+    plotter_options: dict
+    protocol_options: dict
 
 class IExperimentPlotter(metaclass=abc.ABCMeta):
     fig: plt.Figure
@@ -62,11 +68,11 @@ class IExperimentPlotter(metaclass=abc.ABCMeta):
     options: Optional[Dict[str, OptionField]]
 
     @abc.abstractmethod
-    def prepare(self):
+    def prepare(self, ctx: PlotterContext):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def update(self, df):
+    def update(self, df, ctx: PlotterContext):
         raise NotImplementedError()
 
 class IExperimentProtocol(metaclass=abc.ABCMeta):

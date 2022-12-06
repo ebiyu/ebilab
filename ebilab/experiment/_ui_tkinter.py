@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol
+from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol, PlotterContext
 from .options import FloatField, SelectField
 
 # windows dpi workaround
@@ -230,7 +230,7 @@ class ExperimentUITkinter(IExperimentUI):
 
     def _handle_plotter_change(self, _):
         self._reset_plotter()
-        self._draw_plot()
+        # self._draw_plot()
 
     def launch(self):
         self._create_ui()
@@ -276,7 +276,7 @@ class ExperimentUITkinter(IExperimentUI):
     def _draw_plot(self):
         if len(self._data) > 0 and self._plotter:
             df = pd.DataFrame(self._data)
-            self._plotter.update(df)
+            self._plotter.update(df, self._get_plotter_context())
             self._canvas.draw()
     
     def _handle_start_experiment(self):
@@ -354,7 +354,12 @@ class ExperimentUITkinter(IExperimentUI):
 
         self._plotter = Plotter()
         self._plotter.fig = self._fig
-        self._plotter.prepare()
+        if self._state == "running":
+            ctx = self._get_plotter_context()
+            self._plotter.prepare(ctx)
+    
+    def _get_plotter_context(self):
+        return  PlotterContext(plotter_options={}, protocol_options=self.get_options())
 
     def get_options(self) -> dict:
         options = self._get_options()
