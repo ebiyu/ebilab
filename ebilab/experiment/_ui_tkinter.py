@@ -1,5 +1,6 @@
 from logging import getLogger
 import queue
+import time
 from typing import List, Optional, Type, Dict
 import tkinter as tk
 from tkinter import ttk
@@ -358,8 +359,12 @@ class ExperimentUITkinter(IExperimentUI):
     def _draw_plot(self):
         if len(self._data) > 0 and self._plotter:
             df = pd.DataFrame(self._data)
+            time_before_plot = time.perf_counter()
             self._plotter.update(df, self._get_plotter_context())
+            logger.debug(f"Plotter.update took {time.perf_counter() - time_before_plot} s")
+            time_before_draw = time.perf_counter()
             self._canvas.draw()
+            logger.debug(f"canvas.draw took {time.perf_counter() - time_before_draw} s")
 
     def _handle_start_experiment(self):
         experiment_idx = self._experiment_list.curselection()[0]
