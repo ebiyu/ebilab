@@ -1,5 +1,6 @@
+from logging import getLogger
 import queue
-from typing import List, Optional, Type
+from typing import List, Optional, Type, Dict
 import tkinter as tk
 from tkinter import ttk
 import tkinter.font as tkf
@@ -9,7 +10,9 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol, PlotterContext
-from .options import FloatField, SelectField
+from .options import OptionField, FloatField, SelectField
+
+logger = getLogger(__name__)
 
 # windows dpi workaround
 try:
@@ -21,13 +24,148 @@ except:
     except:
         pass
 
+class OptionsPane(ttk.Frame):
+    __label: str
+    __fields: Dict[str, OptionField]
+    __enabled = True
+    __options: dict
+    __is_valid = True
+
+    def __init__(self, master, label):
+        super().__init__(master, padding=10)
+        self.__fields = {}
+        self.__label = label
+
+        # build UI
+        self.columnconfigure(0, weight=1)
+        self._build_fields({})
+
+    def _build_fields(self, fields: Dict[str, OptionField]):
+        for widgets in self.winfo_children():
+            widgets.destroy()
+
+        tk.Label(self, justify="center", text=self.__label).grid(column=0, row=0, sticky=tk.N)
+
+        self._options_widget = []
+        self._options_textvars = []
+
+        for i, (key, field) in enumerate(fields.items()):
+            if isinstance(field, FloatField):
+                label = tk.Label(self, text=key)
+                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
+
+                var = tk.StringVar(value=str(field.default))
+                var.trace("w", self._on_update)
+                widget = tk.Entry(self, textvariable=var)
+                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
+
+                self._options_textvars.append(var)
+                self._options_widget.append(widget)
+                continue
+            elif isinstance(field, SelectField):
+                label = tk.Label(self, text=key)
+                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
+
+                var = tk.StringVar(value=str(field.choices[field.default_index]))
+                var.trace("w", self._on_update)
+                widget = ttk.Combobox(self, textvariable=var, state="readonly", values=field.choices)
+                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
+
+                self._options_textvars.append(var)
+                self._options_widget.append(widget)
+                continue
+            raise TypeError("Unknown field type.")
+
+        opt = self._get_options()
+        if opt is None:
+            raise RuntimeError("Unexpected invalid value")
+        self.__options = opt
+        self.__is_valid = True
+
+    def _on_update(self, *args, **kwargs):
+        opt = self._get_options()
+        if opt is None:
+            self.__is_valid = False
+        else:
+            self.__is_valid = True
+            self.__options = opt
+
+        self.event_generate("<<OptionsPaneUpdate>>")
+
+    @property
+    def fields(self) -> Dict[str, OptionField]:
+        return self.__fields
+
+    @fields.setter
+    def fields(self, fields):
+        self.__fields = fields
+        self._build_fields(fields)
+
+    def _get_options(self) -> Optional[dict]:
+        ret = {}
+        for (key, field), widget, var in zip(self.fields.items(), self._options_widget, self._options_textvars):
+            if isinstance(field, FloatField):
+                try:
+                    val = float(var.get())
+                except ValueError:
+                    logger.debug(f"Validation failed: {key} = {var.get()} is not float.")
+                    return None
+                if field.min is not None and val < field.min:
+                    logger.debug(f"Validation failed: {key} = {val} < {field.min}.")
+                    return None
+                if field.max is not None and val > field.max:
+                    logger.debug(f"Validation failed: {key} = {val} > {field.max}.")
+                    return None
+                ret[key] = val
+                continue
+            elif isinstance(field, SelectField):
+                if len(field.choices) == 0:
+                    raise ValueError("SelectField has no choices.")
+                if isinstance(field.choices[0], int):
+                    val = int(var.get())
+                elif isinstance(field.choices[0], float):
+                    val = float(var.get())
+                else:
+                    val = var.get()
+                ret[key] = val
+                continue
+            raise TypeError("Unknown field type.")
+        return ret
+
+    @property
+    def options(self) -> dict:
+        assert self.__options is not None
+        return self.__options
+
+    @property
+    def is_valid(self) -> bool:
+        return self.__is_valid
+
+    @property
+    def enabled(self) -> bool:
+        return self.__enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool):
+        self.__enabled = enabled
+
+        if enabled:
+            for widget in self._options_widget:
+                if isinstance(widget, ttk.Combobox):
+                    widget["state"] = "readonly"
+                else:
+                    widget["state"] = "normal"
+        else:
+            for widget in self._options_widget:
+                widget["state"] = "disabled"
+
 class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
     _state: str = "stopped"
     _plotter: Optional[IExperimentPlotter] = None
     _update_experiment_loop_id: Optional[str] = None
-    _options_widget = []
-    _options_textvars = []
+    _protocol_options_pane: OptionsPane
+    _plotter_options_pane: OptionsPane
 
     def __init__(self) -> None:
         super().__init__()
@@ -50,6 +188,7 @@ class ExperimentUITkinter(IExperimentUI):
         ctrl_frm.columnconfigure(0, weight=1)
         ctrl_frm.columnconfigure(1, weight=1)
         ctrl_frm.columnconfigure(2, weight=1)
+        ctrl_frm.columnconfigure(3, weight=1)
 
         experiment_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
         experiment_list_pane.grid(column=0, row=0, sticky=tk.NSEW)
@@ -62,10 +201,9 @@ class ExperimentUITkinter(IExperimentUI):
         self._experiment_list.grid(column=0, row=1, sticky=tk.NSEW)
         self._experiment_list.bind("<<ListboxSelect>>", self._handle_experiment_change)
 
-        self._options_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        self._options_pane.grid(column=1, row=0, sticky=tk.NSEW)
-        self._options_pane.columnconfigure(0, weight=1)
-        tk.Label(self._options_pane, justify="center", text="Options").grid(column=0, row=0, sticky=tk.N)
+        # options pane
+        self._protocol_options_pane = OptionsPane(ctrl_frm, "Experiment options")
+        self._protocol_options_pane.grid(column=1, row=0, sticky=tk.NSEW)
 
         plotter_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
         plotter_list_pane.grid(column=2, row=0, sticky=tk.NSEW)
@@ -78,8 +216,12 @@ class ExperimentUITkinter(IExperimentUI):
         self._plotter_list.grid(column=0, row=1, sticky=tk.NSEW)
         self._plotter_list.bind("<<ListboxSelect>>", self._handle_plotter_change)
 
+        # options pane
+        self._plotter_options_pane = OptionsPane(ctrl_frm, "Plot options")
+        self._plotter_options_pane.grid(column=3, row=0, sticky=tk.NSEW)
+
         buttons_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        buttons_pane.grid(column=3, row=0, sticky="nes")
+        buttons_pane.grid(column=4, row=0, sticky="nes")
 
         self._experiment_label_var = tk.StringVar(value="")
         self._experiment_label_var.trace("w", self._validate_options_and_update_ui)
@@ -115,7 +257,7 @@ class ExperimentUITkinter(IExperimentUI):
         lh = tkf.Font(font='TkDefaultFont').metrics('linespace')
         style = ttk.Style()
         style.configure('Treeview', rowheight=lh)
-    
+
     def _handle_quit(self):
         if self._update_experiment_loop_id is not None:
             self._root.after_cancel(self._update_experiment_loop_id)
@@ -136,6 +278,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._plotter_list_var.set(list(map(lambda cls:cls.name, self.experiments[idx].plotter_classes)))
         self._plotter_list.select_clear(0, tk.END)
         self._plotter_list.selection_set(0)
+        self._handle_plotter_change()
 
         # update cols
         Experiment = self.experiments[idx]
@@ -148,89 +291,28 @@ class ExperimentUITkinter(IExperimentUI):
 
         self._experiment_label_var.set(Experiment.name)
 
-        # update options
-        for widgets in self._options_pane.winfo_children():
-            widgets.destroy()
-
-        tk.Label(self._options_pane, justify="center", text="Options").grid(column=0, row=0, sticky=tk.N)
-
-        self._options_widget = []
-        self._options_textvars = []
-
-        for i, (key, field) in enumerate(Experiment.options.items() or []):
-            if isinstance(field, FloatField):
-                label = tk.Label(self._options_pane, text=key)
-                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
-
-                var = tk.StringVar(value=str(field.default))
-                var.trace("w", self._validate_options_and_update_ui)
-                widget = tk.Entry(self._options_pane, textvariable=var)
-                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
-
-                self._options_textvars.append(var)
-                self._options_widget.append(widget)
-                continue
-            elif isinstance(field, SelectField):
-                label = tk.Label(self._options_pane, text=key)
-                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
-
-                var = tk.StringVar(value=str(field.choices[field.default_index]))
-                var.trace("w", self._validate_options_and_update_ui)
-                widget = ttk.Combobox(self._options_pane, textvariable=var, state="readonly", values=field.choices)
-                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
-
-                self._options_textvars.append(var)
-                self._options_widget.append(widget)
-                continue
-            raise ValueError("Unknown field type.")
+        self._protocol_options_pane.fields = Experiment.options
 
         self._validate_options_and_update_ui()
-
-    def _get_options(self) -> Optional[dict]:
-        Experiment = self._get_current_experiment()
-        if Experiment.options.items() is None:
-            return {}
-        ret = {}
-        for (key, field), widget, var in zip(Experiment.options.items(), self._options_widget, self._options_textvars):
-            if isinstance(field, FloatField):
-                try:
-                    val = float(var.get())
-                except ValueError:
-                    return None
-                if field.min is not None and val < field.min:
-                    return None
-                if field.max is not None and val > field.max:
-                    return None
-                ret[key] = val
-                continue
-            elif isinstance(field, SelectField):
-                if len(field.choices) == 0:
-                    return ValueError("Field has no choices.")
-                if isinstance(field.choices[0], int):
-                    val = int(var.get())
-                elif isinstance(field.choices[0], float):
-                    val = float(var.get())
-                else:
-                    val = var.get()
-                ret[key] = val
-                continue
-            raise ValueError("Unknown field type.")
-        return ret
-
-    def _options_is_valid(self):
-        return self._get_options() is not None
 
     def _validate_options_and_update_ui(self, *_):
         if self._state != "stopped":
             return
-        if self._options_is_valid() and self._experiment_label_var.get() != "":
+        if self._protocol_options_pane.is_valid and self._experiment_label_var.get() != "":
             self._start_button["state"] = "normal"
         else:
             self._start_button["state"] = "disabled"
 
-    def _handle_plotter_change(self, _):
+    def _handle_plotter_change(self, *args, **kwargs):
+        try:
+            exp_idx = self._experiment_list.curselection()[0]
+            Experiment = self.experiments[exp_idx]
+            plotter_idx = self._plotter_list.curselection()[0]
+            Plotter = Experiment.plotter_classes[plotter_idx]
+        except IndexError:
+            return
+        self._plotter_options_pane.fields = Plotter.options or {}
         self._reset_plotter()
-        # self._draw_plot()
 
     def launch(self):
         self._create_ui()
@@ -272,13 +354,13 @@ class ExperimentUITkinter(IExperimentUI):
             self._draw_plot()
 
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
-    
+
     def _draw_plot(self):
         if len(self._data) > 0 and self._plotter:
             df = pd.DataFrame(self._data)
             self._plotter.update(df, self._get_plotter_context())
             self._canvas.draw()
-    
+
     def _handle_start_experiment(self):
         experiment_idx = self._experiment_list.curselection()[0]
         self.delegate.handle_ui_start(experiment_idx)
@@ -303,8 +385,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._stop_button["text"] = "Stop"
             self._experiment_label_entry["state"] = "disabled"
             self._experiment_list["state"] = "disabled"
-            for widget in self._options_widget:
-                widget["state"] = "disabled"
+            self._protocol_options_pane.enabled = False
         elif self._state == "stopping":
             self._start_button["state"] = "disabled"
             self._stop_button["state"] = "normal"
@@ -312,8 +393,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._stop_button["text"] = "Stopping..."
             self._experiment_label_entry["state"] = "disabled"
             self._experiment_list["state"] = "disabled"
-            for widget in self._options_widget:
-                widget["state"] = "disabled"
+            self._protocol_options_pane.enabled = False
         else:
             if self._experiment_list.curselection():
                 self._start_button["state"] = "normal"
@@ -322,11 +402,7 @@ class ExperimentUITkinter(IExperimentUI):
                 self._start_button["state"] = "disabled"
             self._experiment_label_entry["state"] = "normal"
             self._experiment_list["state"] = "normal"
-            for widget in self._options_widget:
-                if isinstance(widget, ttk.Combobox):
-                    widget["state"] = "readonly"
-                else:
-                    widget["state"] = "normal"
+            self._protocol_options_pane.enabled = True
             self._stop_button["state"] = "disabled"
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
@@ -357,15 +433,15 @@ class ExperimentUITkinter(IExperimentUI):
         if self._state == "running":
             ctx = self._get_plotter_context()
             self._plotter.prepare(ctx)
-    
+
     def _get_plotter_context(self):
-        return  PlotterContext(plotter_options={}, protocol_options=self.get_options())
+        return  PlotterContext(
+            plotter_options=self._plotter_options_pane.options,
+            protocol_options=self.get_options(),
+        )
 
     def get_options(self) -> dict:
-        options = self._get_options()
-        if options is None:
-            raise RuntimeError()
-        return options
+        return self._protocol_options_pane.options
 
     @property
     def experiment_label(self) -> str:

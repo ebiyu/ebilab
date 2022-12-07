@@ -65,7 +65,7 @@ class IExperimentPlotter(metaclass=abc.ABCMeta):
     fig: plt.Figure
     name: str
 
-    options: Optional[Dict[str, OptionField]]
+    options: Optional[Dict[str, OptionField]] = None
 
     @abc.abstractmethod
     def prepare(self, ctx: PlotterContext):
