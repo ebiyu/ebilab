@@ -13,11 +13,14 @@ from typing import List, Optional, Type, Dict
 import weakref
 from threading import Thread
 import dataclasses
+from logging import getLogger
 
 import matplotlib.pyplot as plt
 
 from .options import OptionField
 from ..project import get_current_project
+
+logger = getLogger(__name__)
 
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
@@ -170,6 +173,8 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         return comment_str
 
     def _run(self, experiment_index: int):
+        logger.info(f"starting experiment")
+
         self._ui.update_state("running")
 
         self._running_experiment_idx = experiment_index
@@ -184,45 +189,57 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
         # file
         try:
+            logger.debug("ebilab project found")
             data_dir = get_current_project().path.data_original
         except:
+            logger.debug("ebilab project not found")
             data_dir = Path(".") / "data"
         dir = data_dir / datetime.datetime.now().strftime("%y%m%d")
         os.makedirs(dir, exist_ok=True)
         label = self._ui.experiment_label or self._running_experiment.name
         filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
         self._filename = dir / filename
+        logger.info(f"Output file: {self._filename}")
         self._file = open(self._filename, "w", newline="")
         self._csv_writer = csv.writer(self._file, quoting=csv.QUOTE_NONNUMERIC)
 
         comment_lines = self._get_comment_line(self._running_experiment, self._options)
+        logger.debug("Comment_lines: " + comment_lines)
         self._file.write(comment_lines)
 
         header = ["t", "time"] + self._running_experiment.columns
+        logger.debug("Header: " + str(header))
         self._csv_writer.writerow(header)
 
         def run():
             self._running_experiment.steps(self._ctx)
+            logger.debug("running_experiment finished, waiting 1sec")
             time.sleep(1)
             self._running = False
             self._ui.update_state("stopped")
+            logger.info("running_experiment finished")
 
         self._started_time = time.perf_counter()
+        logger.debug(f"started_time: {self._started_time}")
         self._running = True
         self._experiment_thread = Thread(target=run)
         self._experiment_thread.daemon = True
         self._experiment_thread.start()
+        logger.info(f"experiment thread started")
 
     def _stop(self):
-
+        logger.debug(f"stopping experiment")
         self._ui.update_state("stopping")
         self._running = False
         if self._experiment_thread is not None:
+            logger.info(f"joining experiment thread")
             self._experiment_thread.join()
         self._ui.update_state("stopped")
 
         if self._file is not None:
             self._file.close()
+            self._file = None
+        logger.debug(f"stopped experiment")
 
     def _get_t(self) -> float:
         return time.perf_counter() - self._started_time

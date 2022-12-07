@@ -2,14 +2,15 @@
 Utility and base class related to visa
 """
 
-from typing import Optional
-
-import pyvisa
-
 from typing import Dict, Optional
 import os
 import re
 from dataclasses import dataclass
+from logging import getLogger
+
+import pyvisa
+
+logger = getLogger(__name__)
 
 @dataclass
 class _VisaManagerDevice:
@@ -40,18 +41,23 @@ class VisaManager:
             self.rm.close()
 
     def __init__(self):
+        logger.debug(f"Initializing VisaManager")
         os.add_dll_directory('C:\\Program Files\\Keysight\\IO Libraries Suite\\bin') # omajinai
 
         rm = pyvisa.ResourceManager()
+        logger.info(f"Resource manager initialized: {str(rm)}")
         visa_list = rm.list_resources()
+        logger.debug(f"List resources: {str(visa_list)}")
 
         for addr in visa_list:
             try:
                 inst = rm.open_resource(addr)
                 try:
                     idn = inst.query('*IDN?')
+                    logger.debug(f"*IDN? to {addr}: {idn}")
                     self._devices[addr] = _VisaManagerDevice(idn, inst)
                 except:
+                    logger.debug(f"No response to *IDN? from {addr}")
                     inst.close()
             except:
                 pass
@@ -68,6 +74,7 @@ class VisaManager:
         """
         for addr, device in self._devices.items():
             if re.search(pattern, device.idn):
+                logger.info(f"{device.idn} ({addr}) matched {pattern}")
                 return device.inst
         return None
 
@@ -110,7 +117,9 @@ class VisaDevice:
             raise DeviceNotFoundError(f"Device matching \"{self._idn_pattern}\" is not found")
         self.pyvisa_inst = inst
         self.pyvisa_inst.timeout = 10000
+        logger.info(f"{self.__class__.__name__} is initializing...")
         self._initialize(**kwargs)
+        logger.info(f"{self.__class__.__name__} has initialized")
 
     def _initialize(self, **kwargs):
         raise NotImplementedError()
@@ -121,10 +130,14 @@ class VisaDevice:
         Equivalent to :py:func:`inst.write` in pyvisa class
         """
         self.pyvisa_inst.write(cmd)
+        logger.info(f"{self.__class__.__name__} -> device: {cmd}")
 
     def visa_query(self, cmd: str):
         """
         Send command to visa device and read output from device
         Equivalent to :py:func:`inst.query` in pyvisa class
         """
-        return self.pyvisa_inst.query(cmd)
+        logger.info(f"{self.__class__.__name__} -> device?: {cmd}")
+        res = self.pyvisa_inst.query(cmd)
+        logger.info(f"{self.__class__.__name__} <- device: {res}")
+        return res
