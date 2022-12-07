@@ -2,11 +2,11 @@
 import time
 import random
 
-from ebilab.experiment import IExperimentProtocol, IExperimentPlotter, ExperimentContext, launch_experiment
+from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, launch_experiment
 from ebilab.experiment.options import FloatField, SelectField
 
 #  class to decide how to plot during experiment
-class MyPlotter(IExperimentPlotter):
+class MyPlotter(ExperimentPlotter):
     name = "simple"
     def prepare(self):
         # this method is executed before starting experiment
@@ -27,7 +27,7 @@ class MyPlotter(IExperimentPlotter):
         self._ax.grid()
 
 # class to decide steps of experiment
-class RandomWalkExperiment(IExperimentProtocol):
+class RandomWalkExperiment(ExperimentProtocol):
     columns = ["v", "v2"] # please specify columns to write csv file
     name = "random-walk" # filename is suffixed by datetime
     plotter_classes = [MyPlotter]

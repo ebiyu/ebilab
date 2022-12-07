@@ -64,7 +64,7 @@ class PlotterContext:
     plotter_options: dict
     protocol_options: dict
 
-class IExperimentPlotter(metaclass=abc.ABCMeta):
+class ExperimentPlotter(metaclass=abc.ABCMeta):
     fig: plt.Figure
     name: str
 
@@ -78,10 +78,12 @@ class IExperimentPlotter(metaclass=abc.ABCMeta):
     def update(self, df, ctx: PlotterContext):
         raise NotImplementedError()
 
-class IExperimentProtocol(metaclass=abc.ABCMeta):
+class ExperimentProtocol(metaclass=abc.ABCMeta):
     name: str
     columns: List[str]
-    plotter_classes: List[Type[IExperimentPlotter]]
+    plotter_classes: List[Type[ExperimentPlotter]]
+
+    options: Optional[Dict[str, OptionField]] = None
 
     @abc.abstractmethod
     def steps(self, ctx: ExperimentContext) -> None:
@@ -115,7 +117,7 @@ class IExperimentUI(metaclass=abc.ABCMeta):
     def data_queue(self) -> queue.Queue:
         raise NotImplementedError()
 
-    experiments: List[Type[IExperimentProtocol]]
+    experiments: List[Type[ExperimentProtocol]]
 
     @abc.abstractmethod
     def launch(self):
@@ -138,7 +140,7 @@ class IExperimentUI(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
 class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
-    _experiments: List[Type[IExperimentProtocol]]
+    _experiments: List[Type[ExperimentProtocol]]
     _ui: IExperimentUI
     _ctx: ExperimentContext
     _running = False
@@ -146,7 +148,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
     _experiment_thread = None
 
-    def __init__(self, *, experiments: List[Type[IExperimentProtocol]], ui: IExperimentUI):
+    def __init__(self, *, experiments: List[Type[ExperimentProtocol]], ui: IExperimentUI):
         self._experiments = experiments
 
         self._ui = ui
@@ -156,7 +158,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     def launch(self):
         self._ui.launch()
 
-    def _get_comment_line(self, experiment: IExperimentProtocol, options: dict) -> str:
+    def _get_comment_line(self, experiment: ExperimentProtocol, options: dict) -> str:
         """
         Returns: 
             str: includes trailing NL

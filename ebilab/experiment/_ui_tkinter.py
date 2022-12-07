@@ -9,7 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ._experiment_controller import IExperimentPlotter, IExperimentUI, IExperimentProtocol, PlotterContext
+from ._experiment_controller import ExperimentPlotter, IExperimentUI, ExperimentProtocol, PlotterContext
 from .options import OptionField, FloatField, SelectField
 
 logger = getLogger(__name__)
@@ -162,7 +162,7 @@ class OptionsPane(ttk.Frame):
 class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
     _state: str = "stopped"
-    _plotter: Optional[IExperimentPlotter] = None
+    _plotter: Optional[ExperimentPlotter] = None
     _update_experiment_loop_id: Optional[str] = None
     _protocol_options_pane: OptionsPane
     _plotter_options_pane: OptionsPane
@@ -264,7 +264,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._root.quit()
         self._root.destroy()
 
-    def _get_current_experiment(self) -> Type[IExperimentProtocol]:
+    def _get_current_experiment(self) -> Type[ExperimentProtocol]:
         idx = self._experiment_list.curselection()[0]
         return self.experiments[idx]
 
@@ -291,7 +291,7 @@ class ExperimentUITkinter(IExperimentUI):
 
         self._experiment_label_var.set(Experiment.name)
 
-        self._protocol_options_pane.fields = Experiment.options
+        self._protocol_options_pane.fields = Experiment.options or {}
 
         self._validate_options_and_update_ui()
 
@@ -372,9 +372,9 @@ class ExperimentUITkinter(IExperimentUI):
     def data_queue(self) -> queue.Queue:
         return self._data_queue
 
-    experiments: List[Type[IExperimentProtocol]]
+    experiments: List[Type[ExperimentProtocol]]
 
-    def set_plotter(self, plotter: Optional[IExperimentPlotter]):
+    def set_plotter(self, plotter: Optional[ExperimentPlotter]):
         self._plotter = plotter
 
     def _update_ui_from_state(self):
