@@ -1,3 +1,4 @@
+from time import sleep
 from typing import List
 
 from ..visa import VisaDevice
@@ -11,8 +12,8 @@ class A707(VisaDevice):
     _idn_pattern = "707A"
 
     def _initialize(self, **kwargs):
-        self.visa_write("*RST;*CLS")
-        self.visa_write('E0P0X')
+        self.visa_write("XRX")
+        sleep(1)
 
     def close_only(self, contacts: List[str]):
         """
@@ -21,8 +22,9 @@ class A707(VisaDevice):
         Args:
             contacts (list): like `["A2", "B4", "C5"]`
         """
-        string = "".join(["C" + contact for contact in contacts])
-        self.visa_write(f'E0P0{string}X')
+        string = ",".join([contact for contact in contacts])
+        self.visa_write(f'E0P0C{string}X')
+        sleep(0.1)
 
 if is_mock_enabled:
     class A707:
