@@ -1,4 +1,4 @@
-from enum import Enum
+import time
 
 from ..visa import VisaDevice
 from .. import is_mock_enabled
@@ -48,11 +48,29 @@ class E4980(VisaDevice):
         ret = self.visa_query(f'*TRG')
         Z, t, *_ = map(float, ret.split(","))
         return (Z, t)
+    
+    def meas_open(self, *, wait=True):
+        self.visa_write('CORR:OPEN:EXEC')
+        if wait:
+            self.wait_correction()
+
+    def meas_short(self, *, wait=True):
+        self.visa_write('CORR:SHORT:EXEC')
+        if wait:
+            self.wait_correction()
+
+    def wait_correction(self):
+        self.pyvisa_inst.timeout = None
+        while True:
+            time.sleep(0.1)
+            ret = int(self.visa_query(':STAT:OPER:COND?'))
+            if (ret & 1) == 0:
+                self.pyvisa_inst.timeout = 10000
+                break
 
 if is_mock_enabled:
     class E4980:
         def trigger(self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"):
-            from time import sleep
             from random import random
-            sleep(0.4)
+            time.sleep(0.4)
             return 1e6 / f * (0.9 + random() * 0.2), random() * 20 - 10
