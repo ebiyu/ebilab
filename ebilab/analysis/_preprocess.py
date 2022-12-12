@@ -16,10 +16,6 @@ class PreprocessDfData:
     def __init__(self, df):
         self._df = df
 
-    def to(self, file):
-        self._df.to_csv(file, index=False)
-        return self
-
     def apply(self, func: Callable[[pd.DataFrame], pd.DataFrame]):
         self._df = func(self._df)
         return self
@@ -57,8 +53,19 @@ class PreprocessFileData:
                 func(fin, fout)
             self._tmp_filename = tmpfile
         return self
+    
+    def _remove_header_comment(self):
+        def func(fin, fout):
+            for line in fin:
+                if line[0] != "#":
+                    fout.write(line)
+                    break
+            for line in fin:
+                fout.write(line)
+        self.apply(func)
 
     def csv(self) -> PreprocessDfData:
+        self._remove_header_comment()
         filename = self._tmp_filename or self._filename
         df = pd.read_csv(filename, skiprows=self._skip_rows)
         return PreprocessDfData(df)
