@@ -5,12 +5,9 @@
 このライブラリは随時アップデートしています。
 バージョンは :code:`a.b.c` の形式で定義され、以下のポリシーで更新されます。
 
-* a (Major version): 破壊的な変更があった場合に更新されます。
-* b (Minor version): 新機能の追加など、破壊的でない変更があった場合に更新されます。
-* c (Patch version): バグ修正など、機能に変更がない場合に更新されます。
-
-異なるメジャーバージョンの間では機能やメソッド名などが変更になっている可能性があり、メジャーバージョンを更新した場合は過去のコードの動作は保証されません。
-一方で、マイナーバージョンやパッチバージョンを更新した場合は過去のコードの動作は保証されます。ただし、バグなどの想定外の原因によって破壊されることがあります。
+* a (Major version): 重要で破壊的な変更があった場合に更新されます。
+* b (Minor version): 新機能の追加など、軽微な変更があった場合に更新されます。
+* c (Patch version): 新メソッドの追加などの軽微な機能柄バグ修正など、機能に変更がない場合に更新されます。ドキュメントに未完成(unstable)と明記されている機能に関しては、パッチバージョンで更新が行なわれることがあります。
 
 ****************************************
 実験の再現性のために
@@ -20,33 +17,33 @@
 
 :code:`venv` や :code:`pipenv` など、ライブラリの管理のために慣れているのであれば、そのようなツールを使用するのが確実でしょう。
 
-一方で、そのようなツールの使用に慣れていない場合や、たった1ファイルのスクリプトなど仮想環境を導入するのが煩雑だと感じる場合もあるでしょう。
-その場合では、 :py:func:`assert_ebilab_version() <ebilab.assert_ebilab_version>` 関数を用いて簡易的にバージョンのチェックを行なうことができます。
+.. 一方で、そのようなツールの使用に慣れていない場合や、たった1ファイルのスクリプトなど仮想環境を導入するのが煩雑だと感じる場合もあるでしょう。
+.. その場合では、 :py:func:`assert_ebilab_version() <ebilab.assert_ebilab_version>` 関数を用いて簡易的にバージョンのチェックを行なうことができます。
 
-例えば、以下のようなコードを実験コードの最上部に記述してください。
+.. 例えば、以下のようなコードを実験コードの最上部に記述してください。
 
-.. code-block:: python
+.. .. code-block:: python
 
-    from ebilab import assert_ebilab_version
-    assert_ebilab_version("1") # Fix major version
+..     from ebilab import assert_ebilab_version
+..     assert_ebilab_version("1") # Fix major version
 
-もしインストールされている :code:`ebilab` のバージョンが指定したものと一致しなかった場合は、 :py:class:`VersionDidNotMatch <ebilab.VersionDidNotMatch>` が送出されます。
+.. もしインストールされている :code:`ebilab` のバージョンが指定したものと一致しなかった場合は、 :py:class:`VersionDidNotMatch <ebilab.VersionDidNotMatch>` が送出されます。
 
-その場合は該当するバージョン手動でをインストールする必要があります。このように、簡易的な動作保証のチェックとして利用することができます。
+.. その場合は該当するバージョン手動でをインストールする必要があります。このように、簡易的な動作保証のチェックとして利用することができます。
 
-.. note::
+.. .. note::
 
-    基本的にはメジャーバージョンのみの指定で十分ですが、ドキュメントに記載されていないクラスを利用している場合などはそれ以上の指定が有効となる場合があります。
-    厳密にバージョンを指定したい場合は、以下のような構文を利用することができます。
+..     基本的にはメジャーバージョンのみの指定で十分ですが、ドキュメントに記載されていないクラスを利用している場合などはそれ以上の指定が有効となる場合があります。
+..     厳密にバージョンを指定したい場合は、以下のような構文を利用することができます。
 
-    .. code-block:: python
+..     .. code-block:: python
 
-        from ebilab import assert_ebilab_version
-        assert_ebilab_version("1.0") # Fix minor version
+..         from ebilab import assert_ebilab_version
+..         assert_ebilab_version("1.0") # Fix minor version
 
-    .. code-block:: python
+..     .. code-block:: python
 
-        from ebilab import assert_ebilab_version
-        assert_ebilab_version("1.0.0") # Fix patch version
+..         from ebilab import assert_ebilab_version
+..         assert_ebilab_version("1.0.0") # Fix patch version
 
 
