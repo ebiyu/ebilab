@@ -1,5 +1,7 @@
 """
 Utility and base class related to visa
+
+This library depends on `pyvisa <https://pyvisa.readthedocs.io/>`_ for VISA control.
 """
 
 from typing import Dict, Optional
