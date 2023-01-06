@@ -4,7 +4,8 @@ setup(
     name="ebilab",
     author="Yusuke Ebihara",
     author_email="yusuke@ebihara.me",
-    url="https://github.com/ebiyuu1121/ebilab",
+    url="https://ebilab.readthedocs.io/",
+    description="Python package for my research",
     install_requires=[
         "tqdm",
         "numpy",
@@ -15,6 +16,9 @@ setup(
         "pyvisa",
         "GitPython",
     ],
+    project_urls={
+        "GitHub repository": "https://github.com/ebiyuu1121/ebilab",
+    },
     include_package_data=True,
     setup_requires=[
         "setuptools_scm"
