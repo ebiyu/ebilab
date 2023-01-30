@@ -153,6 +153,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _ctx: ExperimentContext
     _running = False
     _file = None
+    _log_file = None
 
     _experiment_thread = None
 
@@ -208,9 +209,11 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         os.makedirs(dir, exist_ok=True)
         label = self._ui.experiment_label or self._running_experiment.name
         filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        log_filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
         self._filename = dir / filename
         logger.info(f"Output file: {self._filename}")
         self._file = open(self._filename, "w", newline="")
+        self._log_file = open(dir / log_filename, "w", newline="")
         self._csv_writer = csv.writer(self._file, quoting=csv.QUOTE_NONNUMERIC)
 
         comment_lines = self._get_comment_line(self._running_experiment, self._options)
@@ -249,6 +252,9 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         if self._file is not None:
             self._file.close()
             self._file = None
+        if self._log_file is not None:
+            self._log_file.close()
+            self._log_file = None
         logger.debug(f"stopped experiment")
 
     def _get_t(self) -> float:
@@ -268,11 +274,15 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._csv_writer.writerow(row_list)
 
     def experiment_ctx_delegate_send_log(self, message):
+        t = self._get_t()
+        time = datetime.datetime.now()
         self._ui.log_queue.put({
-            "t": self._get_t(),
-            "time": datetime.datetime.now(),
+            "t": t,
+            "time": time,
             "message": message,
         })
+        self._log_file.write(f"{time} t={t}: {message}\n")
+
 
         # TODO: write to file
 
