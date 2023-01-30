@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Union, List
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from ebilab.project import get_current_project
 from ._actions import DfAction, DfPlotter, AggregatedDfPlotter
@@ -14,11 +15,15 @@ class ProcessingData:
     _df: pd.DataFrame
     _key: str
     _use_cache = True
+    _plot_ctx: dict
+    _plot_ctx_label = ""
+
     def __init__(self, df: pd.DataFrame, key: str, *, save=True):
         self._df = df
         self._key = key
         if save:
             self._save()
+        self._plot_ctx = {}
 
     def apply(self, action: DfAction):
         self._key += "__" + action.key
@@ -65,16 +70,22 @@ class ProcessingData:
     def plot(self, plotter: DfPlotter):
 
         dir = get_current_project().path.data_plot
-        filename = dir / (self._key + "__" + plotter.key + ".png")
+        filename = dir / (self._key + "__" + plotter.key + self._plot_ctx_label + ".png")
 
         # cache
         if self._use_cache and filename.exists():
             if os.environ.get("EBILAB_SOURCE") != "WATCH":
                 print(f"Plot already exists: {filename.name}")
         else:
-            plotter.handler(self._df, filename)
+            with plt.rc_context(self._plot_ctx):
+                plotter.handler(self._df, filename)
             print(f"Saved plot: {filename.name}")
 
+        return self
+
+    def plot_context(self, label, ctx: dict):
+        self._plot_ctx.update(ctx)
+        self._plot_ctx_label += "-" + label
         return self
 
     def __del__(self):
@@ -91,22 +102,31 @@ class AggregatedProcessingData:
     _dfs: List[pd.DataFrame]
     _keys: List[str]
     _use_cache = True
+    _plot_ctx: dict
+    _plot_ctx_label = ""
 
     def __init__(self, data: List[ProcessingData]):
         self._dfs = list(map(lambda d:d._df, data))
         self._keys = list(map(lambda d:d._key, data))
         self._use_cache = all(map(lambda d:d._use_cache, data))
+        self._plot_ctx = {}
+
+    def plot_context(self, label, ctx: dict):
+        self._plot_ctx.update(ctx)
+        self._plot_ctx_label += "-" + label
+        return self
 
     def plot(self, plotter: AggregatedDfPlotter):
         dir = get_current_project().path.data_plot
-        filename = dir / (f"[{','.join(self._keys)}]__{plotter.key}.png")
+        filename = dir / (f"[{','.join(self._keys)}]__{plotter.key}{self._plot_ctx_label}.png")
 
         # cache
         if self._use_cache and filename.exists():
             if os.environ.get("EBILAB_SOURCE") != "WATCH":
                 print(f"Plot already exists: {filename.name}")
         else:
-            plotter.handler(self._dfs, filename)
+            with plt.rc_context(self._plot_ctx):
+                plotter.handler(self._dfs, filename)
             print(f"Saved plot: {filename.name}")
 
         return self  
