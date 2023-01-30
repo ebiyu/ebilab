@@ -2,20 +2,20 @@
 import time
 import random
 
-from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, launch_experiment
+from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, PlotterContext, launch_experiment
 from ebilab.experiment.options import FloatField, SelectField
 
 #  class to decide how to plot during experiment
 class MyPlotter(ExperimentPlotter):
     name = "simple"
-    def prepare(self):
+    def prepare(self, ctx: PlotterContext):
         # this method is executed before starting experiment
         # e.g. adding Axes to Figure
         # figure is stored in `self.fig`
 
         self._ax = self.fig.add_subplot(111)
 
-    def update(self, df):
+    def update(self, df, ctx: PlotterContext):
         # this method is executed many times during experiment
         # df is pandas.DataFrame which has experiment data
 
@@ -43,6 +43,7 @@ class RandomWalkExperiment(ExperimentProtocol):
         step = ctx.options["step"]
         while True:
             # you can use ctx.send_row() to plot and save data
+            ctx.log(f"log: {v}")
             ctx.send_row({"v": v})
 
             time.sleep(0.2)

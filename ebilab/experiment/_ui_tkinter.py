@@ -162,6 +162,8 @@ class OptionsPane(ttk.Frame):
 
 class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
+    log_queue: queue.Queue
+
     _state: str = "stopped"
     _plotter: Optional[ExperimentPlotter] = None
     _update_experiment_loop_id: Optional[str] = None
@@ -182,6 +184,7 @@ class ExperimentUITkinter(IExperimentUI):
         frm.columnconfigure(0, weight=1)
         frm.rowconfigure(1, weight=1)
         frm.rowconfigure(2, weight=1)
+        frm.rowconfigure(3, weight=1)
 
         ctrl_frm = ttk.Frame(frm, padding=10, relief="solid")
         ctrl_frm.grid(column=0, row=0, sticky="new")
@@ -255,6 +258,21 @@ class ExperimentUITkinter(IExperimentUI):
         self._result_tree.column("#0", width=0)
         self._result_tree.grid(row=0, column=0, sticky=tk.NSEW)
 
+        log_frm = ttk.Frame(frm, padding=10, relief="solid")
+        log_frm.grid(column=0, row=3, sticky="wes")
+        log_frm.columnconfigure(0, weight=1)
+        log_frm.rowconfigure(0, weight=1)
+
+        self._log_tree = ttk.Treeview(log_frm)
+        self._log_tree.column("#0", width=0, stretch=False)
+        self._log_tree.grid(row=0, column=0, sticky=tk.NSEW)
+        self._log_tree["columns"] = ["t", "time", "message"]
+        self._log_tree.heading("message", text="message")
+        self._log_tree.heading("time", text="time")
+        self._log_tree.column("time", width=100, stretch=False)
+        self._log_tree.heading("t", text="t")
+        self._log_tree.column("t", width=150, stretch=False)
+
         lh = tkf.Font(font='TkDefaultFont').metrics('linespace')
         style = ttk.Style()
         style.configure('Treeview', rowheight=lh)
@@ -286,9 +304,15 @@ class ExperimentUITkinter(IExperimentUI):
         columns = ["t", "time"] + Experiment.columns
         self._result_tree["columns"] = columns
         self._result_tree.column("#0", width=0, stretch=False)
-        for col in columns:
+        self._result_tree.heading("time", text="time")
+        self._result_tree.column("time", width=100, stretch=False)
+        self._result_tree.heading("t", text="t")
+        self._result_tree.column("t", width=150, stretch=False)
+
+        for col in columns[2:]:
             self._result_tree.heading(col, text=col)
             self._result_tree.column(col, minwidth=100, anchor='center', stretch=True)
+
 
         self._experiment_label_var.set(Experiment.name)
 
@@ -324,18 +348,18 @@ class ExperimentUITkinter(IExperimentUI):
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
         self._root.mainloop()
 
-    def _get_data_from_queue(self):
+    def _get_data_from_queue(self, queue_):
         d = []
         while True:
             try:
-                d.append(self._data_queue.get(False))
+                d.append(queue_.get(False))
             except queue.Empty:
                 return d
 
     def _update_experiment_loop(self):
         self._update_ui_from_state()
         if self._state != "stopped":
-            data = self._get_data_from_queue()
+            data = self._get_data_from_queue(self._data_queue)
 
             for d in data:
                 self._data.append(d)
@@ -353,6 +377,12 @@ class ExperimentUITkinter(IExperimentUI):
                 self._result_tree.insert("", tk.END, values=row_list)
                 self._result_tree.yview_moveto(1)
             self._draw_plot()
+
+            # update logs
+            logs = self._get_data_from_queue(self.log_queue)
+            for log in logs:
+                self._log_tree.insert("", tk.END, values=[log["t"], log["time"], log["message"]])
+                self._log_tree.yview_moveto(1)
 
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
 
@@ -418,6 +448,7 @@ class ExperimentUITkinter(IExperimentUI):
     def reset_data(self):
         self._data = []
         self._data_queue = queue.Queue()
+        self.log_queue = queue.Queue()
         self._result_tree.delete(*self._result_tree.get_children())
         self._reset_plotter()
 

@@ -29,6 +29,10 @@ class ExperimentContextDelegate(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def experiment_ctx_delegate_send_log(self, log: str):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def experiment_ctx_delegate_get_t(self) -> float:
         raise NotImplementedError()
 
@@ -47,6 +51,9 @@ class ExperimentContext:
 
     def send_row(self, row: dict):
         self._delegate.experiment_ctx_delegate_send_row(row)
+
+    def log(self, log: str):
+        self._delegate.experiment_ctx_delegate_send_log(log)
 
     @property
     def t(self) -> float:
@@ -118,6 +125,7 @@ class IExperimentUI(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     experiments: List[Type[ExperimentProtocol]]
+    log_queue: queue.Queue
 
     @abc.abstractmethod
     def launch(self):
@@ -258,6 +266,15 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         cols = ["t", "time"] + self._running_experiment.columns
         row_list = [row.get(col) for col in cols]
         self._csv_writer.writerow(row_list)
+
+    def experiment_ctx_delegate_send_log(self, message):
+        self._ui.log_queue.put({
+            "t": self._get_t(),
+            "time": datetime.datetime.now(),
+            "message": message,
+        })
+
+        # TODO: write to file
 
     def experiment_ctx_delegate_get_t(self) -> float:
         return self._get_t()
