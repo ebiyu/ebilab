@@ -169,11 +169,7 @@ class OptionsPane(ttk.Frame):
                 ret[key] = val
                 continue
             elif isinstance(field, StrField):
-                try:
-                    val = var.get()
-                except ValueError:
-                    logger.debug(f"Validation failed: {key} = {var.get()} is not str.")
-                    return None
+                val = var.get()
                 ret[key] = val
                 continue
             raise TypeError("Unknown field type.")
