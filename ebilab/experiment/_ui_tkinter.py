@@ -170,6 +170,9 @@ class OptionsPane(ttk.Frame):
                 continue
             elif isinstance(field, StrField):
                 val = var.get()
+                if (not field.allow_blank) and len(val) == 0:
+                    logger.debug(f"Validation failed: {key} is blank.")
+                    return None
                 ret[key] = val
                 continue
             raise TypeError("Unknown field type.")

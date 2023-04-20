@@ -25,3 +25,4 @@ class IntField(OptionField):
 @dataclasses.dataclass(frozen=True)
 class StrField(OptionField):
     default: str
+    allow_blank: bool = False
