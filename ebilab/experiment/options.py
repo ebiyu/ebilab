@@ -15,3 +15,13 @@ class FloatField(OptionField):
 class SelectField(OptionField):
     choices: list
     default_index: int = 0
+
+@dataclasses.dataclass(frozen=True)
+class IntField(OptionField):
+    default: int
+    max: Optional[int] = None
+    min: Optional[int] = None
+
+@dataclasses.dataclass(frozen=True)
+class StrField(OptionField):
+    default: str

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ._experiment_controller import ExperimentPlotter, IExperimentUI, ExperimentProtocol, PlotterContext
-from .options import OptionField, FloatField, SelectField
+from .options import OptionField, FloatField, SelectField, IntField, StrField
 
 logger = getLogger(__name__)
 
@@ -75,6 +75,30 @@ class OptionsPane(ttk.Frame):
                 self._options_textvars.append(var)
                 self._options_widget.append(widget)
                 continue
+            elif isinstance(field, IntField):
+                label = tk.Label(self, text=key)
+                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
+
+                var = tk.StringVar(value=str(field.default))
+                var.trace("w", self._on_update)
+                widget = tk.Entry(self, textvariable=var)
+                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
+
+                self._options_textvars.append(var)
+                self._options_widget.append(widget)
+                continue
+            elif isinstance(field, StrField):
+                label = tk.Label(self, text=key)
+                label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
+
+                var = tk.StringVar(value=str(field.default))
+                var.trace("w", self._on_update)
+                widget = tk.Entry(self, textvariable=var)
+                widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
+
+                self._options_textvars.append(var)
+                self._options_widget.append(widget)
+                continue
             raise TypeError("Unknown field type.")
 
         opt = self._get_options()
@@ -128,6 +152,28 @@ class OptionsPane(ttk.Frame):
                     val = float(var.get())
                 else:
                     val = var.get()
+                ret[key] = val
+                continue
+            elif isinstance(field, IntField):
+                try:
+                    val = int(var.get())
+                except ValueError:
+                    logger.debug(f"Validation failed: {key} = {var.get()} is not int.")
+                    return None
+                if field.min is not None and val < field.min:
+                    logger.debug(f"Validation failed: {key} = {val} < {field.min}.")
+                    return None
+                if field.max is not None and val > field.max:
+                    logger.debug(f"Validation failed: {key} = {val} > {field.max}.")
+                    return None
+                ret[key] = val
+                continue
+            elif isinstance(field, StrField):
+                try:
+                    val = var.get()
+                except ValueError:
+                    logger.debug(f"Validation failed: {key} = {var.get()} is not str.")
+                    return None
                 ret[key] = val
                 continue
             raise TypeError("Unknown field type.")
