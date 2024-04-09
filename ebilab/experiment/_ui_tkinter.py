@@ -209,6 +209,7 @@ class OptionsPane(ttk.Frame):
 class ExperimentUITkinter(IExperimentUI):
     _data_queue: queue.Queue
     log_queue: queue.Queue
+    _log_cnt = 0
 
     _state: str = "stopped"
     _plotter: Optional[ExperimentPlotter] = None
@@ -223,96 +224,94 @@ class ExperimentUITkinter(IExperimentUI):
         self._root = tk.Tk()
         self._root.iconbitmap(default=str(Path(__file__).parent.parent / "icon.ico"))
         self._root.state("zoomed")
-        self._root.columnconfigure(0, weight=1)
         self._root.rowconfigure(0, weight=1)
+        self._root.columnconfigure(0, minsize=300)
+        self._root.columnconfigure(1, weight=1)
 
-        frm = ttk.Frame(self._root, padding=10, relief="solid")
-        frm.grid(sticky="nsew")
-        frm.columnconfigure(0, weight=1)
-        frm.rowconfigure(1, weight=1)
-        frm.rowconfigure(2, weight=1)
-        frm.rowconfigure(3, weight=1)
+        # frames
+        sidebar_frm = ttk.Frame(self._root, padding=10, relief="solid")
+        sidebar_frm.grid(row=0, column=0, sticky=tk.NSEW)
+        main_frm = ttk.Frame(self._root, padding=10, relief="solid")
+        main_frm.grid(row=0, column=1, sticky=tk.NSEW)
 
-        ctrl_frm = ttk.Frame(frm, padding=10, relief="solid")
-        ctrl_frm.grid(column=0, row=0, sticky="new")
-        ctrl_frm.rowconfigure(0, weight=1)
-        ctrl_frm.columnconfigure(0, weight=1)
-        ctrl_frm.columnconfigure(1, weight=1)
-        ctrl_frm.columnconfigure(2, weight=1)
-        ctrl_frm.columnconfigure(3, weight=1)
+        # experiment list pane
+        experiment_list_pane = ttk.Frame(sidebar_frm, padding=10, relief="solid")
+        experiment_list_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        experiment_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        experiment_list_pane.grid(column=0, row=0, sticky=tk.NSEW)
-        experiment_list_pane.columnconfigure(0, weight=1)
-        experiment_list_pane.rowconfigure(1, weight=1)
-        tk.Label(experiment_list_pane, justify="center", text="Experiment List").grid(column=0, row=0, sticky=tk.N)
+        tk.Label(experiment_list_pane, justify="center", text="Plotter List") \
+            .pack(side=tk.TOP, fill=tk.Y, expand=False)
 
         self._experiment_list_var = tk.StringVar(value=[])
         self._experiment_list = tk.Listbox(experiment_list_pane, listvariable=self._experiment_list_var, exportselection=False, height=5)
-        self._experiment_list.grid(column=0, row=1, sticky=tk.NSEW)
+        self._experiment_list.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self._experiment_list.bind("<<ListboxSelect>>", self._handle_experiment_change)
 
-        # options pane
-        self._protocol_options_pane = OptionsPane(ctrl_frm, "Experiment options")
-        self._protocol_options_pane.grid(column=1, row=0, sticky=tk.NSEW)
+        # plotter options pane
+        self._protocol_options_pane = OptionsPane(sidebar_frm, "Experiment options")
+        self._protocol_options_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        plotter_list_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        plotter_list_pane.grid(column=2, row=0, sticky=tk.NSEW)
-        plotter_list_pane.columnconfigure(0, weight=1)
-        plotter_list_pane.rowconfigure(1, weight=1)
-        tk.Label(plotter_list_pane, justify="center", text="Plotter List").grid(column=0, row=0, sticky=tk.N)
-
-        self._plotter_list_var = tk.StringVar(value=[])
-        self._plotter_list = tk.Listbox(plotter_list_pane, listvariable=self._plotter_list_var, exportselection=False, height=5)
-        self._plotter_list.grid(column=0, row=1, sticky=tk.NSEW)
-        self._plotter_list.bind("<<ListboxSelect>>", self._handle_plotter_change)
-
-        # options pane
-        self._plotter_options_pane = OptionsPane(ctrl_frm, "Plot options")
-        self._plotter_options_pane.grid(column=3, row=0, sticky=tk.NSEW)
-
-        buttons_pane = ttk.Frame(ctrl_frm, padding=10, relief="solid")
-        buttons_pane.grid(column=4, row=0, sticky="nes")
+        # buttons pane
+        buttons_pane = ttk.Frame(sidebar_frm, padding=10, relief="solid")
+        buttons_pane.pack(side=tk.TOP, fill=tk.BOTH)
 
         self._experiment_label_var = tk.StringVar(value="")
         self._experiment_label_var.trace("w", self._validate_options_and_update_ui)
-        tk.Label(buttons_pane, justify=tk.LEFT, text="Filename:").grid(column=0, row=0, sticky=tk.W)
+        tk.Label(buttons_pane, justify=tk.LEFT, text="Filename:") \
+            .pack(side=tk.TOP, fill=tk.X, expand=False)
         self._experiment_label_entry = tk.Entry(buttons_pane, textvariable=self._experiment_label_var)
-        self._experiment_label_entry.grid(column=0, row=1)
+        self._experiment_label_entry.pack(side=tk.TOP, fill=tk.X, expand=False)
 
         self._start_button = ttk.Button(buttons_pane, text="Start", command=self._handle_start_experiment, state="disabled")
-        self._start_button.grid(column=0, row=2)
+        self._start_button.pack(side=tk.TOP, fill=tk.X, expand=False)
         self._stop_button = ttk.Button(buttons_pane, text="Stop", command=self._handle_stop_experiment, state="disabled")
-        self._stop_button.grid(column=0, row=3)
+        self._stop_button.pack(side=tk.TOP, fill=tk.X, expand=False)
         self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._handle_quit)
-        self._quit_button.grid(column=0, row=4)
+        self._quit_button.pack(side=tk.TOP, fill=tk.X, expand=False)
 
-        plot_frm = ttk.Frame(frm, padding=10, relief="solid")
-        plot_frm.grid(column=0, row=1, sticky=tk.NSEW)
-        plot_frm.columnconfigure(0, weight=1)
+        self._plotter_nb = ttk.Notebook(main_frm)
+        tab1 = tk.Frame(self._plotter_nb)
+        self._plotter_nb.pack(side=tk.TOP, fill=tk.BOTH)
+
+        # タブに表示する文字列の設定
+        self._plotter_nb.add(tab1, text='-')
+        self._plotter_nb.bind("<<NotebookTabChanged>>", self._handle_plotter_change)
+
+
+        # plot range
+        plot_frm = ttk.Frame(main_frm, padding=10, relief="solid")
+        plot_frm.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
         plot_frm.rowconfigure(0, weight=1)
+        plot_frm.columnconfigure(0, weight=1)
+        plot_frm.columnconfigure(1, minsize=300)
 
         self._fig = plt.figure(figsize=(6, 3), dpi=100, constrained_layout=True)
         self._canvas = FigureCanvasTkAgg(self._fig, master=plot_frm)
-        self._canvas.get_tk_widget().grid(column=0, row=0, sticky=tk.NSEW)
+        self._canvas.get_tk_widget().grid(row=0, column=0, sticky=tk.NSEW)
 
-        table_frm = ttk.Frame(frm, padding=10, relief="solid")
-        table_frm.grid(column=0, row=2, sticky="wes")
-        table_frm.columnconfigure(0, weight=1)
-        table_frm.rowconfigure(0, weight=1)
+        # plotter options pane
+        self._plotter_options_pane = OptionsPane(plot_frm, "Plot options")
+        self._plotter_options_pane.grid(row=0, column=1, sticky=tk.NSEW)
+
+        # bottom notebook
+        self._bottom_nb = ttk.Notebook(main_frm)
+        self._bottom_nb.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        table_frm = ttk.Frame(self._bottom_nb, padding=10)
+        table_frm.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        log_frm = ttk.Frame(self._bottom_nb, padding=10)
+        log_frm.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self._bottom_nb.add(table_frm, text="Result")
+        self._bottom_nb.add(log_frm, text="Log")
 
         self._result_tree = ttk.Treeview(table_frm)
         self._result_tree.column("#0", width=0)
-        self._result_tree.grid(row=0, column=0, sticky=tk.NSEW)
-
-        log_frm = ttk.Frame(frm, padding=10, relief="solid")
-        log_frm.grid(column=0, row=3, sticky="wes")
-        log_frm.columnconfigure(0, weight=1)
-        log_frm.rowconfigure(0, weight=1)
+        self._result_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         self._log_tree = ttk.Treeview(log_frm)
+        self._log_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True) 
         self._log_tree.column("#0", width=0, stretch=False)
-        self._log_tree.grid(row=0, column=0, sticky=tk.NSEW)
         self._log_tree["columns"] = ["t", "time", "message"]
         self._log_tree.heading("message", text="message")
         self._log_tree.heading("time", text="time")
@@ -341,9 +340,17 @@ class ExperimentUITkinter(IExperimentUI):
         self.reset_data()
 
         idx = self._experiment_list.curselection()[0]
-        self._plotter_list_var.set(list(map(lambda cls:cls.name, self.experiments[idx].plotter_classes)))
-        self._plotter_list.select_clear(0, tk.END)
-        self._plotter_list.selection_set(0)
+
+        # update plotter list (tab)
+        for tab in self._plotter_nb.tabs():
+            self._plotter_nb.forget(tab)
+        for name in map(lambda cls:cls.name, self.experiments[idx].plotter_classes):
+            tab = tk.Frame(self._plotter_nb)
+            self._plotter_nb.add(tab, text=name)
+        if len(self.experiments[idx].plotter_classes) == 0:
+            tab = tk.Frame(self._plotter_nb)
+            self._plotter_nb.add(tab, text="-")
+
         self._handle_plotter_change()
 
         # update cols
@@ -379,7 +386,7 @@ class ExperimentUITkinter(IExperimentUI):
         try:
             exp_idx = self._experiment_list.curselection()[0]
             Experiment = self.experiments[exp_idx]
-            plotter_idx = self._plotter_list.curselection()[0]
+            plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
             Plotter = Experiment.plotter_classes[plotter_idx]
         except IndexError:
             return
@@ -430,6 +437,8 @@ class ExperimentUITkinter(IExperimentUI):
             for log in logs:
                 self._log_tree.insert("", tk.END, values=[log["t"], log["time"], log["message"]])
                 self._log_tree.yview_moveto(1)
+                self._log_cnt += 1
+                self._bottom_nb.tab(1, text=f"Log ({self._log_cnt})")
 
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
 
@@ -496,6 +505,8 @@ class ExperimentUITkinter(IExperimentUI):
         self._data = []
         self._data_queue = queue.Queue()
         self.log_queue = queue.Queue()
+        self._log_cnt = 0
+        self._bottom_nb.tab(1, text=f"Log")
         self._result_tree.delete(*self._result_tree.get_children())
         self._reset_plotter()
 
@@ -505,7 +516,7 @@ class ExperimentUITkinter(IExperimentUI):
         try:
             exp_idx = self._experiment_list.curselection()[0]
             Experiment = self.experiments[exp_idx]
-            plotter_idx = self._plotter_list.curselection()[0]
+            plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
             Plotter = Experiment.plotter_classes[plotter_idx]
         except IndexError:
             self._plotter = None
