@@ -6,8 +6,8 @@ from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentC
 from ebilab.experiment.options import FloatField, SelectField
 
 #  class to decide how to plot during experiment
-class MyPlotter(ExperimentPlotter):
-    name = "simple"
+class TransientPlotter(ExperimentPlotter):
+    name = "transient"
     def prepare(self, ctx: PlotterContext):
         # this method is executed before starting experiment
         # e.g. adding Axes to Figure
@@ -26,11 +26,32 @@ class MyPlotter(ExperimentPlotter):
         self._ax.set_ylabel("Voltage")
         self._ax.grid()
 
+#  class to decide how to plot during experiment
+class HistgramPlotter(ExperimentPlotter):
+    name = "histgram"
+    def prepare(self, ctx: PlotterContext):
+        # this method is executed before starting experiment
+        # e.g. adding Axes to Figure
+        # figure is stored in `self.fig`
+
+        self._ax = self.fig.add_subplot(111)
+
+    def update(self, df, ctx: PlotterContext):
+        # this method is executed many times during experiment
+        # df is pandas.DataFrame which has experiment data
+
+        self._ax.cla()
+
+        self._ax.hist(df["v"])
+        self._ax.set_xlabel("Value")
+        self._ax.set_ylabel("Count")
+        self._ax.grid()
+
 # class to decide steps of experiment
 class RandomWalkExperiment(ExperimentProtocol):
     columns = ["v", "v2"] # please specify columns to write csv file
     name = "random-walk" # filename is suffixed by datetime
-    plotter_classes = [MyPlotter]
+    plotter_classes = [TransientPlotter, HistgramPlotter]
 
     # available in GUI
     options = {
