@@ -29,6 +29,9 @@ class TransientPlotter(ExperimentPlotter):
 #  class to decide how to plot during experiment
 class HistgramPlotter(ExperimentPlotter):
     name = "histgram"
+    options = {
+        "bins": FloatField(default=10),
+    }
     def prepare(self, ctx: PlotterContext):
         # this method is executed before starting experiment
         # e.g. adding Axes to Figure
@@ -42,7 +45,7 @@ class HistgramPlotter(ExperimentPlotter):
 
         self._ax.cla()
 
-        self._ax.hist(df["v"])
+        self._ax.hist(df["v"], bins=int(ctx.plotter_options["bins"]))
         self._ax.set_xlabel("Value")
         self._ax.set_ylabel("Count")
         self._ax.grid()
@@ -72,6 +75,19 @@ class RandomWalkExperiment(ExperimentProtocol):
 
             ctx.loop() # you must run ctx.loop() in every loop
 
+class NothingExperiment(ExperimentProtocol):
+    columns = []
+    name = "do-noting"
+    plotter_classes = []
+
+    # available in GUI
+    options = {
+    }
+
+    def steps() -> None: # step of measurement
+        pass
+
+
 if __name__ == "__main__":
-    launch_experiment([RandomWalkExperiment])
+    launch_experiment([RandomWalkExperiment, NothingExperiment])
 
