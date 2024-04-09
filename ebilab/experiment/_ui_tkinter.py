@@ -1,6 +1,7 @@
 from logging import getLogger
 import queue
 import time
+from pathlib import Path
 from typing import List, Optional, Type, Dict
 import tkinter as tk
 from tkinter import ttk
@@ -220,6 +221,7 @@ class ExperimentUITkinter(IExperimentUI):
 
     def _create_ui(self):
         self._root = tk.Tk()
+        self._root.iconbitmap(default=str(Path(__file__).parent.parent / "icon.ico"))
         self._root.state("zoomed")
         self._root.columnconfigure(0, weight=1)
         self._root.rowconfigure(0, weight=1)
