@@ -43,7 +43,7 @@ class ProtocolTree(ttk.Treeview):
         for i, experiment in enumerate(experiments):
             new_key = f"{key}.{i}"
             if isinstance(experiment, ExperimentProtocolGroup):
-                id = self.insert(parent, "end", text=experiment.name, iid=new_key)
+                id = self.insert(parent, "end", text=experiment.name, iid=new_key, open=True)
                 self._insert_experiments(id, experiment.protocols, new_key)
                 continue
             else:
