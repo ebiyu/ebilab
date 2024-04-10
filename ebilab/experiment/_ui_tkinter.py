@@ -28,7 +28,7 @@ except:
 
 class ProtocolTree(ttk.Treeview):
     def __init__(self, master):
-        super().__init__(master, padding=10)
+        super().__init__(master, padding=10, selectmode="browse")
         self.bind("<<TreeviewSelect>>", self._on_change)
         self.experiments = []
 
