@@ -14,5 +14,5 @@ class NothingExperiment(ExperimentProtocol):
     options = {
     }
 
-    def steps() -> None: # step of measurement
+    def steps(self, ctx: ExperimentContext) -> None: # step of measurement
         pass

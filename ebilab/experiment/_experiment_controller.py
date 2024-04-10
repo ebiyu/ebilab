@@ -88,13 +88,19 @@ class ExperimentPlotter(metaclass=abc.ABCMeta):
 class ExperimentProtocol(metaclass=abc.ABCMeta):
     name: str
     columns: List[str]
-    plotter_classes: List[Type[ExperimentPlotter]]
+    plotter_classes: List[Type[ExperimentPlotter]] = None
 
     options: Optional[Dict[str, OptionField]] = None
 
     @abc.abstractmethod
     def steps(self, ctx: ExperimentContext) -> None:
         raise NotImplementedError()
+
+    @classmethod
+    def register_plotter(cls, plotter):
+        if cls.plotter_classes is None:
+            cls.plotter_classes = []
+        cls.plotter_classes.append(plotter)
 
 @dataclasses.dataclass(frozen=True)
 class ExperimentProtocolGroup:
@@ -153,6 +159,15 @@ class IExperimentUI(metaclass=abc.ABCMeta):
     def experiment_label(self) -> str:
         raise NotImplementedError()
 
+def prepare_experiments(experiments):
+    for experiment in experiments:
+        if isinstance(experiment, ExperimentProtocolGroup):
+            prepare_experiments(experiment.protocols)
+            continue
+
+        if experiment.plotter_classes is None:
+            experiment.plotter_classes = []
+
 class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _experiments: List[Type[ExperimentProtocol]]
     _ui: IExperimentUI
@@ -164,6 +179,9 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
     _experiment_thread = None
 
     def __init__(self, *, experiments: List[Type[ExperimentProtocol]], ui: IExperimentUI):
+        # fix plotter_classes in experiments
+        prepare_experiments(experiments)
+
         self._experiments = experiments
 
         self._ui = ui
