@@ -1,6 +1,6 @@
 from typing import List, Type
 
-from ._experiment_controller import ExperimentProtocol, ExperimentContext, ExperimentController, ExperimentPlotter, PlotterContext
+from ._experiment_controller import ExperimentProtocol, ExperimentContext, ExperimentController, ExperimentPlotter, PlotterContext, ExperimentProtocolGroup
 
 def launch_experiment(experiments: List[Type[ExperimentProtocol]]):
     from ._ui_tkinter import ExperimentUITkinter

@@ -2,7 +2,7 @@
 import time
 import random
 
-from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, PlotterContext, launch_experiment
+from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, PlotterContext, launch_experiment, ExperimentProtocolGroup
 from ebilab.experiment.options import FloatField, SelectField
 
 #  class to decide how to plot during experiment
@@ -89,5 +89,5 @@ class NothingExperiment(ExperimentProtocol):
 
 
 if __name__ == "__main__":
-    launch_experiment([RandomWalkExperiment, NothingExperiment])
+    launch_experiment([RandomWalkExperiment, ExperimentProtocolGroup(name="dir", protocols=[NothingExperiment])])
 

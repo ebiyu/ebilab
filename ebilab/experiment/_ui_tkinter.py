@@ -11,7 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ._experiment_controller import ExperimentPlotter, IExperimentUI, ExperimentProtocol, PlotterContext
+from ._experiment_controller import ExperimentPlotter, IExperimentUI, ExperimentProtocol, PlotterContext, ExperimentProtocolGroup
 from .options import OptionField, FloatField, SelectField, IntField, StrField
 
 logger = getLogger(__name__)
@@ -25,6 +25,51 @@ except:
         ctypes.windll.user32.SetProcessDPIAware()
     except:
         pass
+
+class ProtocolTree(ttk.Treeview):
+    def __init__(self, master):
+        super().__init__(master, padding=10)
+        self.bind("<<TreeviewSelect>>", self._on_change)
+        self.experiments = []
+
+    def update_experiments(self, experiments):
+        """
+        Update protocol list (tree)
+        """
+        self._insert_experiments("", experiments, "")
+        self.experiments = experiments
+
+    def _insert_experiments(self, parent, experiments, key):
+        for i, experiment in enumerate(experiments):
+            new_key = f"{key}.{i}"
+            if isinstance(experiment, ExperimentProtocolGroup):
+                id = self.insert(parent, "end", text=experiment.name, iid=new_key)
+                self._insert_experiments(id, experiment.protocols, new_key)
+                continue
+            else:
+                self.insert(parent, "end", text=experiment.name, iid=new_key)
+
+    def _on_change(self, *args, **kwargs):
+        self.event_generate("<<ExperimentChange>>")
+
+    def _get_experiment_from_list(self, experiments, ids):
+        for i in ids:
+            experiment = experiments[int(i)]
+            if not isinstance(experiment, ExperimentProtocolGroup):
+                return experiment
+            experiments = experiment.protocols
+        return None
+
+    @property
+    def selected_experiment(self):
+        """
+        Active experiment
+        """
+        selection = self.selection()
+        if len(selection) == 0:
+            return None
+        ids = selection[0].split(".")
+        return self._get_experiment_from_list(self.experiments, ids[1:])
 
 class OptionsPane(ttk.Frame):
     __label: str
@@ -238,13 +283,12 @@ class ExperimentUITkinter(IExperimentUI):
         experiment_list_pane = ttk.Frame(sidebar_frm, padding=10, relief="solid")
         experiment_list_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        tk.Label(experiment_list_pane, justify="center", text="Plotter List") \
+        tk.Label(experiment_list_pane, justify="center", text="Experiments") \
             .pack(side=tk.TOP, fill=tk.Y, expand=False)
 
-        self._experiment_list_var = tk.StringVar(value=[])
-        self._experiment_list = tk.Listbox(experiment_list_pane, listvariable=self._experiment_list_var, exportselection=False, height=5)
-        self._experiment_list.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        self._experiment_list.bind("<<ListboxSelect>>", self._handle_experiment_change)
+        self._protocol_tree = ProtocolTree(experiment_list_pane)
+        self._protocol_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self._protocol_tree.bind("<<ExperimentChange>>", self._handle_experiment_change)
 
         # plotter options pane
         self._protocol_options_pane = OptionsPane(sidebar_frm, "Experiment options")
@@ -329,33 +373,27 @@ class ExperimentUITkinter(IExperimentUI):
         self._root.quit()
         self._root.destroy()
 
-    def _get_current_experiment(self) -> Type[ExperimentProtocol]:
-        idx = self._experiment_list.curselection()[0]
-        return self.experiments[idx]
-
     def _handle_experiment_change(self, _):
-        if not self._experiment_list.curselection():
+        experiment = self._protocol_tree.selected_experiment
+        if not experiment:
             return
 
         self.reset_data()
 
-        idx = self._experiment_list.curselection()[0]
-
         # update plotter list (tab)
         for tab in self._plotter_nb.tabs():
             self._plotter_nb.forget(tab)
-        for name in map(lambda cls:cls.name, self.experiments[idx].plotter_classes):
+        for name in map(lambda cls:cls.name, experiment.plotter_classes):
             tab = tk.Frame(self._plotter_nb)
             self._plotter_nb.add(tab, text=name)
-        if len(self.experiments[idx].plotter_classes) == 0:
+        if len(experiment.plotter_classes) == 0:
             tab = tk.Frame(self._plotter_nb)
             self._plotter_nb.add(tab, text="-")
 
         self._handle_plotter_change()
 
         # update cols
-        Experiment = self.experiments[idx]
-        columns = ["t", "time"] + Experiment.columns
+        columns = ["t", "time"] + experiment.columns
         self._result_tree["columns"] = columns
         self._result_tree.column("#0", width=0, stretch=False)
         self._result_tree.heading("time", text="time")
@@ -368,11 +406,12 @@ class ExperimentUITkinter(IExperimentUI):
             self._result_tree.column(col, minwidth=100, anchor='center', stretch=True)
 
 
-        self._experiment_label_var.set(Experiment.name)
+        self._experiment_label_var.set(experiment.name)
 
-        self._protocol_options_pane.fields = Experiment.options or {}
+        self._protocol_options_pane.fields = experiment.options or {}
 
         self._validate_options_and_update_ui()
+        self._update_ui_from_state()
 
     def _validate_options_and_update_ui(self, *_):
         if self._state != "stopped":
@@ -384,10 +423,11 @@ class ExperimentUITkinter(IExperimentUI):
 
     def _handle_plotter_change(self, *args, **kwargs):
         try:
-            exp_idx = self._experiment_list.curselection()[0]
-            Experiment = self.experiments[exp_idx]
+            experiment = self._protocol_tree.selected_experiment
+            if experiment is None:
+                return
             plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
-            Plotter = Experiment.plotter_classes[plotter_idx]
+            Plotter = experiment.plotter_classes[plotter_idx]
         except IndexError:
             return
         self._plotter_options_pane.fields = Plotter.options or {}
@@ -397,7 +437,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._create_ui()
 
         # insert data
-        self._experiment_list_var.set(list(map(lambda cls:cls.name, self.experiments)))
+        self._protocol_tree.update_experiments(self.experiments)
 
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
         self._root.mainloop()
@@ -418,8 +458,8 @@ class ExperimentUITkinter(IExperimentUI):
             for d in data:
                 self._data.append(d)
 
-                experiment_idx = self._experiment_list.curselection()[0]
-                columns = self.experiments[experiment_idx].columns
+                experiment = self._protocol_tree.selected_experiment
+                columns = experiment.columns
 
                 # insert to table
                 row_list = [str(d["t"]), str(d["time"])]
@@ -453,8 +493,7 @@ class ExperimentUITkinter(IExperimentUI):
             logger.debug(f"canvas.draw took {time.perf_counter() - time_before_draw} s")
 
     def _handle_start_experiment(self):
-        experiment_idx = self._experiment_list.curselection()[0]
-        self.delegate.handle_ui_start(experiment_idx)
+        self.delegate.handle_ui_start(self._protocol_tree.selected_experiment)
 
     def _handle_stop_experiment(self):
         self.delegate.handle_ui_stop()
@@ -475,7 +514,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._quit_button["state"] = "disabled"
             self._stop_button["text"] = "Stop"
             self._experiment_label_entry["state"] = "disabled"
-            self._experiment_list["state"] = "disabled"
+            self._protocol_tree.state(("disabled", ))
             self._protocol_options_pane.enabled = False
         elif self._state == "stopping":
             self._start_button["state"] = "disabled"
@@ -483,16 +522,16 @@ class ExperimentUITkinter(IExperimentUI):
             self._quit_button["state"] = "normal"
             self._stop_button["text"] = "Stopping..."
             self._experiment_label_entry["state"] = "disabled"
-            self._experiment_list["state"] = "disabled"
+            self._protocol_tree.state(("disabled", ))
             self._protocol_options_pane.enabled = False
         else:
-            if self._experiment_list.curselection():
+            if self._protocol_tree.selected_experiment:
                 self._start_button["state"] = "normal"
                 self._validate_options_and_update_ui()
             else:
                 self._start_button["state"] = "disabled"
             self._experiment_label_entry["state"] = "normal"
-            self._experiment_list["state"] = "normal"
+            self._protocol_tree.state(("!disabled", ))
             self._protocol_options_pane.enabled = True
             self._stop_button["state"] = "disabled"
             self._quit_button["state"] = "enabled"
@@ -514,8 +553,7 @@ class ExperimentUITkinter(IExperimentUI):
         self._fig.clf()
 
         try:
-            exp_idx = self._experiment_list.curselection()[0]
-            Experiment = self.experiments[exp_idx]
+            Experiment = self._protocol_tree.selected_experiment
             plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
             Plotter = Experiment.plotter_classes[plotter_idx]
         except IndexError:

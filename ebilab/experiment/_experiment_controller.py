@@ -96,6 +96,12 @@ class ExperimentProtocol(metaclass=abc.ABCMeta):
     def steps(self, ctx: ExperimentContext) -> None:
         raise NotImplementedError()
 
+@dataclasses.dataclass(frozen=True)
+class ExperimentProtocolGroup:
+    name: str
+    protocols: List[Type[ExperimentProtocol]]
+
+
 class ExperimentUIDelegate(metaclass=abc.ABCMeta):
     # UI -> Coreの操作
     @abc.abstractmethod
@@ -183,13 +189,12 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         comment_str += f"#\n"
         return comment_str
 
-    def _run(self, experiment_index: int):
+    def _run(self, experiment: Type[ExperimentProtocol]):
         logger.info(f"starting experiment")
 
         self._ui.update_state("running")
 
-        self._running_experiment_idx = experiment_index
-        self._running_experiment_class = self._experiments[experiment_index]
+        self._running_experiment_class = experiment
         self._running_experiment = self._running_experiment_class()
 
         self._ui.reset_data()
@@ -297,8 +302,8 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
             sys.exit()
 
     # ExperimentUIDelegate
-    def handle_ui_start(self, experiment_index: int):
-        self._run(experiment_index)
+    def handle_ui_start(self, experiment: Type[ExperimentProtocol]):
+        self._run(experiment)
 
     def handle_ui_stop(self):
         self._stop()
