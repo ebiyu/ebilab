@@ -3,9 +3,14 @@ import sys
 import time
 import os
 import shutil
+import importlib
+import inspect
 from subprocess import PIPE, STDOUT, Popen
+import datetime
+from logging import getLogger, StreamHandler, FileHandler, Formatter, INFO, DEBUG, WARNING
 
 from .project import get_current_project
+from .experiment import ExperimentProtocol, launch_experiment
 
 from git import Repo
 from git.exc import GitCommandNotFound
@@ -17,6 +22,39 @@ import click
 def cli():
     pass
 
+@cli.command(help="Discover experiment recipes and launch GUI")
+@click.argument("path")
+def experiment(path: str):
+    target = Path(path).resolve()
+
+    if not target.exists():
+        print("File not exists")
+        exit(1)
+
+    if not target.is_dir():
+        print("You have to specify directory")
+        exit(1)
+
+    setup_logger(target.name)
+
+    logger = getLogger(__name__)
+
+    # Discover protocols
+    sys.path.append(str(target.parent))
+    files = target.glob("*.py")
+    protocols = []
+    for file in files:
+        mod = importlib.import_module(target.name + "." + file.stem)
+
+        for _, obj in inspect.getmembers(mod):
+            if inspect.isclass(obj) and issubclass(obj, ExperimentProtocol) and obj.__name__ != "ExperimentProtocol":
+                logger.debug(f"Loaded {obj.__name__} from {file}")
+                protocols.append(obj)
+    protocols.sort(key=lambda p:p.name)
+
+    logger.info(f"Found {len(protocols)} protocols")
+
+    launch_experiment(protocols)
 
 @cli.command()
 @click.argument("path")
@@ -111,3 +149,27 @@ def init(name: str):
 def clean(f):
     project = get_current_project()
     project.clean_files(dry=not f)
+
+def setup_logger(libname: str):
+    # Set up logging
+    os.makedirs("logs", exist_ok=True)
+    formatter = Formatter("%(asctime)s %(name)s:%(lineno)s %(funcName)s [%(levelname)s]: %(message)s")
+    simple_formatter = Formatter("%(asctime)s [%(levelname)s]: %(message)s")
+    dateTag = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    info_handler = FileHandler(filename=f"logs/{dateTag}.log")
+    info_handler.setLevel(INFO)
+    info_handler.setFormatter(formatter)
+    debug_handler = FileHandler(filename=f"logs/{dateTag}.debug.log")
+    debug_handler.setLevel(DEBUG)
+    debug_handler.setFormatter(formatter)
+    stream_handler = StreamHandler()
+    stream_handler.setLevel(WARNING)
+    stream_handler.setFormatter(simple_formatter)
+
+    getLogger("ebilab").setLevel(DEBUG)
+    getLogger(libname).setLevel(DEBUG)
+    getLogger("__main__").setLevel(DEBUG)
+    logger = getLogger()
+    logger.addHandler(stream_handler)
+    logger.addHandler(info_handler)
+    logger.addHandler(debug_handler)
