@@ -6,6 +6,7 @@ setup(
     author_email="yusuke@ebihara.me",
     url="https://ebilab.readthedocs.io/",
     description="Python package for my research",
+    long_description_content_type="text/markdown",
     install_requires=[
         "tqdm",
         "numpy",
