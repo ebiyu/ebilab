@@ -12,8 +12,13 @@ from logging import getLogger, StreamHandler, FileHandler, Formatter, INFO, DEBU
 from .project import get_current_project
 from .experiment import ExperimentProtocol, launch_experiment
 
-from git import Repo
-from git.exc import GitCommandNotFound
+# This import may fail if git is not installed
+try:
+    from git import Repo
+    from git.exc import GitCommandNotFound
+except:
+    pass
+
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import click
