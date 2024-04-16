@@ -38,6 +38,7 @@ extensions = [
     'sphinx.ext.todo',  # ToDoアイテムのサポート
     'sphinx.ext.napoleon', #googleスタイルやNumpyスタイルでdocstringを記述した際に必要
     'sphinx.ext.autosummary',
+    'myst_parser', # for markdown
 ]
 
 autosummary_generate = False
