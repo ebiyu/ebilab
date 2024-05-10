@@ -29,6 +29,9 @@ class A707(VisaDevice):
             self.visa_write(f'E0P0C{string}X')
         sleep(0.1)
 
+    def open_all(self):
+        self.close_only([])
+
 if is_mock_enabled:
     class A707:
         def close_only(self, contacts: List[str]):
