@@ -22,8 +22,11 @@ class A707(VisaDevice):
         Args:
             contacts (list): like `["A2", "B4", "C5"]`
         """
-        string = ",".join([contact for contact in contacts])
-        self.visa_write(f'E0P0C{string}X')
+        if len(contacts) == 0:
+            self.visa_write(f'E0P0X')
+        else:
+            string = ",".join([contact for contact in contacts])
+            self.visa_write(f'E0P0C{string}X')
         sleep(0.1)
 
 if is_mock_enabled:
