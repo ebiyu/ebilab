@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Type, Dict
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import tkinter.font as tkf
 
 import pandas as pd
@@ -578,3 +578,6 @@ class ExperimentUITkinter(IExperimentUI):
     @property
     def experiment_label(self) -> str:
         return self._experiment_label_var.get()
+
+    def show_error(self, msg: str):
+        messagebox.showerror("Error", msg)

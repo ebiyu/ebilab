@@ -22,6 +22,13 @@ from ..project import get_current_project
 
 logger = getLogger(__name__)
 
+class ExperimentStoppedByUser(Exception):
+    """
+    Raised when user pressed 'stop' button
+    """
+    def __str__(self):
+        return "User has stopped the experiment"
+
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
     @abc.abstractmethod
@@ -159,6 +166,9 @@ class IExperimentUI(metaclass=abc.ABCMeta):
     def experiment_label(self) -> str:
         raise NotImplementedError()
 
+    def show_error(self, msg: str):
+        raise NotImplementedError()
+
 def prepare_experiments(experiments):
     for experiment in experiments:
         if isinstance(experiment, ExperimentProtocolGroup):
@@ -248,12 +258,21 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
         self._csv_writer.writerow(header)
 
         def run():
-            self._running_experiment.steps(self._ctx)
-            logger.debug("running_experiment finished, waiting 1sec")
-            time.sleep(1)
-            self._running = False
-            self._ui.update_state("stopped")
-            logger.info("running_experiment finished")
+            try:
+                self._running_experiment.steps(self._ctx)
+            except ExperimentStoppedByUser:
+                logger.info("experiment stopped by user")
+            except Exception as e:
+                # print error info
+                self._ctx.log(f"Python error occured: {e}")
+                logger.exception("Python error occured during experiment")
+                self._ui.show_error(f"Python error occured: {e}")
+            finally:
+                logger.debug("running_experiment finished, waiting 1sec")
+                time.sleep(1)
+                self._running = False
+                self._ui.update_state("stopped")
+                logger.info("running_experiment finished")
 
         self._started_time = time.perf_counter()
         logger.debug(f"started_time: {self._started_time}")
@@ -317,7 +336,7 @@ class ExperimentController(ExperimentContextDelegate, ExperimentUIDelegate):
 
     def experiment_ctx_delegate_loop(self) -> None:
         if not self._running:
-            sys.exit()
+            raise ExperimentStoppedByUser()
 
     # ExperimentUIDelegate
     def handle_ui_start(self, experiment: Type[ExperimentProtocol]):
