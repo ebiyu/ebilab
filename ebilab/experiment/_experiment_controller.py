@@ -72,7 +72,22 @@ class ExperimentContext:
 
     def loop(self) -> None:
         self._delegate.experiment_ctx_delegate_loop()
-        
+
+    def sleep(self, sleep_time: float) -> None:
+        """
+        Cancelable sleep
+        You should use ctx.sleep instead of time.sleep
+
+        Args:
+            sleep_time (float): Time to sleep
+        """
+        target = time.time() + sleep_time
+        while target - time.time() > 1.0:
+            time.sleep(1)
+            self.loop()
+
+        time.sleep(target - time.time())
+ 
 @dataclasses.dataclass
 class PlotterContext:
     plotter_options: dict
