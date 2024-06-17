@@ -61,10 +61,25 @@ def experiment(path: str):
 
     launch_experiment(protocols)
 
+def print_message_full(message):
+    size = shutil.get_terminal_size((80, 20))
+    terminal_width = size.columns
+
+    if len(message) > terminal_width - 4:
+        # Message exceeds terminal width
+        print("=" * terminal_width)
+        print(message)
+        print("=" * terminal_width)
+    else:
+        # Message fits in terminal width
+        print(f" {message} ".center(terminal_width, "="))
+
 @cli.command()
 @click.argument("path")
-def watch(path: str):
+@click.option("--watch-project", is_flag=True, default=False, help="Watch project directory instead of file.")
+def watch(path: str, watch_project: bool = False):
     target = Path(path).resolve()
+    project = get_current_project()
 
     if not target.exists():
         print("File not exists")
@@ -74,8 +89,6 @@ def watch(path: str):
         print("Python please")
         exit(1)
 
-
-    print(target)
 
     class Handler(PatternMatchingEventHandler):
         last_trigger_time = None
@@ -87,12 +100,15 @@ def watch(path: str):
             if self.last_trigger_time and current_time - self.last_trigger_time < 1:
                 return
 
+            src_path = Path(event.src_path)
+            print(f"Change detected: {src_path.relative_to(project.path.root)}")
+
             self.last_trigger_time = current_time
-            print("running...")
+            print_message_full(f"Running {target.relative_to(project.path.root)}")
 
             try:
                 my_env = os.environ.copy()
-                size = os.get_terminal_size()
+                size = shutil.get_terminal_size()
                 my_env["COLUMNS"] = str(size.columns)
                 my_env["LINES"] = str(size.lines)
                 my_env["EBILAB_SOURCE"] = "WATCH"
@@ -108,12 +124,20 @@ def watch(path: str):
 
             finally:
                 self.last_trigger_time = time.time()
-                print("done")
+                print_message_full(f"Completed {target.relative_to(project.path.root)}")
 
-    event_handler = Handler([target.name])
-    observer = Observer()
-    observer.schedule(event_handler, target.parent)
-    observer.start()
+    if watch_project:
+        event_handler = Handler(["*.py"])
+        observer = Observer()
+        observer.schedule(event_handler, project.path.root, recursive=True)
+        observer.start()
+        print(f"Watching directory: {project.path.root}")
+    else:
+        event_handler = Handler([target.name])
+        observer = Observer()
+        observer.schedule(event_handler, target.parent)
+        observer.start()
+        print(f"Watching file: {target}")
 
     try:
         while True:
