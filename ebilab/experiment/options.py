@@ -26,3 +26,7 @@ class IntField(OptionField):
 class StrField(OptionField):
     default: str
     allow_blank: bool = False
+
+@dataclasses.dataclass(frozen=True)
+class BoolField:
+    default: bool = False
