@@ -1,6 +1,18 @@
 更新履歴
 ========
 
+v2.8.0 (July 5, 2024)
+---------------------
+
+### Features
+
+- `ebilab.experiment` に `options.BoolField` を追加しました。
+
+### Features (unstable)
+
+- `ebilab.analysis` において、 `ebilab watch` コマンドに `--watch-project` オプションを追加しました。
+    - ファイル単体ではなく、プロジェクト全体を監視して実行することができます。
+
 v2.7.0 (May 16, 2024)
 ---------------------
 
@@ -9,7 +21,7 @@ v2.7.0 (May 16, 2024)
 - `ebilab.experiment` にて、 `ctx.sleep` 関数を追加しました。
     - 実験定義の中で `time.sleep` 関数を用いると、STOPボタンを押してもsleep中は実験が停止できません。そこで、代わりに `ctx.sleep` 関数を用いると、sleep中にSTOPボタンを押しても停止することができます。
 
-## Policy Update
+### Policy Update
 
 - バージョン更新ポリシーを変更し、semantic versioningにより準拠するようになりました。
     - 今後、より後方互換性を重視するようになります。
