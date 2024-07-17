@@ -70,7 +70,7 @@ class ProcessingData:
     def plot(self, plotter: DfPlotter):
 
         dir = get_current_project().path.data_plot
-        filename = dir / (self._key + "__" + plotter.key + self._plot_ctx_label + ".png")
+        filename = dir / (self._key + "__" + plotter.get_key() + self._plot_ctx_label + ".png")
 
         # cache
         if self._use_cache and filename.exists():
@@ -118,7 +118,7 @@ class AggregatedProcessingData:
 
     def plot(self, plotter: AggregatedDfPlotter):
         dir = get_current_project().path.data_plot
-        filename = dir / (f"[{','.join(self._keys)}]__{plotter.key}{self._plot_ctx_label}.png")
+        filename = dir / (f"[{','.join(self._keys)}]__{plotter.get_key()}{self._plot_ctx_label}.png")
 
         # cache
         if self._use_cache and filename.exists():
