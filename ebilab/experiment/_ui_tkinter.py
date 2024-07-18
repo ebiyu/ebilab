@@ -27,6 +27,10 @@ except:
         pass
 
 class ProtocolTree(ttk.Treeview):
+    """
+    Treeview which can show list of ExperimentProtocol
+    """
+
     def __init__(self, master):
         super().__init__(master, padding=10, selectmode="browse")
         self.bind("<<TreeviewSelect>>", self._on_change)
@@ -47,7 +51,7 @@ class ProtocolTree(ttk.Treeview):
                 self._insert_experiments(id, experiment.protocols, new_key)
                 continue
             else:
-                self.insert(parent, "end", text=experiment.name, iid=new_key)
+                self.insert(parent, "end", text=experiment.get_summary(), iid=new_key)
 
     def _on_change(self, *args, **kwargs):
         self.event_generate("<<ExperimentChange>>")
@@ -306,6 +310,9 @@ class ExperimentUITkinter(IExperimentUI):
         self._protocol_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self._protocol_tree.bind("<<ExperimentChange>>", self._handle_experiment_change)
 
+        self._description_label = ttk.Label(sidebar_frm, text="-")
+        self._description_label.pack(side=tk.TOP, fill=tk.X)
+
         # plotter options pane
         self._protocol_options_pane = OptionsPane(sidebar_frm, "Experiment options")
         self._protocol_options_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -395,6 +402,9 @@ class ExperimentUITkinter(IExperimentUI):
             return
 
         self.reset_data()
+
+        # update description
+        self._description_label["text"] = experiment.get_description()
 
         # update plotter list (tab)
         for tab in self._plotter_nb.tabs():

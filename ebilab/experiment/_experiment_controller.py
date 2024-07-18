@@ -114,6 +114,20 @@ class ExperimentProtocol(metaclass=abc.ABCMeta):
 
     options: Optional[Dict[str, OptionField]] = None
 
+    @classmethod
+    def get_summary(cls):
+        if cls.__doc__ is None:
+            return cls.name
+        return cls.__doc__.strip().splitlines()[0].strip()
+
+    @classmethod
+    def get_description(cls):
+        if cls.__doc__ is None:
+            return "There's no description"
+        lines = cls.__doc__.strip().splitlines()[1:]
+        lines = map(lambda x:x.strip(), lines)
+        return "\n".join(lines).strip()
+
     @abc.abstractmethod
     def steps(self, ctx: ExperimentContext) -> None:
         raise NotImplementedError()

@@ -8,6 +8,13 @@ from ebilab.experiment.options import FloatField, SelectField
 
 # class to decide steps of experiment
 class RandomWalkExperiment(ExperimentProtocol):
+    """
+    Random Walk
+    
+    This is example experiment.
+    The interval is 0.2 sec.
+    """
+
     columns = ["v", "v2"] # please specify columns to write csv file
     name = "random-walk" # filename is suffixed by datetime
 
