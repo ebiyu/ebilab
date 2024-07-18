@@ -11,6 +11,7 @@ from logging import getLogger, StreamHandler, FileHandler, Formatter, INFO, DEBU
 
 from .project import get_current_project
 from .experiment import ExperimentProtocol, launch_experiment
+from .experiment._experiment_controller import ExperimentProtocolSourceInfo
 
 # This import may fail if git is not installed
 try:
@@ -49,11 +50,16 @@ def experiment(path: str):
     files = target.glob("*.py")
     protocols = []
     for file in files:
-        mod = importlib.import_module(target.name + "." + file.stem)
+        module_name = target.name + "." + file.stem
+        mod = importlib.import_module(module_name)
 
         for _, obj in inspect.getmembers(mod):
             if inspect.isclass(obj) and issubclass(obj, ExperimentProtocol) and obj.__name__ != "ExperimentProtocol":
                 logger.debug(f"Loaded {obj.__name__} from {file}")
+                obj.source_info = ExperimentProtocolSourceInfo(
+                    filepath=file,
+                    module_name=module_name,
+                ) 
                 protocols.append(obj)
     protocols.sort(key=lambda p:p.name)
 

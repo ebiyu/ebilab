@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import os
+import subprocess
 from pathlib import Path
 from typing import Union, List
 
@@ -67,7 +68,7 @@ class ProcessingData:
         self._df.to_csv(dir / (self._key + ".csv"), index=False)
         return self
 
-    def plot(self, plotter: DfPlotter):
+    def plot(self, plotter: DfPlotter, open=False):
 
         dir = get_current_project().path.data_plot
         filename = dir / (self._key + "__" + plotter.get_key() + self._plot_ctx_label + ".png")
@@ -80,6 +81,13 @@ class ProcessingData:
             with plt.rc_context(self._plot_ctx):
                 plotter.handler(self._df, filename)
             print(f"Saved plot: {filename.name}")
+
+        # open
+        if open:
+            if "VSCODE_INJECTION" in os.environ:
+                subprocess.run(["code.cmd", filename])
+            else:
+                subprocess.run(["start.exe", filename])
 
         return self
 

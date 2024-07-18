@@ -107,10 +107,16 @@ class ExperimentPlotter(metaclass=abc.ABCMeta):
     def update(self, df, ctx: PlotterContext):
         raise NotImplementedError()
 
+@dataclasses.dataclass(frozen=True)
+class ExperimentProtocolSourceInfo():
+    filepath: Path
+    module_name: str
+
 class ExperimentProtocol(metaclass=abc.ABCMeta):
     name: str
     columns: List[str]
     plotter_classes: List[Type[ExperimentPlotter]] = None
+    source_info: Optional[ExperimentProtocolSourceInfo] = None
 
     options: Optional[Dict[str, OptionField]] = None
 

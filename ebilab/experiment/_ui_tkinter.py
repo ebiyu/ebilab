@@ -6,6 +6,8 @@ from typing import List, Optional, Type, Dict
 import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkf
+import importlib
+import subprocess
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -75,6 +77,61 @@ class ProtocolTree(ttk.Treeview):
         ids = selection[0].split(".")
         return self._get_experiment_from_list(self.experiments, ids[1:])
 
+class DevelopPane(ttk.Frame):
+    _active_experiment: ExperimentProtocol = None
+
+    def __init__(self, master):
+        super().__init__(master, padding=10, relief="solid")
+        self.create_widgets()
+
+    def create_widgets(self):
+        tk.Label(self, justify=tk.LEFT, text="Development") \
+            .pack(side=tk.TOP, fill=tk.X, expand=False)
+
+        buttons_frame = ttk.Frame(self)
+        buttons_frame.pack(side=tk.TOP, fill=tk.X, expand=False)
+
+        self.open_button = ttk.Button(buttons_frame, text="Open", command=self._handle_open)
+        self.open_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.reload_button = ttk.Button(buttons_frame, text="Reload", command=self._handle_reload)
+        # self.reload_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        # TODO: reload is not implemented
+
+        self.on_experiment_change(None)
+
+    def _handle_reload(self):
+        if self._active_experiment is None:
+            return
+        info = self._active_experiment.source_info
+        if info is None:
+            return
+
+        logger.info(f"Reloading {info.module_name}")
+        module = importlib.import_module(info.module_name)
+        importlib.reload(module)
+        logger.info(f"Reloaded {info.module_name}")
+
+    def _handle_open(self):
+        if self._active_experiment is None:
+            return
+        info = self._active_experiment.source_info
+        if info is None:
+            return
+
+        logger.info(f"Opening {str(info.filepath)}")
+        subprocess.Popen (["notepad.exe", str(info.filepath)])
+
+    def on_experiment_change(self, experiment):
+        self._active_experiment = experiment
+        if experiment is None:
+            self.open_button["state"] = "disabled"
+            self.reload_button["state"] = "disabled"
+        else:
+            self.open_button["state"] = "normal"
+            self.reload_button["state"] = "normal"
+
+# tk.Variable()
 class OptionsPane(ttk.Frame):
     __label: str
     __fields: Dict[str, OptionField]
@@ -313,6 +370,9 @@ class ExperimentUITkinter(IExperimentUI):
         self._description_label = ttk.Label(sidebar_frm, text="-")
         self._description_label.pack(side=tk.TOP, fill=tk.X)
 
+        self.develop_pane = DevelopPane(sidebar_frm)
+        self.develop_pane.pack(side=tk.TOP, fill=tk.X)
+
         # plotter options pane
         self._protocol_options_pane = OptionsPane(sidebar_frm, "Experiment options")
         self._protocol_options_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -405,6 +465,9 @@ class ExperimentUITkinter(IExperimentUI):
 
         # update description
         self._description_label["text"] = experiment.get_description()
+
+        # update develop pane
+        self.develop_pane.on_experiment_change(experiment)
 
         # update plotter list (tab)
         for tab in self._plotter_nb.tabs():
