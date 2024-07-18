@@ -192,7 +192,7 @@ def setup_logger(libname: str):
     debug_handler.setLevel(DEBUG)
     debug_handler.setFormatter(formatter)
     stream_handler = StreamHandler()
-    stream_handler.setLevel(WARNING)
+    stream_handler.setLevel(INFO)
     stream_handler.setFormatter(simple_formatter)
 
     getLogger("ebilab").setLevel(DEBUG)
