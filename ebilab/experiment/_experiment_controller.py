@@ -9,7 +9,7 @@ from typing import TypedDict
 from threading import Thread
 from logging import getLogger
 
-from .protocol import *  # FIXME
+from .protocol import ExperimentContext, ExperimentContextDelegate, ExperimentProtocol
 from .util import Event
 from ..project import get_current_project
 
@@ -77,7 +77,7 @@ class ExperimentController(ExperimentContextDelegate):
         try:
             logger.debug("ebilab project found")
             data_dir = get_current_project().path.data_original
-        except:
+        except:  # noqa: E722 FIXME
             logger.debug("ebilab project not found")
             data_dir = Path(".") / "data"
         dir = data_dir / datetime.datetime.now().strftime("%y%m%d")

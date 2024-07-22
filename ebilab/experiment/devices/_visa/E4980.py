@@ -28,7 +28,8 @@ class E4980(VisaDevice):
             ampl (float): measurement amplitude [V]
             time (str): measurement time from {"LONG", "MED", "SHORT"}
             format (str): format of return value from
-                {"CPD", "CPQ", "CPG", "CPRP", "CSD", "CSQ", "CSRS", "LPD", "LPQ", "LPG", "LPRP", "LSD", "LSQ", "LSRS", "RX", "ZTD", "ZTR", "GB", "YTD", "YTR"}
+                {"CPD", "CPQ", "CPG", "CPRP", "CSD", "CSQ", "CSRS", "LPD", "LPQ", "LPG", "LPRP",
+                "LSD", "LSQ", "LSRS", "RX", "ZTD", "ZTR", "GB", "YTD", "YTR"}
 
         Returns:
             [float, float]: Measured impedance value

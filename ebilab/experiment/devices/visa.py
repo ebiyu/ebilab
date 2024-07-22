@@ -25,7 +25,8 @@ class VisaManager:
     """
     Manager class of visa device based on pyvisa module
 
-    Do not intialize directory, use :py:meth:`get_visa_manager() <ebilab.experiment.devices.visa.get_visa_manager>` method instead.
+    Do not intialize directory, use
+    :py:meth:`get_visa_manager() <ebilab.experiment.devices.visa.get_visa_manager>` method instead.
     """
 
     _rm: Optional[pyvisa.ResourceManager] = None
@@ -60,10 +61,10 @@ class VisaManager:
                     idn = inst.query("*IDN?")
                     logger.debug(f"*IDN? to {addr}: {idn}")
                     self._devices[addr] = _VisaManagerDevice(idn, inst)
-                except:
+                except:  # noqa: E722
                     logger.debug(f"No response to *IDN? from {addr}")
                     inst.close()
-            except:
+            except:  # noqa: E722
                 pass
 
     def get_inst(self, pattern: str) -> Optional[pyvisa.Resource]:

@@ -21,7 +21,7 @@ from .experiment._experiment_manager import ExperimentManager
 try:
     from git import Repo
     from git.exc import GitCommandNotFound
-except:
+except:  # noqa: E722
     pass
 
 from watchdog.observers import Observer
@@ -170,7 +170,7 @@ def init(name: str):
         repo.git.commit(m="init: initialized by `ebilab init`")
     except GitCommandNotFound:
         print("Git command not found, skipping...")
-    except:
+    except:  # noqa: E722
         print("Git initialization failed, skipping...")
 
     print(f'Initialized project "{name}"')

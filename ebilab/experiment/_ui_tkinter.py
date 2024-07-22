@@ -29,10 +29,10 @@ try:
     import ctypes
 
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except:
+except:  # noqa: E722
     try:
         ctypes.windll.user32.SetProcessDPIAware()
-    except:
+    except:  # noqa: E722
         pass
 
 
