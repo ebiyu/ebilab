@@ -86,7 +86,7 @@ class VisaManager:
 
 
 # To be singleton
-_visa_manager = None
+_visa_manager: VisaManager | None = None
 
 
 def get_visa_manager():
@@ -120,7 +120,7 @@ class VisaDevice:
 
     _idn_pattern: Optional[str] = None
 
-    def __init__(self, *, addr: str = None, **kwargs):
+    def __init__(self, *, addr: str | None = None, **kwargs):
         if self._idn_pattern is None:
             raise NotImplementedError("idn_pattern is None")
         inst = get_visa_manager().get_inst(self._idn_pattern)

@@ -100,12 +100,7 @@ class ExperimentManager:
 
         logger.info(f"Found {len(protocols)} protocols")
 
-        # FIXME: mypy error
-        discovered: list[ExperimentProtocolInfo | ExperimentProtocolGroupInfo] = (
-            protocols  # type: ignore
-        )
-
-        return cls(discovered)
+        return cls(protocols)
 
     @classmethod
     def from_experiments(

@@ -2,7 +2,7 @@ from logging import getLogger
 import queue
 import time
 from pathlib import Path
-from typing import List, Optional, Type, Dict
+from typing import Any, List, Optional, Type, Dict
 import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkf
@@ -194,9 +194,9 @@ class OptionsPane(ttk.Frame):
                 label = tk.Label(self, text=key)
                 label.grid(row=i + 1, column=0, sticky=tk.W + tk.N)
 
-                var = tk.StringVar(value=str(field.default))
+                var: Any = tk.StringVar(value=str(field.default))
                 var.trace("w", self._on_update)
-                widget = tk.Entry(self, textvariable=var)
+                widget: Any = tk.Entry(self, textvariable=var)
                 widget.grid(row=i + 1, column=1, sticky=tk.EW + tk.N)
 
                 self._options_textvars.append(var)
@@ -286,7 +286,7 @@ class OptionsPane(ttk.Frame):
         ):
             if isinstance(field, FloatField):
                 try:
-                    val = float(var.get())
+                    val: Any = float(var.get())
                 except ValueError:
                     logger.debug(
                         f"Validation failed: {key} = {var.get()} is not float."
@@ -714,7 +714,7 @@ class ExperimentUITkinter:
         """handle ExperimentManager event"""
         self._log_queue.put(log)
 
-    def _update_ui_from_state(self):
+    def _update_ui_from_state(self) -> None:
         if self._state == "running":
             self._start_button["state"] = "disabled"
             self._stop_button["state"] = "normal"
@@ -758,17 +758,20 @@ class ExperimentUITkinter:
 
         try:
             Experiment = self._protocol_tree.selected_experiment
+            if Experiment is None:
+                self._plotter = None
+                return
             plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
-            Plotter = Experiment.plotter_classes[plotter_idx]
+            Plotter = (Experiment.plotter_classes or [])[plotter_idx]
         except IndexError:
             self._plotter = None
             return
 
         self._plotter = Plotter()
-        self._plotter.fig = self._fig
+        self._plotter.fig = self._fig # type: ignore
         if self._state == "running":
             ctx = self._get_plotter_context()
-            self._plotter.prepare(ctx)
+            self._plotter.prepare(ctx) # type: ignore
 
     def _get_plotter_context(self):
         return PlotterContext(
