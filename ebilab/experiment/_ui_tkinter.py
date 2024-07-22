@@ -13,8 +13,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ._experiment_controller import ExperimentPlotter, IExperimentUI, ExperimentProtocol, PlotterContext, ExperimentProtocolGroup
+from .protocol import ExperimentPlotter, ExperimentProtocol, PlotterContext, ExperimentProtocolGroup
 from .options import OptionField, FloatField, SelectField, IntField, StrField, BoolField
+from ._experiment_manager import ExperimentManager
+from ._experiment_controller import ExperimentController
 
 logger = getLogger(__name__)
 
@@ -33,17 +35,13 @@ class ProtocolTree(ttk.Treeview):
     Treeview which can show list of ExperimentProtocol
     """
 
-    def __init__(self, master):
+    def __init__(self, master, experiment_manager: ExperimentManager):
         super().__init__(master, padding=10, selectmode="browse")
         self.bind("<<TreeviewSelect>>", self._on_change)
-        self.experiments = []
+        self.experiment_manager = experiment_manager
 
-    def update_experiments(self, experiments):
-        """
-        Update protocol list (tree)
-        """
-        self._insert_experiments("", experiments, "")
-        self.experiments = experiments
+        self._insert_experiments("", self.experiment_manager.experiments, "")
+        # TODO: listen change
 
     def _insert_experiments(self, parent, experiments, key):
         for i, experiment in enumerate(experiments):
@@ -75,7 +73,7 @@ class ProtocolTree(ttk.Treeview):
         if len(selection) == 0:
             return None
         ids = selection[0].split(".")
-        return self._get_experiment_from_list(self.experiments, ids[1:])
+        return self._get_experiment_from_list(self.experiment_manager.experiments, ids[1:])
 
 class DevelopPane(ttk.Frame):
     _active_experiment: ExperimentProtocol = None
@@ -328,9 +326,9 @@ class OptionsPane(ttk.Frame):
             for widget in self._options_widget:
                 widget["state"] = "disabled"
 
-class ExperimentUITkinter(IExperimentUI):
+class ExperimentUITkinter:
     _data_queue: queue.Queue
-    log_queue: queue.Queue
+    _log_queue: queue.Queue
     _log_cnt = 0
 
     _state: str = "stopped"
@@ -339,8 +337,13 @@ class ExperimentUITkinter(IExperimentUI):
     _protocol_options_pane: OptionsPane
     _plotter_options_pane: OptionsPane
 
-    def __init__(self) -> None:
+    experiment_manager: ExperimentManager
+    experiment_controller: ExperimentController | None = None
+    active_experiment: ExperimentProtocol | None = None
+
+    def __init__(self, experiment_manager: ExperimentManager) -> None:
         super().__init__()
+        self.experiment_manager = experiment_manager
 
     def _create_ui(self):
         self._root = tk.Tk()
@@ -363,7 +366,7 @@ class ExperimentUITkinter(IExperimentUI):
         tk.Label(experiment_list_pane, justify="center", text="Experiments") \
             .pack(side=tk.TOP, fill=tk.Y, expand=False)
 
-        self._protocol_tree = ProtocolTree(experiment_list_pane)
+        self._protocol_tree = ProtocolTree(experiment_list_pane, self.experiment_manager)
         self._protocol_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self._protocol_tree.bind("<<ExperimentChange>>", self._handle_experiment_change)
 
@@ -523,11 +526,10 @@ class ExperimentUITkinter(IExperimentUI):
         self._reset_plotter()
 
     def launch(self):
+        """
+        Entrypoint (called from launch_experiment())
+        """
         self._create_ui()
-
-        # insert data
-        self._protocol_tree.update_experiments(self.experiments)
-
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
         self._root.mainloop()
 
@@ -540,6 +542,10 @@ class ExperimentUITkinter(IExperimentUI):
                 return d
 
     def _update_experiment_loop(self):
+        """
+        Called every 30 ms
+        """
+
         self._update_ui_from_state()
         if self._state != "stopped":
             data = self._get_data_from_queue(self._data_queue)
@@ -562,7 +568,7 @@ class ExperimentUITkinter(IExperimentUI):
             self._draw_plot()
 
             # update logs
-            logs = self._get_data_from_queue(self.log_queue)
+            logs = self._get_data_from_queue(self._log_queue)
             for log in logs:
                 self._log_tree.insert("", tk.END, values=[log["t"], log["time"], log["message"]])
                 self._log_tree.yview_moveto(1)
@@ -582,19 +588,53 @@ class ExperimentUITkinter(IExperimentUI):
             logger.debug(f"canvas.draw took {time.perf_counter() - time_before_draw} s")
 
     def _handle_start_experiment(self):
-        self.delegate.handle_ui_start(self._protocol_tree.selected_experiment)
+        """
+        event handler for button
+        """
+
+        # TODO: ensure experiment is reloaded
+        self.active_experiment = self._protocol_tree.selected_experiment()
+        options = self._protocol_options_pane.options
+
+        # generate instance
+        self.experiment_controller = ExperimentController(self.active_experiment)
+
+        # register event handlers
+        self.experiment_controller.event_state_change.add_listener(self._handler_experiment_state_change)
+        self.experiment_controller.event_error.add_listener(self._handler_experiment_error)
+        self.experiment_controller.event_data_row.add_listener(self._handler_experiment_data_row)
+        self.experiment_controller.event_log.add_listener(self._handle_experiment_log)
+
+        self._state = "running" # FIXME: workaround for reset_data()
+        self.reset_data()
+
+        self.experiment_controller.start(options, self.experiment_label)
 
     def _handle_stop_experiment(self):
-        self.delegate.handle_ui_stop()
+        """
+        event handler for button
+        """
+        if self.experiment_controller is not None:
+            self.experiment_controller.stop()
+            self.experiment_controller = None
+            self.active_experiment = None
 
-    @property
-    def data_queue(self) -> queue.Queue:
-        return self._data_queue
+    # handlers for ExperimentManager event
+    def _handler_experiment_state_change(self, state: str):
+        """handle ExperimentManager event"""
+        self._state = state
 
-    experiments: List[Type[ExperimentProtocol]]
+    def _handler_experiment_error(self, error: str):
+        """handle ExperimentManager event"""
+        self.show_error(error)
 
-    def set_plotter(self, plotter: Optional[ExperimentPlotter]):
-        self._plotter = plotter
+    def _handler_experiment_data_row(self, row):
+        """handle ExperimentManager event"""
+        self._data_queue.put(row)
+
+    def _handle_experiment_log(self, log):
+        """handle ExperimentManager event"""
+        self._log_queue.put(log)
 
     def _update_ui_from_state(self):
         if self._state == "running":
@@ -626,13 +666,10 @@ class ExperimentUITkinter(IExperimentUI):
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
 
-    def update_state(self, state: str):
-        self._state = state
-
     def reset_data(self):
         self._data = []
         self._data_queue = queue.Queue()
-        self.log_queue = queue.Queue()
+        self._log_queue = queue.Queue()
         self._log_cnt = 0
         self._bottom_nb.tab(1, text=f"Log")
         self._result_tree.delete(*self._result_tree.get_children())
@@ -658,11 +695,8 @@ class ExperimentUITkinter(IExperimentUI):
     def _get_plotter_context(self):
         return  PlotterContext(
             plotter_options=self._plotter_options_pane.options,
-            protocol_options=self.get_options(),
+            protocol_options=self._protocol_options_pane.options,
         )
-
-    def get_options(self) -> dict:
-        return self._protocol_options_pane.options
 
     @property
     def experiment_label(self) -> str:
