@@ -12,6 +12,7 @@ from logging import getLogger, StreamHandler, FileHandler, Formatter, INFO, DEBU
 from .project import get_current_project
 from .experiment import ExperimentProtocol, launch_experiment
 from .experiment._experiment_controller import ExperimentProtocolSourceInfo
+from .experiment._experiment_manager import ExperimentManager
 
 # This import may fail if git is not installed
 try:
@@ -31,41 +32,14 @@ def cli():
 @cli.command(help="Discover experiment recipes and launch GUI")
 @click.argument("path")
 def experiment(path: str):
+    from .experiment._ui_tkinter import ExperimentUITkinter
+
     target = Path(path).resolve()
-
-    if not target.exists():
-        print("File not exists")
-        exit(1)
-
-    if not target.is_dir():
-        print("You have to specify directory")
-        exit(1)
-
     setup_logger(target.name)
 
-    logger = getLogger(__name__)
-
-    # Discover protocols
-    sys.path.append(str(target.parent))
-    files = target.glob("*.py")
-    protocols = []
-    for file in files:
-        module_name = target.name + "." + file.stem
-        mod = importlib.import_module(module_name)
-
-        for _, obj in inspect.getmembers(mod):
-            if inspect.isclass(obj) and issubclass(obj, ExperimentProtocol) and obj.__name__ != "ExperimentProtocol":
-                logger.debug(f"Loaded {obj.__name__} from {file}")
-                obj.source_info = ExperimentProtocolSourceInfo(
-                    filepath=file,
-                    module_name=module_name,
-                ) 
-                protocols.append(obj)
-    protocols.sort(key=lambda p:p.name)
-
-    logger.info(f"Found {len(protocols)} protocols")
-
-    launch_experiment(protocols)
+    experiment_manager = ExperimentManager.discover(target)
+    ui = ExperimentUITkinter(experiment_manager)
+    ui.launch()
 
 def print_message_full(message):
     size = shutil.get_terminal_size((80, 20))

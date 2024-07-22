@@ -14,17 +14,6 @@ from .protocol import ExperimentProtocol, ExperimentProtocolGroup
 
 logger = getLogger(__name__)
 
-def postprocess_experiments(experiments: list[ExperimentProtocolInfo]):
-    """
-    workaround for bug
-    """
-    for experiment in experiments:
-        if  experiment.children is not None:
-            postprocess_experiments(experiment.children)
-
-        if experiment.protocol is not None and experiment.protocol.plotter_classes is None:
-            experiment.protocol.plotter_classes = []
-
 @dataclasses.dataclass
 class ExperimentProtocolInfo:
     label: str
@@ -110,27 +99,43 @@ class ExperimentManager:
     def from_experiments(cls, experiments: list[type[ExperimentProtocol]]) -> ExperimentManager:
         return cls(list(map(ExperimentProtocolInfo.from_experiment, experiments)))
 
+    def reload(self, key: str) -> None:
+        """
+        Reload experiment protocol
+        """
+        experiment = self.get_experiment_by_key(key)
+        if experiment is None:
+            return None
+        protocol = experiment.protocol
+        if protocol is None:
+            return None
+
+        module_name = experiment.module_name
+        if module_name is None:
+            return
+
+        # reload module
+        logger.info(f"Reloading {module_name}")
+        module = importlib.import_module(module_name)
+        importlib.reload(module)
+        logger.info(f"Reloaded {module_name}")
+
+        # refresh
+        experiment.module = module
+        for _, obj in inspect.getmembers(module):
+            if hasattr(obj, '__name__') and obj.__name__ == protocol.__name__:
+                experiment.protocol = obj
+                logger.info(f'Reloaded {protocol.__name__}')
+
     def update_experiments(self, experiments: list[ExperimentProtocolInfo]):
         self._experiments = experiments
-        postprocess_experiments(experiments)
-        # self._update_key(self._experiments, "")
         self.changed_event.notify(self._experiments)
-
-    # def _update_key(self, experiments: list[type[ExperimentProtocol]], key):
-    #     for i, experiment in enumerate(experiments):
-    #         new_key = f"{key}.{i}"
-    #         if isinstance(experiment, ExperimentProtocolGroup):
-    #             self._insert_experiments(id, experiment.protocols, new_key)
-    #             continue
-    #         else:
-    #             # FIXME: updating experiment class may be bad practice, fix type definition
-    #             experiment.key = new_key # type: ignore
 
     @property
     def experiments(self):
         return self._experiments
 
-    def get_experiment_by_key(self, key: str) -> type[ExperimentProtocol] | None:
+    def get_experiment_by_key(self, key: str) -> ExperimentProtocolInfo | None:
         """
         Get ExperimentProcol class by key
         Args:
@@ -147,9 +152,4 @@ class ExperimentManager:
                         return found
             return None
 
-        info = _get_by_key(key, self._experiments)
-        if info is None:
-            return None
-        if info.protocol is None:
-            return None
-        return info.protocol
+        return _get_by_key(key, self._experiments)

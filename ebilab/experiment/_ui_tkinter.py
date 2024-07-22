@@ -64,7 +64,7 @@ class ProtocolTree(ttk.Treeview):
         return None
 
     @property
-    def selected_experiment(self) -> type[ExperimentProtocol] | None:
+    def selected_experiment_info(self) -> ExperimentProtocolInfo | None:
         """
         Active experiment
         """
@@ -74,12 +74,24 @@ class ProtocolTree(ttk.Treeview):
         # ids = selection[0].split(".")
         return self.experiment_manager.get_experiment_by_key(selection[0])
 
-class DevelopPane(ttk.Frame):
-    _active_experiment: ExperimentProtocol | None = None
+    @property
+    def selected_experiment(self) -> type[ExperimentProtocol] | None:
+        """
+        Active experiment
+        """
+        info = self.selected_experiment_info
+        if info is None:
+            return None
+        return info.protocol
 
-    def __init__(self, master):
+class DevelopPane(ttk.Frame):
+    _active_experiment_key: str | None
+
+    def __init__(self, master, *, experiment_manager: ExperimentManager):
         super().__init__(master, padding=10, relief="solid")
         self.create_widgets()
+        self.experiment_manager = experiment_manager
+        self._active_experiment_key = None
 
     def create_widgets(self):
         tk.Label(self, justify=tk.LEFT, text="Development") \
@@ -92,41 +104,37 @@ class DevelopPane(ttk.Frame):
         self.open_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         self.reload_button = ttk.Button(buttons_frame, text="Reload", command=self._handle_reload)
-        # self.reload_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.reload_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
         # TODO: reload is not implemented
 
         self.on_experiment_change(None)
 
-    def _handle_reload(self):
-        if self._active_experiment is None:
-            return
-        info = self._active_experiment.source_info
-        if info is None:
-            return
+    def _handle_reload(self) -> None:
+        if self._active_experiment_key is not None:
+            self.experiment_manager.reload(self._active_experiment_key)
 
-        logger.info(f"Reloading {info.module_name}")
-        module = importlib.import_module(info.module_name)
-        importlib.reload(module)
-        logger.info(f"Reloaded {info.module_name}")
-
-    def _handle_open(self):
-        if self._active_experiment is None:
-            return
-        info = self._active_experiment.source_info
-        if info is None:
-            return
-
-        logger.info(f"Opening {str(info.filepath)}")
-        subprocess.Popen (["notepad.exe", str(info.filepath)])
-
-    def on_experiment_change(self, experiment):
-        self._active_experiment = experiment
+    def _handle_open(self) -> None:
+        experiment = self._active_experiment_info
         if experiment is None:
+            return
+
+        logger.info(f"Opening {str(experiment.filepath)}")
+        subprocess.Popen (["notepad.exe", str(experiment.filepath)])
+
+    def on_experiment_change(self, experiment_key: str | None):
+        self._active_experiment_key = experiment_key
+        if experiment_key is None:
             self.open_button["state"] = "disabled"
             self.reload_button["state"] = "disabled"
         else:
             self.open_button["state"] = "normal"
             self.reload_button["state"] = "normal"
+
+    @property
+    def _active_experiment_info(self) -> ExperimentProtocolInfo | None:
+        if self._active_experiment_key is None:
+            return None
+        return self.experiment_manager.get_experiment_by_key(self._active_experiment_key)
 
 # tk.Variable()
 class OptionsPane(ttk.Frame):
@@ -344,7 +352,7 @@ class ExperimentUITkinter:
         super().__init__()
         self.experiment_manager = experiment_manager
 
-    def _create_ui(self):
+    def _create_ui(self) -> None:
         self._root = tk.Tk()
         self._root.iconbitmap(default=str(Path(__file__).parent.parent / "icon.ico"))
         self._root.state("zoomed")
@@ -372,7 +380,7 @@ class ExperimentUITkinter:
         self._description_label = ttk.Label(sidebar_frm, text="-")
         self._description_label.pack(side=tk.TOP, fill=tk.X)
 
-        self.develop_pane = DevelopPane(sidebar_frm)
+        self.develop_pane = DevelopPane(sidebar_frm, experiment_manager=self.experiment_manager)
         self.develop_pane.pack(side=tk.TOP, fill=tk.X)
 
         # plotter options pane
@@ -458,9 +466,10 @@ class ExperimentUITkinter:
         self._root.quit()
         self._root.destroy()
 
-    def _handle_experiment_change(self, _):
+    def _handle_experiment_change(self, _) -> None:
+        experiment_info = self._protocol_tree.selected_experiment_info
         experiment = self._protocol_tree.selected_experiment
-        if not experiment:
+        if not experiment or not experiment_info:
             return
 
         self.reset_data()
@@ -469,15 +478,16 @@ class ExperimentUITkinter:
         self._description_label["text"] = experiment.get_description()
 
         # update develop pane
-        self.develop_pane.on_experiment_change(experiment)
+        self.develop_pane.on_experiment_change(experiment_info.key)
 
         # update plotter list (tab)
         for tab in self._plotter_nb.tabs():
             self._plotter_nb.forget(tab)
-        for name in map(lambda cls:cls.name, experiment.plotter_classes):
+
+        for name in map(lambda cls:cls.name, experiment.plotter_classes or []):
             tab = tk.Frame(self._plotter_nb)
             self._plotter_nb.add(tab, text=name)
-        if len(experiment.plotter_classes) == 0:
+        if len(experiment.plotter_classes or []) == 0:
             tab = tk.Frame(self._plotter_nb)
             self._plotter_nb.add(tab, text="-")
 
