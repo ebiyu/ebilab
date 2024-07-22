@@ -17,9 +17,7 @@ class E4980(VisaDevice):
         self.visa_write(":TRIG:DEL 0")
         self.visa_write("*SRE 1")
 
-    def trigger(
-        self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"
-    ):
+    def trigger(self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"):
         """
         measure impedance
 

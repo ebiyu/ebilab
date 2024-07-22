@@ -103,9 +103,7 @@ class ExperimentManager:
         return cls(protocols)
 
     @classmethod
-    def from_experiments(
-        cls, experiments: list[type[ExperimentProtocol]]
-    ) -> ExperimentManager:
+    def from_experiments(cls, experiments: list[type[ExperimentProtocol]]) -> ExperimentManager:
         return cls(list(map(ExperimentProtocolInfo.from_experiment, experiments)))
 
     def reload(self, key: str) -> None:

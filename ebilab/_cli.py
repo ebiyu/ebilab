@@ -96,9 +96,7 @@ def watch(path: str, watch_project: bool = False):
             ignore_directories=False,
             case_sensitive=False,
         ):
-            super().__init__(
-                patterns, ignore_patterns, ignore_directories, case_sensitive
-            )
+            super().__init__(patterns, ignore_patterns, ignore_directories, case_sensitive)
 
         def on_modified(self, event):
             current_time = time.time()

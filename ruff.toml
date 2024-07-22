@@ -1,11 +1,38 @@
 target-version = "py310"
+exclude = [
+    "sample",
+    "docs",
+    "setup.py",
+]
+
+line-length = 100
 
 [lint]
-select = ["ALL"]
-ignore = [
-    "D", # pydocstyle
+select = ["E", "F"]
+# TODO: UP, B, SIM, I, D
+#ignore = [
+#    # TODO
+#    "ANN", # annotation
+#    "PT", # pytest
+#
+#    "D", # pydocstyle
+#
+#
+#    # pending
+#    "TRY002", # raise-vanilla-class
+#    "TRY003", # raise-vanilla-args
+#    "EM", # flake8-errmsg
+# 
+#    # ignore
+#    "PTH", # pathlib
+#    "INP", # implicit namespace package
+#    "G004", # logging f-string
+#    "TID252", # ban relative import
+#    "PLW0603", # global-statement
+#    "PERF203", # try-except in loop
+#
+#    # To avoid conflict
+#    "COM812",
+#    "ISC001",
+#]
 
-    # To avoid conflict
-    "COM812",
-    "ISC001",
-]

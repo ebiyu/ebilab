@@ -55,9 +55,7 @@ class ExperimentController(ExperimentContextDelegate):
         exp_name = experiment.name
         date = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         pc_name = socket.gethostname()
-        options_str = (
-            ", ".join([f"{k}: {v}" for k, v in options.items()]) if options else ""
-        )
+        options_str = ", ".join([f"{k}: {v}" for k, v in options.items()]) if options else ""
 
         comment_str = ""
         comment_str += f"# {exp_name} experiment: Ran at {date} in {pc_name}\n"
@@ -86,12 +84,8 @@ class ExperimentController(ExperimentContextDelegate):
         dir = data_dir / datetime.datetime.now().strftime("%y%m%d")
         os.makedirs(dir, exist_ok=True)
         label = label or self.experiment.name
-        filename = (
-            label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
-        )
-        log_filename = (
-            label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
-        )
+        filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        log_filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
         self._filename = dir / filename
         logger.info(f"Output file: {self._filename}")
         self._file = open(self._filename, "w", newline="")

@@ -50,9 +50,7 @@ class ProcessingData:
     def concat(self, other: ProcessingData) -> ProcessingData:
         key1 = re.sub(r"^\((.+)\)$", r"\1", self._key)
         key2 = re.sub(r"^\((.+)\)$", r"\1", other._key)
-        return ProcessingData(
-            df=pd.concat([self._df, other._df]), key=f"({key1}+{key2})"
-        )
+        return ProcessingData(df=pd.concat([self._df, other._df]), key=f"({key1}+{key2})")
 
     def nocache(self):
         self._use_cache = False
@@ -74,9 +72,7 @@ class ProcessingData:
 
     def plot(self, plotter: DfPlotter, open=False):
         dir = get_current_project().path.data_plot
-        filename = dir / (
-            self._key + "__" + plotter.get_key() + self._plot_ctx_label + ".png"
-        )
+        filename = dir / (self._key + "__" + plotter.get_key() + self._plot_ctx_label + ".png")
 
         # cache
         if self._use_cache and filename.exists():
@@ -151,9 +147,7 @@ class AggregatedProcessingData:
         dfs_copy = [df.copy() for df in self._dfs]
         for df, val in zip(dfs_copy, values):
             df[varname] = val
-        return ProcessingData(
-            df=pd.concat(dfs_copy), key=f"{varname}[{','.join(self._keys)}]"
-        )
+        return ProcessingData(df=pd.concat(dfs_copy), key=f"{varname}[{','.join(self._keys)}]")
 
     def nocache(self):
         self._use_cache = False

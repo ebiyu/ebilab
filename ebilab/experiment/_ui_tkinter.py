@@ -50,9 +50,7 @@ class ProtocolTree(ttk.Treeview):
         self._insert_experiments("", self.experiment_manager.experiments)
         # TODO: listen change
 
-    def _insert_experiments(
-        self, parent: str, experiments: list[ExperimentProtocolInfo]
-    ):
+    def _insert_experiments(self, parent: str, experiments: list[ExperimentProtocolInfo]):
         for i, experiment in enumerate(experiments):
             if experiment.children is not None:
                 id = self.insert(
@@ -118,14 +116,10 @@ class DevelopPane(ttk.Frame):
         buttons_frame = ttk.Frame(self)
         buttons_frame.pack(side=tk.TOP, fill=tk.X, expand=False)
 
-        self.open_button = ttk.Button(
-            buttons_frame, text="Open", command=self._handle_open
-        )
+        self.open_button = ttk.Button(buttons_frame, text="Open", command=self._handle_open)
         self.open_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        self.reload_button = ttk.Button(
-            buttons_frame, text="Reload", command=self._handle_reload
-        )
+        self.reload_button = ttk.Button(buttons_frame, text="Reload", command=self._handle_reload)
         self.reload_button.pack(side=tk.LEFT, fill=tk.X, expand=True)
         # TODO: reload is not implemented
 
@@ -156,9 +150,7 @@ class DevelopPane(ttk.Frame):
     def _active_experiment_info(self) -> ExperimentProtocolInfo | None:
         if self._active_experiment_key is None:
             return None
-        return self.experiment_manager.get_experiment_by_key(
-            self._active_experiment_key
-        )
+        return self.experiment_manager.get_experiment_by_key(self._active_experiment_key)
 
 
 # tk.Variable()
@@ -182,9 +174,7 @@ class OptionsPane(ttk.Frame):
         for widgets in self.winfo_children():
             widgets.destroy()
 
-        tk.Label(self, justify="center", text=self.__label).grid(
-            column=0, row=0, sticky=tk.N
-        )
+        tk.Label(self, justify="center", text=self.__label).grid(column=0, row=0, sticky=tk.N)
 
         self._options_widget = []
         self._options_textvars = []
@@ -288,9 +278,7 @@ class OptionsPane(ttk.Frame):
                 try:
                     val: Any = float(var.get())
                 except ValueError:
-                    logger.debug(
-                        f"Validation failed: {key} = {var.get()} is not float."
-                    )
+                    logger.debug(f"Validation failed: {key} = {var.get()} is not float.")
                     return None
                 if field.min is not None and val < field.min:
                     logger.debug(f"Validation failed: {key} = {val} < {field.min}.")
@@ -408,18 +396,14 @@ class ExperimentUITkinter:
             side=tk.TOP, fill=tk.Y, expand=False
         )
 
-        self._protocol_tree = ProtocolTree(
-            experiment_list_pane, self.experiment_manager
-        )
+        self._protocol_tree = ProtocolTree(experiment_list_pane, self.experiment_manager)
         self._protocol_tree.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self._protocol_tree.bind("<<ExperimentChange>>", self._handle_experiment_change)
 
         self._description_label = ttk.Label(sidebar_frm, text="-")
         self._description_label.pack(side=tk.TOP, fill=tk.X)
 
-        self.develop_pane = DevelopPane(
-            sidebar_frm, experiment_manager=self.experiment_manager
-        )
+        self.develop_pane = DevelopPane(sidebar_frm, experiment_manager=self.experiment_manager)
         self.develop_pane.pack(side=tk.TOP, fill=tk.X)
 
         # plotter options pane
@@ -454,9 +438,7 @@ class ExperimentUITkinter:
             state="disabled",
         )
         self._stop_button.pack(side=tk.TOP, fill=tk.X, expand=False)
-        self._quit_button = ttk.Button(
-            buttons_pane, text="Quit", command=self._handle_quit
-        )
+        self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._handle_quit)
         self._quit_button.pack(side=tk.TOP, fill=tk.X, expand=False)
 
         self._plotter_nb = ttk.Notebook(main_frm)
@@ -569,10 +551,7 @@ class ExperimentUITkinter:
     def _validate_options_and_update_ui(self, *_):
         if self._state != "stopped":
             return
-        if (
-            self._protocol_options_pane.is_valid
-            and self._experiment_label_var.get() != ""
-        ):
+        if self._protocol_options_pane.is_valid and self._experiment_label_var.get() != "":
             self._start_button["state"] = "normal"
         else:
             self._start_button["state"] = "disabled"
@@ -594,9 +573,7 @@ class ExperimentUITkinter:
         Entrypoint (called from launch_experiment())
         """
         self._create_ui()
-        self._update_experiment_loop_id = self._root.after(
-            30, self._update_experiment_loop
-        )
+        self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
         self._root.mainloop()
 
     def _get_data_from_queue(self, queue_):
@@ -636,25 +613,19 @@ class ExperimentUITkinter:
             # update logs
             logs = self._get_data_from_queue(self._log_queue)
             for log in logs:
-                self._log_tree.insert(
-                    "", tk.END, values=[log["t"], log["time"], log["message"]]
-                )
+                self._log_tree.insert("", tk.END, values=[log["t"], log["time"], log["message"]])
                 self._log_tree.yview_moveto(1)
                 self._log_cnt += 1
                 self._bottom_nb.tab(1, text=f"Log ({self._log_cnt})")
 
-        self._update_experiment_loop_id = self._root.after(
-            30, self._update_experiment_loop
-        )
+        self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
 
     def _draw_plot(self):
         if len(self._data) > 0 and self._plotter:
             df = pd.DataFrame(self._data)
             time_before_plot = time.perf_counter()
             self._plotter.update(df, self._get_plotter_context())
-            logger.debug(
-                f"Plotter.update took {time.perf_counter() - time_before_plot} s"
-            )
+            logger.debug(f"Plotter.update took {time.perf_counter() - time_before_plot} s")
             time_before_draw = time.perf_counter()
             self._canvas.draw()
             logger.debug(f"canvas.draw took {time.perf_counter() - time_before_draw} s")
@@ -675,12 +646,8 @@ class ExperimentUITkinter:
         self.experiment_controller.event_state_change.add_listener(
             self._handler_experiment_state_change
         )
-        self.experiment_controller.event_error.add_listener(
-            self._handler_experiment_error
-        )
-        self.experiment_controller.event_data_row.add_listener(
-            self._handler_experiment_data_row
-        )
+        self.experiment_controller.event_error.add_listener(self._handler_experiment_error)
+        self.experiment_controller.event_data_row.add_listener(self._handler_experiment_data_row)
         self.experiment_controller.event_log.add_listener(self._handle_experiment_log)
 
         self._state = "running"  # FIXME: workaround for reset_data()
