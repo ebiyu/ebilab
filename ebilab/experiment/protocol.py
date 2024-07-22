@@ -3,6 +3,7 @@ Base classes
 
 Users will define protocol by overriding classes here.
 """
+from __future__ import annotations
 
 import abc
 import dataclasses

@@ -1,6 +1,7 @@
 """
 Module to manage ebilab project directory.
 """
+from __future__ import annotations
 
 import itertools
 import os

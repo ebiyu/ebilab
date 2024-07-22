@@ -1,4 +1,4 @@
-target-version = "py310"
+target-version = "py38"
 exclude = [
     "sample",
     "docs",
@@ -8,7 +8,7 @@ exclude = [
 line-length = 100
 
 [lint]
-select = ["E", "F", "I", "UP"]
+select = ["E", "F", "I", "UP", "FA"]
 # TODO: B, SIM, D
 #ignore = [
 #    # TODO

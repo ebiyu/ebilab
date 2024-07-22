@@ -3,6 +3,7 @@ Utility and base class related to visa
 
 This library depends on `pyvisa <https://pyvisa.readthedocs.io/>`_ for VISA control.
 """
+from __future__ import annotations
 
 import os
 import re
