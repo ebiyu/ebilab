@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Optional, Type, Dict
 import dataclasses
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # type: ignore
 
 from .options import OptionField
 

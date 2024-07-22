@@ -2,6 +2,7 @@ import datetime
 import os
 import csv
 import socket
+import io
 import copy
 import time
 from pathlib import Path
@@ -32,9 +33,6 @@ class ExperimentController(ExperimentContextDelegate):
 
     _ctx: ExperimentContext
     _running = False
-    _file = None
-    _log_file = None
-    _experiment_thread = None
 
     def __init__(self, experiment: ExperimentProtocol):
         self.experiment = experiment
