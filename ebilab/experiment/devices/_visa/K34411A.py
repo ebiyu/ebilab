@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from ..visa import VisaDevice
 
 
@@ -35,12 +37,12 @@ class K34411A(VisaDevice):
     ]
     _option_v_range = ["auto", "1E-1", "1E+0", "1E+1", "1E+2", "1E+3"]
 
-    def _initialize(self, **kwargs):
+    def _initialize(self, **kwargs: Any) -> None:
         self.visa_write("*RST;*CLS")
         self.visa_write("RES:RANG:AUTO ON")
         self.visa_write("TRIG:SOUR BUS")
 
-    def measure_resistance(self, *, nplc: str | None = None, range: str = "auto"):
+    def measure_resistance(self, *, nplc: str | None = None, range: str = "auto") -> float:
         """
         Measure resistance once
 
@@ -69,7 +71,7 @@ class K34411A(VisaDevice):
         val = self.visa_query("READ?")
         return float(val)
 
-    def measure_resistance_4w(self, *, nplc: str | None = None, range: str = "auto"):
+    def measure_resistance_4w(self, *, nplc: str | None = None, range: str = "auto") -> float:
         """
         Measure resistance once by 4 wire method
 
@@ -98,7 +100,7 @@ class K34411A(VisaDevice):
         val = self.visa_query("READ?")
         return float(val)
 
-    def measure_voltage(self, *, nplc: str | None = None, range: str = "auto"):
+    def measure_voltage(self, *, nplc: str | None = None, range: str = "auto") -> float:
         """
         Measure resistance once
 

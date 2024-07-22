@@ -2,7 +2,7 @@ class VersionDidNotMatch(Exception):
     pass
 
 
-def assert_ebilab_version(want: str):
+def assert_ebilab_version(want: str) -> None:
     """
     This raises the VersionDidNotMatch exception if versison did not match.
     If the version of package is "dev", this always raise the exception

@@ -4,12 +4,15 @@ Utility and base class related to visa
 This library depends on `pyvisa <https://pyvisa.readthedocs.io/>`_ for VISA control.
 """
 
+# TODO: type
+
 from __future__ import annotations
 
 import os
 import re
 from dataclasses import dataclass
 from logging import getLogger
+from typing import Any
 
 import pyvisa
 
@@ -19,7 +22,7 @@ logger = getLogger(__name__)
 @dataclass
 class _VisaManagerDevice:
     idn: str
-    inst: pyvisa.Resource
+    inst: Any
 
 
 class VisaManager:
@@ -34,19 +37,19 @@ class VisaManager:
     _devices: dict[str, _VisaManagerDevice] = {}
 
     @property
-    def rm(self):
+    def rm(self) -> pyvisa.ResourceManager | None:
         """
         ResourceManager of pyvisa module
         """
         return self._rm
 
-    def __del__(self):
+    def __del__(self) -> None:
         for _, device in self._devices.items():
             device.inst.close()
         if self.rm:
             self.rm.close()
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.debug("Initializing VisaManager")
         os.add_dll_directory("C:\\Program Files\\Keysight\\IO Libraries Suite\\bin")  # omajinai
 
@@ -57,7 +60,7 @@ class VisaManager:
 
         for addr in visa_list:
             try:
-                inst = rm.open_resource(addr)
+                inst: Any = rm.open_resource(addr)
                 try:
                     idn = inst.query("*IDN?")
                     logger.debug(f"*IDN? to {addr}: {idn}")
@@ -68,7 +71,7 @@ class VisaManager:
             except:  # noqa: E722
                 pass
 
-    def get_inst(self, pattern: str) -> pyvisa.Resource | None:
+    def get_inst(self, pattern: str) -> Any | None:
         """
         Get pyvisa instance from pattern that matches *IDN? result.
 
@@ -89,7 +92,7 @@ class VisaManager:
 _visa_manager: VisaManager | None = None
 
 
-def get_visa_manager():
+def get_visa_manager() -> VisaManager:
     """
     Function to get :py:class:`VisaManager <ebilab.experiment.devices.visa.VisaManager>` class.
     Many times of call of this function returns same VisaManager.
@@ -119,8 +122,9 @@ class VisaDevice:
     """
 
     _idn_pattern: str | None = None
+    pyvisa_inst: Any
 
-    def __init__(self, *, addr: str | None = None, **kwargs):
+    def __init__(self, *, addr: str | None = None, **kwargs: Any) -> None:
         if self._idn_pattern is None:
             raise NotImplementedError("idn_pattern is None")
         inst = get_visa_manager().get_inst(self._idn_pattern)
@@ -132,10 +136,10 @@ class VisaDevice:
         self._initialize(**kwargs)
         logger.info(f"{self.__class__.__name__} has initialized")
 
-    def _initialize(self, **kwargs):
+    def _initialize(self, **kwargs: Any) -> None:
         raise NotImplementedError()
 
-    def visa_write(self, cmd: str):
+    def visa_write(self, cmd: str) -> None:
         """
         Send command to visa device
         Equivalent to :py:func:`inst.write` in pyvisa class
@@ -143,12 +147,12 @@ class VisaDevice:
         self.pyvisa_inst.write(cmd)
         logger.info(f"{self.__class__.__name__} -> device: {cmd}")
 
-    def visa_query(self, cmd: str):
+    def visa_query(self, cmd: str) -> str:
         """
         Send command to visa device and read output from device
         Equivalent to :py:func:`inst.query` in pyvisa class
         """
         logger.info(f"{self.__class__.__name__} -> device?: {cmd}")
-        res = self.pyvisa_inst.query(cmd)
+        res: str = self.pyvisa_inst.query(cmd)
         logger.info(f"{self.__class__.__name__} <- device: {res}")
         return res

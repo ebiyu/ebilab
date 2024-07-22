@@ -131,12 +131,12 @@ class ExperimentManager:
                 experiment.protocol = obj
                 logger.info(f"Reloaded {protocol.__name__}")
 
-    def update_experiments(self, experiments: list[ExperimentProtocolInfo]):
+    def update_experiments(self, experiments: list[ExperimentProtocolInfo]) -> None:
         self._experiments = experiments
         self.changed_event.notify(self._experiments)
 
     @property
-    def experiments(self):
+    def experiments(self) -> list[ExperimentProtocolInfo]:
         return self._experiments
 
     def get_experiment_by_key(self, key: str) -> ExperimentProtocolInfo | None:

@@ -15,13 +15,14 @@ from logging import (
 )
 from pathlib import Path
 from subprocess import PIPE, STDOUT, Popen
+from typing import Any
 
 from .experiment._experiment_manager import ExperimentManager
 from .project import get_current_project
 
 # This import may fail if git is not installed
 try:
-    from git import Repo
+    from git import Repo  # type: ignore # TODO
     from git.exc import GitCommandNotFound
 except:  # noqa: E722
     pass
@@ -32,13 +33,13 @@ from watchdog.observers import Observer
 
 
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 
 @cli.command(help="Discover experiment recipes and launch GUI")
 @click.argument("path")
-def experiment(path: str):
+def experiment(path: str) -> None:
     from .experiment._ui_tkinter import ExperimentUITkinter
 
     target = Path(path).resolve()
@@ -49,7 +50,7 @@ def experiment(path: str):
     ui.launch()
 
 
-def print_message_full(message):
+def print_message_full(message: str) -> None:
     size = shutil.get_terminal_size((80, 20))
     terminal_width = size.columns
 
@@ -71,7 +72,7 @@ def print_message_full(message):
     default=False,
     help="Watch project directory instead of file.",
 )
-def watch(path: str, watch_project: bool = False):
+def watch(path: str, watch_project: bool = False) -> None:
     target = Path(path).resolve()
     project = get_current_project()
 
@@ -88,14 +89,14 @@ def watch(path: str, watch_project: bool = False):
 
         def __init__(
             self,
-            patterns=None,
-            ignore_patterns=None,
-            ignore_directories=False,
-            case_sensitive=False,
+            patterns: list[str] | None = None,
+            ignore_patterns: list[str] | None = None,
+            ignore_directories: bool = False,
+            case_sensitive: bool = False,
         ):
-            super().__init__(patterns, ignore_patterns, ignore_directories, case_sensitive)
+            super().__init__(patterns, ignore_patterns, ignore_directories, case_sensitive)  # type: ignore
 
-        def on_modified(self, event):
+        def on_modified(self, event: Any) -> None:
             current_time = time.time()
             if self.last_trigger_time and current_time - self.last_trigger_time < 1:
                 return
@@ -133,28 +134,28 @@ def watch(path: str, watch_project: bool = False):
 
     if watch_project:
         event_handler = Handler(["*.py"])
-        observer = Observer()
-        observer.schedule(event_handler, project.path.root, recursive=True)
-        observer.start()
+        observer = Observer()  # type: ignore
+        observer.schedule(event_handler, project.path.root, recursive=True)  # type: ignore
+        observer.start()  # type: ignore
         print(f"Watching directory: {project.path.root}")
     else:
         event_handler = Handler([target.name])
-        observer = Observer()
-        observer.schedule(event_handler, target.parent)
-        observer.start()
+        observer = Observer()  # type: ignore
+        observer.schedule(event_handler, target.parent)  # type: ignore
+        observer.start()  # type: ignore
         print(f"Watching file: {target}")
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        observer.stop()
+        observer.stop()  # type: ignore
     observer.join()
 
 
 @cli.command()
 @click.argument("name")
-def init(name: str):
+def init(name: str) -> None:
     path = Path(name)
     if path.exists():
         print(f'file or directory "{path}" already exists.')
@@ -180,12 +181,12 @@ def init(name: str):
 
 @cli.command()
 @click.option("-f", is_flag=True, default=False, help="Delete files actually.")
-def clean(f):
+def clean(f: bool) -> None:
     project = get_current_project()
     project.clean_files(dry=not f)
 
 
-def setup_logger(libname: str):
+def setup_logger(libname: str) -> None:
     # Set up logging
     os.makedirs("logs", exist_ok=True)
     formatter = Formatter(

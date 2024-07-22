@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import dataclasses
+from typing import Any
 
 
 class OptionField(metaclass=abc.ABCMeta):
@@ -17,7 +18,7 @@ class FloatField(OptionField):
 
 @dataclasses.dataclass(frozen=True)
 class SelectField(OptionField):
-    choices: list
+    choices: list[Any]
     default_index: int = 0
 
 

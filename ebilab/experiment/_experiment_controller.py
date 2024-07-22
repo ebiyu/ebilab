@@ -3,13 +3,14 @@ from __future__ import annotations
 import copy
 import csv
 import datetime
+import io
 import os
 import socket
 import time
 from logging import getLogger
 from pathlib import Path
 from threading import Thread
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from ..project import get_current_project
 from .protocol import ExperimentContext, ExperimentContextDelegate, ExperimentProtocol
@@ -23,7 +24,7 @@ class ExperimentStoppedByUser(Exception):
     Raised when user pressed 'stop' button
     """
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "User has stopped the experiment"
 
 
@@ -38,6 +39,8 @@ class ExperimentController(ExperimentContextDelegate):
 
     _ctx: ExperimentContext
     _running = False
+    _file: io.TextIOWrapper | None
+    _log_file: io.TextIOWrapper | None
 
     def __init__(self, experiment: ExperimentProtocol):
         self.experiment = experiment
@@ -45,10 +48,10 @@ class ExperimentController(ExperimentContextDelegate):
         # setup events
         self.event_state_change = Event[str]()
         self.event_error = Event[str]()
-        self.event_data_row = Event[dict]()
+        self.event_data_row = Event[dict[str, Any]]()
         self.event_log = Event[EventLog]()
 
-    def _get_comment_line(self, experiment: ExperimentProtocol, options: dict) -> str:
+    def _get_comment_line(self, experiment: ExperimentProtocol, options: dict[str, Any]) -> str:
         """
         Returns:
             str: includes trailing NL
@@ -64,7 +67,7 @@ class ExperimentController(ExperimentContextDelegate):
         comment_str += "#\n"
         return comment_str
 
-    def start(self, options, label: str | None = None):
+    def start(self, options: dict[str, Any], label: str | None = None) -> None:
         """
         Experiment core logic
         """
@@ -101,7 +104,7 @@ class ExperimentController(ExperimentContextDelegate):
         logger.debug("Header: " + str(header))
         self._csv_writer.writerow(header)
 
-        def run():
+        def run() -> None:
             try:
                 self.experiment.steps(self._ctx)
             except ExperimentStoppedByUser:
@@ -127,7 +130,7 @@ class ExperimentController(ExperimentContextDelegate):
         self._experiment_thread.start()
         logger.info("experiment thread started")
 
-    def stop(self):
+    def stop(self) -> None:
         logger.debug("stopping experiment")
         self.event_state_change.notify("stopping")
 
@@ -149,7 +152,7 @@ class ExperimentController(ExperimentContextDelegate):
         return time.perf_counter() - self._started_time
 
     # ExperimentContextDelegate
-    def experiment_ctx_delegate_send_row(self, row):
+    def experiment_ctx_delegate_send_row(self, row: dict[str, Any]) -> None:
         row = copy.copy(row)
         row["t"] = self._get_t()
         row["time"] = datetime.datetime.now()
@@ -164,6 +167,9 @@ class ExperimentController(ExperimentContextDelegate):
     def experiment_ctx_delegate_send_log(self, message: str) -> None:
         t = self._get_t()
         time = datetime.datetime.now()
+        if self._log_file is None:
+            logger.warn(f"Failed to write message '{time} t={t}: {message}'")
+            return
         self.event_log.notify(
             {
                 "t": t,
@@ -178,13 +184,13 @@ class ExperimentController(ExperimentContextDelegate):
     def experiment_ctx_delegate_get_t(self) -> float:
         return self._get_t()
 
-    def experiment_ctx_delegate_get_options(self) -> dict:
+    def experiment_ctx_delegate_get_options(self) -> dict[str, Any]:
         return self._options
 
     def experiment_ctx_delegate_loop(self) -> None:
         if not self._running:
             raise ExperimentStoppedByUser()
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._file is not None:
             self._file.close()

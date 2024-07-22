@@ -71,7 +71,7 @@ def _get_current_project() -> Project:
     return Project(root)
 
 
-_current_project = None
+_current_project: Project | None = None
 
 
 def get_current_project() -> Project:

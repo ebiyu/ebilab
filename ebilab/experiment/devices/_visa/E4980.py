@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import time
+from typing import Any
 
 from ..visa import VisaDevice
 
@@ -10,14 +13,16 @@ class E4980(VisaDevice):
 
     _idn_pattern = "E4980"
 
-    def _initialize(self, **kwargs):
+    def _initialize(self, **kwargs: Any) -> None:
         self.visa_write("*RST;*CLS")
         self.visa_write("FORMAT ASC;TRIG:SOUR BUS")
         self.visa_write(":INIT:CONT ON")
         self.visa_write(":TRIG:DEL 0")
         self.visa_write("*SRE 1")
 
-    def trigger(self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"):
+    def trigger(
+        self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"
+    ) -> tuple[float, float]:
         """
         measure impedance
 
@@ -71,17 +76,17 @@ class E4980(VisaDevice):
         Z, t, *_ = map(float, ret.split(","))
         return (Z, t)
 
-    def meas_open(self, *, wait=True):
+    def meas_open(self, *, wait: bool = True) -> None:
         self.visa_write("CORR:OPEN:EXEC")
         if wait:
             self.wait_correction()
 
-    def meas_short(self, *, wait=True):
+    def meas_short(self, *, wait: bool = True) -> None:
         self.visa_write("CORR:SHORT:EXEC")
         if wait:
             self.wait_correction()
 
-    def wait_correction(self):
+    def wait_correction(self) -> None:
         self.pyvisa_inst.timeout = None
         while True:
             time.sleep(0.1)

@@ -10,8 +10,10 @@ import abc
 import dataclasses
 import time
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt  # type: ignore
+import pandas as pd
 
 from .options import OptionField
 
@@ -19,11 +21,11 @@ from .options import OptionField
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def experiment_ctx_delegate_send_row(self, row):
+    def experiment_ctx_delegate_send_row(self, row: dict[str, Any]) -> None:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def experiment_ctx_delegate_send_log(self, log: str):
+    def experiment_ctx_delegate_send_log(self, log: str) -> None:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -31,7 +33,7 @@ class ExperimentContextDelegate(metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def experiment_ctx_delegate_get_options(self) -> dict:
+    def experiment_ctx_delegate_get_options(self) -> dict[str, Any]:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -45,10 +47,10 @@ class ExperimentContext:
     def __init__(self, delegate: ExperimentContextDelegate):
         self._delegate = delegate
 
-    def send_row(self, row: dict):
+    def send_row(self, row: dict[str, Any]) -> None:
         self._delegate.experiment_ctx_delegate_send_row(row)
 
-    def log(self, log: str):
+    def log(self, log: str) -> None:
         self._delegate.experiment_ctx_delegate_send_log(log)
 
     @property
@@ -56,7 +58,7 @@ class ExperimentContext:
         return self._delegate.experiment_ctx_delegate_get_t()
 
     @property
-    def options(self) -> dict:
+    def options(self) -> dict[str, Any]:
         return self._delegate.experiment_ctx_delegate_get_options()
 
     def loop(self) -> None:
@@ -80,8 +82,8 @@ class ExperimentContext:
 
 @dataclasses.dataclass
 class PlotterContext:
-    plotter_options: dict
-    protocol_options: dict
+    plotter_options: dict[str, OptionField]
+    protocol_options: dict[str, OptionField]
 
 
 class ExperimentPlotter(metaclass=abc.ABCMeta):
@@ -91,11 +93,11 @@ class ExperimentPlotter(metaclass=abc.ABCMeta):
     options: dict[str, OptionField] | None = None
 
     @abc.abstractmethod
-    def prepare(self, ctx: PlotterContext):
+    def prepare(self, ctx: PlotterContext) -> None:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def update(self, df, ctx: PlotterContext):
+    def update(self, df: pd.Dataframe, ctx: PlotterContext) -> None:
         raise NotImplementedError()
 
 
@@ -114,25 +116,25 @@ class ExperimentProtocol(metaclass=abc.ABCMeta):
     options: dict[str, OptionField] | None = None
 
     @classmethod
-    def get_summary(cls):
+    def get_summary(cls) -> str:
         if cls.__doc__ is None:
             return cls.name
         return cls.__doc__.strip().splitlines()[0].strip()
 
     @classmethod
-    def get_description(cls):
+    def get_description(cls) -> str:
         if cls.__doc__ is None:
             return "There's no description"
         lines = cls.__doc__.strip().splitlines()[1:]
-        lines = map(lambda x: x.strip(), lines)
-        return "\n".join(lines).strip()
+        lines_stripped = map(lambda x: x.strip(), lines)
+        return "\n".join(lines_stripped).strip()
 
     @abc.abstractmethod
     def steps(self, ctx: ExperimentContext) -> None:
         raise NotImplementedError()
 
     @classmethod
-    def register_plotter(cls, plotter):
+    def register_plotter(cls, plotter: type[ExperimentPlotter]) -> None:
         if cls.plotter_classes is None:
             cls.plotter_classes = []
         cls.plotter_classes.append(plotter)

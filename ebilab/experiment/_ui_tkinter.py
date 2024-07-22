@@ -8,23 +8,23 @@ import tkinter.font as tkf
 from logging import getLogger
 from pathlib import Path
 from tkinter import messagebox, ttk
-from typing import Any
+from typing import Any, TypeVar
 
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ._experiment_controller import ExperimentController
+from ._experiment_controller import EventLog, ExperimentController
 from ._experiment_manager import ExperimentManager, ExperimentProtocolInfo
 from .options import BoolField, FloatField, IntField, OptionField, SelectField, StrField
 from .protocol import (
     ExperimentPlotter,
     ExperimentProtocol,
-    ExperimentProtocolGroup,
     PlotterContext,
 )
 
 logger = getLogger(__name__)
+T = TypeVar("T")
 
 # windows dpi workaround
 try:
@@ -43,7 +43,7 @@ class ProtocolTree(ttk.Treeview):
     Treeview which can show list of ExperimentProtocol
     """
 
-    def __init__(self, master, experiment_manager: ExperimentManager):
+    def __init__(self, master: ttk.Widget, experiment_manager: ExperimentManager) -> None:
         super().__init__(master, padding=10, selectmode="browse")
         self.bind("<<TreeviewSelect>>", self._on_change)
         self.experiment_manager = experiment_manager
@@ -51,7 +51,7 @@ class ProtocolTree(ttk.Treeview):
         self._insert_experiments("", self.experiment_manager.experiments)
         # TODO: listen change
 
-    def _insert_experiments(self, parent: str, experiments: list[ExperimentProtocolInfo]):
+    def _insert_experiments(self, parent: str, experiments: list[ExperimentProtocolInfo]) -> None:
         for i, experiment in enumerate(experiments):
             if experiment.children is not None:
                 id = self.insert(
@@ -67,16 +67,8 @@ class ProtocolTree(ttk.Treeview):
                     iid=experiment.key,
                 )
 
-    def _on_change(self, *args, **kwargs):
+    def _on_change(self, *args, **kwargs) -> None:  # type: ignore
         self.event_generate("<<ExperimentChange>>")
-
-    def _get_experiment_from_list(self, experiments, ids):
-        for i in ids:
-            experiment = experiments[int(i)]
-            if not isinstance(experiment, ExperimentProtocolGroup):
-                return experiment
-            experiments = experiment.protocols
-        return None
 
     @property
     def selected_experiment_info(self) -> ExperimentProtocolInfo | None:
@@ -103,13 +95,13 @@ class ProtocolTree(ttk.Treeview):
 class DevelopPane(ttk.Frame):
     _active_experiment_key: str | None
 
-    def __init__(self, master, *, experiment_manager: ExperimentManager):
+    def __init__(self, master: ttk.Widget, *, experiment_manager: ExperimentManager) -> None:
         super().__init__(master, padding=10, relief="solid")
         self.create_widgets()
         self.experiment_manager = experiment_manager
         self._active_experiment_key = None
 
-    def create_widgets(self):
+    def create_widgets(self) -> None:
         tk.Label(self, justify=tk.LEFT, text="Development").pack(
             side=tk.TOP, fill=tk.X, expand=False
         )
@@ -138,7 +130,7 @@ class DevelopPane(ttk.Frame):
         logger.info(f"Opening {str(experiment.filepath)}")
         subprocess.Popen(["notepad.exe", str(experiment.filepath)])
 
-    def on_experiment_change(self, experiment_key: str | None):
+    def on_experiment_change(self, experiment_key: str | None) -> None:
         self._active_experiment_key = experiment_key
         if experiment_key is None:
             self.open_button["state"] = "disabled"
@@ -159,10 +151,10 @@ class OptionsPane(ttk.Frame):
     __label: str
     __fields: dict[str, OptionField]
     __enabled = True
-    __options: dict
+    __options: dict[str, Any]
     __is_valid = True
 
-    def __init__(self, master, label):
+    def __init__(self, master: ttk.Widget, label: str) -> None:
         super().__init__(master, padding=10)
         self.__fields = {}
         self.__label = label
@@ -171,7 +163,7 @@ class OptionsPane(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self._build_fields({})
 
-    def _build_fields(self, fields: dict[str, OptionField]):
+    def _build_fields(self, fields: dict[str, OptionField]):  # type: ignore
         for widgets in self.winfo_children():
             widgets.destroy()
 
@@ -251,7 +243,7 @@ class OptionsPane(ttk.Frame):
         self.__options = opt
         self.__is_valid = True
 
-    def _on_update(self, *args, **kwargs):
+    def _on_update(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         opt = self._get_options()
         if opt is None:
             self.__is_valid = False
@@ -266,11 +258,11 @@ class OptionsPane(ttk.Frame):
         return self.__fields
 
     @fields.setter
-    def fields(self, fields):
+    def fields(self, fields: dict[str, OptionField]) -> None:
         self.__fields = fields
         self._build_fields(fields)
 
-    def _get_options(self) -> dict | None:
+    def _get_options(self) -> dict[str, Any] | None:
         ret = {}
         for (key, field), widget, var in zip(
             self.fields.items(), self._options_widget, self._options_textvars
@@ -329,7 +321,7 @@ class OptionsPane(ttk.Frame):
         return ret
 
     @property
-    def options(self) -> dict:
+    def options(self) -> dict[str, Any]:
         assert self.__options is not None
         return self.__options
 
@@ -342,7 +334,7 @@ class OptionsPane(ttk.Frame):
         return self.__enabled
 
     @enabled.setter
-    def enabled(self, enabled: bool):
+    def enabled(self, enabled: bool) -> None:
         self.__enabled = enabled
 
         if enabled:
@@ -357,8 +349,9 @@ class OptionsPane(ttk.Frame):
 
 
 class ExperimentUITkinter:
-    _data_queue: queue.Queue
-    _log_queue: queue.Queue
+    _data: list[dict[str, Any]]
+    _data_queue: queue.Queue[dict[str, Any]]
+    _log_queue: queue.Queue[EventLog]
     _log_cnt = 0
 
     _state: str = "stopped"
@@ -416,7 +409,7 @@ class ExperimentUITkinter:
         buttons_pane.pack(side=tk.TOP, fill=tk.BOTH)
 
         self._experiment_label_var = tk.StringVar(value="")
-        self._experiment_label_var.trace("w", self._validate_options_and_update_ui)
+        self._experiment_label_var.trace_add("write", self._validate_options_and_update_ui)
         tk.Label(buttons_pane, justify=tk.LEFT, text="Filename:").pack(
             side=tk.TOP, fill=tk.X, expand=False
         )
@@ -496,7 +489,7 @@ class ExperimentUITkinter:
         style = ttk.Style()
         style.configure("Treeview", rowheight=lh)
 
-    def _handle_quit(self):
+    def _handle_quit(self) -> None:
         if self._state != "stopped":
             self._handle_stop_experiment()
         if self._update_experiment_loop_id is not None:
@@ -504,7 +497,7 @@ class ExperimentUITkinter:
         self._root.quit()
         self._root.destroy()
 
-    def _handle_experiment_change(self, _) -> None:
+    def _handle_experiment_change(self, _: Any) -> None:
         experiment_info = self._protocol_tree.selected_experiment_info
         experiment = self._protocol_tree.selected_experiment
         if not experiment or not experiment_info:
@@ -519,7 +512,7 @@ class ExperimentUITkinter:
         self.develop_pane.on_experiment_change(experiment_info.key)
 
         # update plotter list (tab)
-        for tab in self._plotter_nb.tabs():
+        for tab in self._plotter_nb.tabs():  # type: ignore
             self._plotter_nb.forget(tab)
 
         for name in map(lambda cls: cls.name, experiment.plotter_classes or []):
@@ -551,7 +544,7 @@ class ExperimentUITkinter:
         self._validate_options_and_update_ui()
         self._update_ui_from_state()
 
-    def _validate_options_and_update_ui(self, *_):
+    def _validate_options_and_update_ui(self, *_: Any) -> None:
         if self._state != "stopped":
             return
         if self._protocol_options_pane.is_valid and self._experiment_label_var.get() != "":
@@ -559,19 +552,19 @@ class ExperimentUITkinter:
         else:
             self._start_button["state"] = "disabled"
 
-    def _handle_plotter_change(self, *args, **kwargs) -> None:
+    def _handle_plotter_change(self, *args: Any, **kwargs: Any) -> None:
         try:
             experiment = self._protocol_tree.selected_experiment
             if experiment is None:
                 return
-            plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
+            plotter_idx = self._plotter_nb.index(self._plotter_nb.select())  # type: ignore
             Plotter = (experiment.plotter_classes or [])[plotter_idx]
         except IndexError:
             return
         self._plotter_options_pane.fields = Plotter.options or {}
         self._reset_plotter()
 
-    def launch(self):
+    def launch(self) -> None:
         """
         Entrypoint (called from launch_experiment())
         """
@@ -580,15 +573,15 @@ class ExperimentUITkinter:
         self._root.protocol("WM_DELETE_WINDOW", self._handle_quit)
         self._root.mainloop()
 
-    def _get_data_from_queue(self, queue_):
-        d = []
+    def _get_data_from_queue(self, queue_: queue.Queue[T]) -> list[T]:
+        d: list[T] = []
         while True:
             try:
                 d.append(queue_.get(False))
             except queue.Empty:
                 return d
 
-    def _update_experiment_loop(self):
+    def _update_experiment_loop(self) -> None:
         """
         Called every 30 ms
         """
@@ -602,6 +595,9 @@ class ExperimentUITkinter:
                     self._data.append(d)
 
                     experiment = self._protocol_tree.selected_experiment
+                    if experiment is None:
+                        return
+
                     columns = experiment.columns
 
                     # insert to table
@@ -627,7 +623,7 @@ class ExperimentUITkinter:
         finally:
             self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
 
-    def _draw_plot(self):
+    def _draw_plot(self) -> None:
         if len(self._data) > 0 and self._plotter:
             df = pd.DataFrame(self._data)
             time_before_plot = time.perf_counter()
@@ -637,13 +633,16 @@ class ExperimentUITkinter:
             self._canvas.draw()
             logger.debug(f"canvas.draw took {time.perf_counter() - time_before_draw} s")
 
-    def _handle_start_experiment(self):
+    def _handle_start_experiment(self) -> None:
         """
         event handler for button
         """
 
-        # TODO: ensure experiment is reloaded
-        self.active_experiment = self._protocol_tree.selected_experiment()
+        experiment = self._protocol_tree.selected_experiment
+        if experiment is None:
+            logger.warn("Cannot start experiment because selected_experiment is none")
+            return
+        self.active_experiment = experiment()  # generate instance
         options = self._protocol_options_pane.options
 
         # generate instance
@@ -662,7 +661,7 @@ class ExperimentUITkinter:
 
         self.experiment_controller.start(options, self.experiment_label)
 
-    def _handle_stop_experiment(self):
+    def _handle_stop_experiment(self) -> None:
         """
         event handler for button
         """
@@ -672,19 +671,19 @@ class ExperimentUITkinter:
             self.active_experiment = None
 
     # handlers for ExperimentManager event
-    def _handler_experiment_state_change(self, state: str):
+    def _handler_experiment_state_change(self, state: str) -> None:
         """handle ExperimentManager event"""
         self._state = state
 
-    def _handler_experiment_error(self, error: str):
+    def _handler_experiment_error(self, error: str) -> None:
         """handle ExperimentManager event"""
         self.show_error(error)
 
-    def _handler_experiment_data_row(self, row):
+    def _handler_experiment_data_row(self, row: dict[str, Any]) -> None:
         """handle ExperimentManager event"""
         self._data_queue.put(row)
 
-    def _handle_experiment_log(self, log):
+    def _handle_experiment_log(self, log: EventLog) -> None:
         """handle ExperimentManager event"""
         self._log_queue.put(log)
 
@@ -718,7 +717,7 @@ class ExperimentUITkinter:
             self._quit_button["state"] = "enabled"
             self._stop_button["text"] = "Stop"
 
-    def reset_data(self):
+    def reset_data(self) -> None:
         self._data = []
         self._data_queue = queue.Queue()
         self._log_queue = queue.Queue()
@@ -735,7 +734,7 @@ class ExperimentUITkinter:
             if Experiment is None:
                 self._plotter = None
                 return
-            plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
+            plotter_idx = self._plotter_nb.index(self._plotter_nb.select())  # type: ignore
             Plotter = (Experiment.plotter_classes or [])[plotter_idx]
         except IndexError:
             self._plotter = None
@@ -747,7 +746,7 @@ class ExperimentUITkinter:
             ctx = self._get_plotter_context()
             self._plotter.prepare(ctx)  # type: ignore
 
-    def _get_plotter_context(self):
+    def _get_plotter_context(self) -> PlotterContext:
         return PlotterContext(
             plotter_options=self._plotter_options_pane.options,
             protocol_options=self._protocol_options_pane.options,
@@ -757,5 +756,5 @@ class ExperimentUITkinter:
     def experiment_label(self) -> str:
         return self._experiment_label_var.get()
 
-    def show_error(self, msg: str):
+    def show_error(self, msg: str) -> None:
         messagebox.showerror("Error", msg)
