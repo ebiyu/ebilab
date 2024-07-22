@@ -2,6 +2,7 @@ import time
 
 from ..visa import VisaDevice
 
+
 class E4980(VisaDevice):
     """
     Keysight E4980A Precision LCR Meter

@@ -3,6 +3,7 @@ from typing import List
 
 from ..visa import VisaDevice
 
+
 class A707(VisaDevice):
     """
     Keithley 707A Switching Matrix

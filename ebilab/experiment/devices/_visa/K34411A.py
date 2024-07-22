@@ -2,6 +2,7 @@ from typing import Optional
 
 from ..visa import VisaDevice
 
+
 class K34411A(VisaDevice):
     """
     Keysight 6½ Digit Digital Multimeter 34411A

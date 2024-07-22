@@ -768,10 +768,10 @@ class ExperimentUITkinter:
             return
 
         self._plotter = Plotter()
-        self._plotter.fig = self._fig # type: ignore
+        self._plotter.fig = self._fig  # type: ignore
         if self._state == "running":
             ctx = self._get_plotter_context()
-            self._plotter.prepare(ctx) # type: ignore
+            self._plotter.prepare(ctx)  # type: ignore
 
     def _get_plotter_context(self):
         return PlotterContext(
