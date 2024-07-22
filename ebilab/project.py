@@ -2,11 +2,11 @@
 Module to manage ebilab project directory.
 """
 
-from pathlib import Path
-from typing import Union
-from dataclasses import dataclass
 import itertools
 import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Union
 
 
 @dataclass(frozen=True)

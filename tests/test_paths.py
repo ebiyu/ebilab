@@ -1,6 +1,6 @@
-from unittest import TestCase
 import os
 from pathlib import Path
+from unittest import TestCase
 
 from ebilab.project import get_current_project
 

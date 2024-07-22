@@ -1,26 +1,26 @@
-from logging import getLogger
 import queue
-import time
-from pathlib import Path
-from typing import Any, Optional, Dict
-import tkinter as tk
-from tkinter import ttk, messagebox
-import tkinter.font as tkf
 import subprocess
+import time
+import tkinter as tk
+import tkinter.font as tkf
+from logging import getLogger
+from pathlib import Path
+from tkinter import messagebox, ttk
+from typing import Any, Dict, Optional
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from ._experiment_controller import ExperimentController
+from ._experiment_manager import ExperimentManager, ExperimentProtocolInfo
+from .options import BoolField, FloatField, IntField, OptionField, SelectField, StrField
 from .protocol import (
     ExperimentPlotter,
     ExperimentProtocol,
-    PlotterContext,
     ExperimentProtocolGroup,
+    PlotterContext,
 )
-from .options import OptionField, FloatField, SelectField, IntField, StrField, BoolField
-from ._experiment_manager import ExperimentManager, ExperimentProtocolInfo
-from ._experiment_controller import ExperimentController
 
 logger = getLogger(__name__)
 

@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-import re
 import os
+import re
 import subprocess
 from pathlib import Path
-from typing import Union, List
+from typing import List, Union
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from ebilab.project import get_current_project
-from ._actions import DfAction, DfPlotter, AggregatedDfPlotter
+
+from ._actions import AggregatedDfPlotter, DfAction, DfPlotter
 
 
 class ProcessingData:

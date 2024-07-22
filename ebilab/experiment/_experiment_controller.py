@@ -1,17 +1,17 @@
+import copy
+import csv
 import datetime
 import os
-import csv
 import socket
-import copy
 import time
-from pathlib import Path
-from typing import TypedDict
-from threading import Thread
 from logging import getLogger
+from pathlib import Path
+from threading import Thread
+from typing import TypedDict
 
+from ..project import get_current_project
 from .protocol import ExperimentContext, ExperimentContextDelegate, ExperimentProtocol
 from .util import Event
-from ..project import get_current_project
 
 logger = getLogger(__name__)
 

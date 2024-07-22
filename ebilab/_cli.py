@@ -1,21 +1,21 @@
-from pathlib import Path
-import sys
-import time
+import datetime
 import os
 import shutil
-from subprocess import PIPE, STDOUT, Popen
-import datetime
+import sys
+import time
 from logging import (
-    getLogger,
-    StreamHandler,
+    DEBUG,
+    INFO,
     FileHandler,
     Formatter,
-    INFO,
-    DEBUG,
+    StreamHandler,
+    getLogger,
 )
+from pathlib import Path
+from subprocess import PIPE, STDOUT, Popen
 
-from .project import get_current_project
 from .experiment._experiment_manager import ExperimentManager
+from .project import get_current_project
 
 # This import may fail if git is not installed
 try:
@@ -24,9 +24,9 @@ try:
 except:  # noqa: E722
     pass
 
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
 import click
+from watchdog.events import PatternMatchingEventHandler
+from watchdog.observers import Observer
 
 
 @click.group()

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
-from pathlib import Path
-from typing import Callable, Any
 import importlib
-import sys
 import inspect
+import sys
 import uuid
 from logging import getLogger
+from pathlib import Path
+from typing import Any, Callable
 
-from .util import Event
 from .protocol import ExperimentProtocol, ExperimentProtocolGroup
+from .util import Event
 
 logger = getLogger(__name__)
 

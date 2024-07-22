@@ -5,10 +5,10 @@ Users will define protocol by overriding classes here.
 """
 
 import abc
+import dataclasses
 import time
 from pathlib import Path
-from typing import List, Optional, Type, Dict
-import dataclasses
+from typing import Dict, List, Optional, Type
 
 import matplotlib.pyplot as plt  # type: ignore
 

@@ -1,14 +1,14 @@
 from typing import List, Type
 
-from .protocol import (
-    ExperimentProtocol,
-    ExperimentContext,
-    ExperimentPlotter,
-    PlotterContext,
-    ExperimentProtocolGroup,
-)
 from ._experiment_controller import ExperimentController
 from ._experiment_manager import ExperimentManager
+from .protocol import (
+    ExperimentContext,
+    ExperimentPlotter,
+    ExperimentProtocol,
+    ExperimentProtocolGroup,
+    PlotterContext,
+)
 
 
 def launch_experiment(experiments: List[Type[ExperimentProtocol]]):

@@ -4,7 +4,7 @@ import os
 import tempfile
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Callable, Optional, Union, Dict
+from typing import Callable, Dict, Optional, Union
 
 import pandas as pd
 
