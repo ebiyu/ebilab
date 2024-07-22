@@ -2,8 +2,6 @@ from time import sleep
 from typing import List
 
 from ..visa import VisaDevice
-from .. import is_mock_enabled
-
 
 class A707(VisaDevice):
     """
@@ -32,10 +30,3 @@ class A707(VisaDevice):
 
     def open_all(self):
         self.close_only([])
-
-
-if is_mock_enabled:
-
-    class A707:
-        def close_only(self, contacts: List[str]):
-            pass

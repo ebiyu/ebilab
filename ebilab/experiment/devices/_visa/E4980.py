@@ -1,8 +1,6 @@
 import time
 
 from ..visa import VisaDevice
-from .. import is_mock_enabled
-
 
 class E4980(VisaDevice):
     """
@@ -91,15 +89,3 @@ class E4980(VisaDevice):
             if (ret & 1) == 0:
                 self.pyvisa_inst.timeout = 10000
                 break
-
-
-if is_mock_enabled:
-
-    class E4980:
-        def trigger(
-            self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"
-        ):
-            from random import random
-
-            time.sleep(0.4)
-            return 1e6 / f * (0.9 + random() * 0.2), random() * 20 - 10

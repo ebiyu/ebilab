@@ -8,9 +8,6 @@ logger = getLogger(__name__)
 
 import os
 
-is_mock_enabled = bool(os.environ.get("EBILAB_MOCK"))
-if is_mock_enabled:
-    logger.warn("Mocking of devices is enabled.")
 del os
 del getLogger
 del logger
