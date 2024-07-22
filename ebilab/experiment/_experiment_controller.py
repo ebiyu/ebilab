@@ -48,7 +48,7 @@ class ExperimentController(ExperimentContextDelegate):
         # setup events
         self.event_state_change = Event[str]()
         self.event_error = Event[str]()
-        self.event_data_row = Event[dict[str, Any]]()
+        self.event_data_row: Event[dict[str, Any]] = Event()
         self.event_log = Event[EventLog]()
 
     def _get_comment_line(self, experiment: ExperimentProtocol, options: dict[str, Any]) -> str:
