@@ -15,7 +15,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from .protocol import ExperimentPlotter, ExperimentProtocol, PlotterContext, ExperimentProtocolGroup
 from .options import OptionField, FloatField, SelectField, IntField, StrField, BoolField
-from ._experiment_manager import ExperimentManager
+from ._experiment_manager import ExperimentManager, ExperimentProtocolInfo
 from ._experiment_controller import ExperimentController
 
 logger = getLogger(__name__)
@@ -40,18 +40,17 @@ class ProtocolTree(ttk.Treeview):
         self.bind("<<TreeviewSelect>>", self._on_change)
         self.experiment_manager = experiment_manager
 
-        self._insert_experiments("", self.experiment_manager.experiments, "")
+        self._insert_experiments("", self.experiment_manager.experiments)
         # TODO: listen change
 
-    def _insert_experiments(self, parent, experiments, key):
+    def _insert_experiments(self, parent: str, experiments: list[ExperimentProtocolInfo]):
         for i, experiment in enumerate(experiments):
-            new_key = f"{key}.{i}"
-            if isinstance(experiment, ExperimentProtocolGroup):
-                id = self.insert(parent, "end", text=experiment.name, iid=new_key, open=True)
-                self._insert_experiments(id, experiment.protocols, new_key)
+            if experiment.children is not None:
+                id = self.insert(parent, "end", text=experiment.label, iid=experiment.key, open=True)
+                self._insert_experiments(id, experiment.children)
                 continue
-            else:
-                self.insert(parent, "end", text=experiment.get_summary(), iid=new_key)
+            if experiment.protocol is not None:
+                self.insert(parent, "end", text=experiment.protocol.get_summary(), iid=experiment.key)
 
     def _on_change(self, *args, **kwargs):
         self.event_generate("<<ExperimentChange>>")
@@ -65,18 +64,18 @@ class ProtocolTree(ttk.Treeview):
         return None
 
     @property
-    def selected_experiment(self):
+    def selected_experiment(self) -> type[ExperimentProtocol] | None:
         """
         Active experiment
         """
         selection = self.selection()
         if len(selection) == 0:
             return None
-        ids = selection[0].split(".")
-        return self._get_experiment_from_list(self.experiment_manager.experiments, ids[1:])
+        # ids = selection[0].split(".")
+        return self.experiment_manager.get_experiment_by_key(selection[0])
 
 class DevelopPane(ttk.Frame):
-    _active_experiment: ExperimentProtocol = None
+    _active_experiment: ExperimentProtocol | None = None
 
     def __init__(self, master):
         super().__init__(master, padding=10, relief="solid")
@@ -675,7 +674,7 @@ class ExperimentUITkinter:
         self._result_tree.delete(*self._result_tree.get_children())
         self._reset_plotter()
 
-    def _reset_plotter(self):
+    def _reset_plotter(self) -> None:
         self._fig.clf()
 
         try:
