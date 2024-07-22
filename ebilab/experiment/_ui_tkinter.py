@@ -497,6 +497,8 @@ class ExperimentUITkinter:
         style.configure("Treeview", rowheight=lh)
 
     def _handle_quit(self):
+        if self._state != "stopped":
+            self._handle_stop_experiment()
         if self._update_experiment_loop_id is not None:
             self._root.after_cancel(self._update_experiment_loop_id)
         self._root.quit()
@@ -575,6 +577,7 @@ class ExperimentUITkinter:
         """
         self._create_ui()
         self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
+        self._root.protocol("WM_DELETE_WINDOW", self._handle_quit)
         self._root.mainloop()
 
     def _get_data_from_queue(self, queue_):
@@ -590,36 +593,39 @@ class ExperimentUITkinter:
         Called every 30 ms
         """
 
-        self._update_ui_from_state()
-        if self._state != "stopped":
-            data = self._get_data_from_queue(self._data_queue)
+        try:
+            self._update_ui_from_state()
+            if self._state != "stopped":
+                data = self._get_data_from_queue(self._data_queue)
 
-            for d in data:
-                self._data.append(d)
+                for d in data:
+                    self._data.append(d)
 
-                experiment = self._protocol_tree.selected_experiment
-                columns = experiment.columns
+                    experiment = self._protocol_tree.selected_experiment
+                    columns = experiment.columns
 
-                # insert to table
-                row_list = [str(d["t"]), str(d["time"])]
-                for col in columns:
-                    if col in d:
-                        row_list.append(str(d[col]))
-                    else:
-                        row_list.append("")
-                self._result_tree.insert("", tk.END, values=row_list)
-                self._result_tree.yview_moveto(1)
-            self._draw_plot()
+                    # insert to table
+                    row_list = [str(d["t"]), str(d["time"])]
+                    for col in columns:
+                        if col in d:
+                            row_list.append(str(d[col]))
+                        else:
+                            row_list.append("")
+                    self._result_tree.insert("", tk.END, values=row_list)
+                    self._result_tree.yview_moveto(1)
+                self._draw_plot()
 
-            # update logs
-            logs = self._get_data_from_queue(self._log_queue)
-            for log in logs:
-                self._log_tree.insert("", tk.END, values=[log["t"], log["time"], log["message"]])
-                self._log_tree.yview_moveto(1)
-                self._log_cnt += 1
-                self._bottom_nb.tab(1, text=f"Log ({self._log_cnt})")
-
-        self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
+                # update logs
+                logs = self._get_data_from_queue(self._log_queue)
+                for log in logs:
+                    self._log_tree.insert(
+                        "", tk.END, values=[log["t"], log["time"], log["message"]]
+                    )
+                    self._log_tree.yview_moveto(1)
+                    self._log_cnt += 1
+                    self._bottom_nb.tab(1, text=f"Log ({self._log_cnt})")
+        finally:
+            self._update_experiment_loop_id = self._root.after(30, self._update_experiment_loop)
 
     def _draw_plot(self):
         if len(self._data) > 0 and self._plotter:
