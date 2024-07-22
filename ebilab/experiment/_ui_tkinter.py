@@ -559,13 +559,13 @@ class ExperimentUITkinter:
         else:
             self._start_button["state"] = "disabled"
 
-    def _handle_plotter_change(self, *args, **kwargs):
+    def _handle_plotter_change(self, *args, **kwargs) -> None:
         try:
             experiment = self._protocol_tree.selected_experiment
             if experiment is None:
                 return
             plotter_idx = self._plotter_nb.index(self._plotter_nb.select())
-            Plotter = experiment.plotter_classes[plotter_idx]
+            Plotter = (experiment.plotter_classes or [])[plotter_idx]
         except IndexError:
             return
         self._plotter_options_pane.fields = Plotter.options or {}
