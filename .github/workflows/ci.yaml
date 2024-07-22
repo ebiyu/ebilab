@@ -13,4 +13,12 @@ jobs:
         with:
           python-version: '3.8'
       - run: pip install .
-      - run: make test
+      - run: pip install ruff mypy
+      - name: Format check
+        run: python -m ruff format --check .
+      - name: Lint
+        run: python -m ruff check .
+      - name: Run test
+        run: make test
+      - name: Type check
+        run: python -m mypy .
