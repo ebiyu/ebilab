@@ -71,7 +71,7 @@ def watch(path: str, watch_project: bool = False):
 
 
     class Handler(PatternMatchingEventHandler):
-        last_trigger_time = None
+        last_trigger_time: float | None = None
         def __init__(self, patterns=None, ignore_patterns=None, ignore_directories=False, case_sensitive=False):
             super().__init__(patterns, ignore_patterns, ignore_directories, case_sensitive)
 
