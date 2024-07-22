@@ -9,7 +9,7 @@ import copy
 import time
 import queue
 from pathlib import Path
-from typing import List, Optional, Type, Dict, Callable
+from typing import List, Optional, Type, Dict, Callable, TypedDict
 import weakref
 from threading import Thread
 import dataclasses
@@ -29,6 +29,11 @@ class ExperimentStoppedByUser(Exception):
     def __str__(self):
         return "User has stopped the experiment"
 
+class EventLog(TypedDict):
+    t: float
+    time: datetime.datetime
+    message: str
+
 class ExperimentController(ExperimentContextDelegate):
     experiment: ExperimentProtocol
 
@@ -42,10 +47,10 @@ class ExperimentController(ExperimentContextDelegate):
         self.experiment = experiment
 
         # setup events
-        self.event_state_change = Event()
-        self.event_error = Event()
-        self.event_data_row = Event()
-        self.event_log = Event()
+        self.event_state_change = Event[str]()
+        self.event_error = Event[str]()
+        self.event_data_row = Event[dict]()
+        self.event_log = Event[EventLog]()
 
     def _get_comment_line(self, experiment: ExperimentProtocol, options: dict) -> str:
         """
@@ -160,7 +165,7 @@ class ExperimentController(ExperimentContextDelegate):
         row_list = [row.get(col) for col in cols]
         self._csv_writer.writerow(row_list)
 
-    def experiment_ctx_delegate_send_log(self, message):
+    def experiment_ctx_delegate_send_log(self, message: str) -> None:
         t = self._get_t()
         time = datetime.datetime.now()
         self.event_log.notify({

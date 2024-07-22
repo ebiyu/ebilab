@@ -17,12 +17,10 @@ def prepare_experiments(experiments):
 ExperimentManagerHandler = Callable[[list[type[ExperimentProtocol]]], None]
 class ExperimentManager:
     _experiments: list[type[ExperimentProtocol]]
-    _handlers: list[ExperimentManagerHandler] = []
-
-    changed_event = Event()
 
     def __init__(self, experiments: list[type[ExperimentProtocol]]):
         self.update_experiments(experiments)
+        self.changed_event = Event[list[type[ExperimentProtocol]]]()
 
     @classmethod
     def discover(cls, dir: Path) -> ExperimentManager:
