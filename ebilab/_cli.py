@@ -3,8 +3,6 @@ import sys
 import time
 import os
 import shutil
-import importlib
-import inspect
 from subprocess import PIPE, STDOUT, Popen
 import datetime
 from logging import (
@@ -14,12 +12,9 @@ from logging import (
     Formatter,
     INFO,
     DEBUG,
-    WARNING,
 )
 
 from .project import get_current_project
-from .experiment import ExperimentProtocol, launch_experiment
-from .experiment._experiment_controller import ExperimentProtocolSourceInfo
 from .experiment._experiment_manager import ExperimentManager
 
 # This import may fail if git is not installed
@@ -124,7 +119,7 @@ def watch(path: str, watch_project: bool = False):
                 )
                 if p.stdout is None:
                     return
-                while p.returncode == None:
+                while p.returncode is None:
                     data = p.stdout.read(1)
                     sys.stdout.buffer.write(data)
                     # sys.stdout.flush()

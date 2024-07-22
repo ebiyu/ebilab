@@ -23,7 +23,7 @@ class A707(VisaDevice):
             contacts (list): like `["A2", "B4", "C5"]`
         """
         if len(contacts) == 0:
-            self.visa_write(f"E0P0X")
+            self.visa_write("E0P0X")
         else:
             string = ",".join([contact for contact in contacts])
             self.visa_write(f"E0P0C{string}X")

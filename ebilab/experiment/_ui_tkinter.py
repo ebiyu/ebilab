@@ -2,11 +2,10 @@ from logging import getLogger
 import queue
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Type, Dict
+from typing import Any, Optional, Dict
 import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.font as tkf
-import importlib
 import subprocess
 
 import pandas as pd
@@ -716,7 +715,7 @@ class ExperimentUITkinter:
         self._data_queue = queue.Queue()
         self._log_queue = queue.Queue()
         self._log_cnt = 0
-        self._bottom_nb.tab(1, text=f"Log")
+        self._bottom_nb.tab(1, text="Log")
         self._result_tree.delete(*self._result_tree.get_children())
         self._reset_plotter()
 

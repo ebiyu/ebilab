@@ -45,7 +45,7 @@ class VisaManager:
             self.rm.close()
 
     def __init__(self):
-        logger.debug(f"Initializing VisaManager")
+        logger.debug("Initializing VisaManager")
         os.add_dll_directory("C:\\Program Files\\Keysight\\IO Libraries Suite\\bin")  # omajinai
 
         rm = pyvisa.ResourceManager()

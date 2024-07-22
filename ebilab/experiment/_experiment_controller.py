@@ -2,7 +2,6 @@ import datetime
 import os
 import csv
 import socket
-import io
 import copy
 import time
 from pathlib import Path
@@ -60,14 +59,14 @@ class ExperimentController(ExperimentContextDelegate):
         comment_str = ""
         comment_str += f"# {exp_name} experiment: Ran at {date} in {pc_name}\n"
         comment_str += f"# {options_str}\n"
-        comment_str += f"#\n"
+        comment_str += "#\n"
         return comment_str
 
     def start(self, options, label: str | None = None):
         """
         Experiment core logic
         """
-        logger.info(f"starting experiment")
+        logger.info("starting experiment")
         self._options = options
 
         self.event_state_change.notify("running")
@@ -124,15 +123,15 @@ class ExperimentController(ExperimentContextDelegate):
         self._experiment_thread = Thread(target=run)
         self._experiment_thread.daemon = True
         self._experiment_thread.start()
-        logger.info(f"experiment thread started")
+        logger.info("experiment thread started")
 
     def stop(self):
-        logger.debug(f"stopping experiment")
+        logger.debug("stopping experiment")
         self.event_state_change.notify("stopping")
 
         self._running = False
         if self._experiment_thread is not None:
-            logger.info(f"joining experiment thread")
+            logger.info("joining experiment thread")
             self._experiment_thread.join()
         self.event_state_change.notify("stopped")
 
@@ -142,7 +141,7 @@ class ExperimentController(ExperimentContextDelegate):
         if self._log_file is not None:
             self._log_file.close()
             self._log_file = None
-        logger.debug(f"stopped experiment")
+        logger.debug("stopped experiment")
 
     def _get_t(self) -> float:
         return time.perf_counter() - self._started_time

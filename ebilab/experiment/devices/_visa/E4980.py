@@ -66,7 +66,7 @@ class E4980(VisaDevice):
         self.visa_write(f"VOLT {ampl}")
         self.visa_write(f"FREQ:CW {f}")
 
-        ret = self.visa_query(f"*TRG")
+        ret = self.visa_query("*TRG")
         Z, t, *_ = map(float, ret.split(","))
         return (Z, t)
 
