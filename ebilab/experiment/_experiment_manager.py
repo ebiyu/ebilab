@@ -45,9 +45,6 @@ class ExperimentProtocolInfo:
             )
 
 
-ExperimentManagerHandler = Callable[[list[type[ExperimentProtocol]]], None]
-
-
 class ExperimentManager:
     """
     manages experiment protocols
@@ -56,7 +53,7 @@ class ExperimentManager:
     _experiments: list[ExperimentProtocolInfo]
 
     def __init__(self, experiments: list[ExperimentProtocolInfo]):
-        self.changed_event = Event[list[ExperimentProtocolInfo]]()
+        self.changed_event: Event[list[ExperimentProtocolInfo]] = Event()
         self.update_experiments(experiments)
 
     @classmethod

@@ -30,10 +30,10 @@ logger = getLogger(__name__)
 try:
     import ctypes
 
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # type: ignore
 except:  # noqa: E722
     try:
-        ctypes.windll.user32.SetProcessDPIAware()
+        ctypes.windll.user32.SetProcessDPIAware()  # type: ignore
     except:  # noqa: E722
         pass
 
