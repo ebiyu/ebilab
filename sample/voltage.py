@@ -9,9 +9,11 @@ from matplotlib.lines import Line2D
 
 from ebilab.experiment.devices import K34411A
 
+
 class VoltagePlotter:
     _fig: Figure
     _line1: Line2D
+
     def __init__(self):
         self._fig, self._ax = plt.subplots(1, 1)
         plt.pause(0.01)
@@ -26,6 +28,7 @@ class VoltagePlotter:
 
         plt.gcf().canvas.draw_idle()
         plt.gcf().canvas.flush_events()
+
 
 if __name__ == "__main__":
     multimeter = K34411A()

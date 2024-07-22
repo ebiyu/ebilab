@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from ebilab.project import get_current_project
 from ._actions import DfAction, DfPlotter, AggregatedDfPlotter
 
+
 class ProcessingData:
     _df: pd.DataFrame
     _key: str
@@ -43,12 +44,15 @@ class ProcessingData:
     def query(self, q: str, caption: str):
         def func(df: pd.DataFrame) -> pd.DataFrame:
             return df.query(q)
+
         return self.apply(DfAction(func, caption))
 
     def concat(self, other: ProcessingData) -> ProcessingData:
         key1 = re.sub(r"^\((.+)\)$", r"\1", self._key)
         key2 = re.sub(r"^\((.+)\)$", r"\1", other._key)
-        return ProcessingData(df=pd.concat([self._df, other._df]), key=f"({key1}+{key2})")
+        return ProcessingData(
+            df=pd.concat([self._df, other._df]), key=f"({key1}+{key2})"
+        )
 
     def nocache(self):
         self._use_cache = False
@@ -69,9 +73,10 @@ class ProcessingData:
         return self
 
     def plot(self, plotter: DfPlotter, open=False):
-
         dir = get_current_project().path.data_plot
-        filename = dir / (self._key + "__" + plotter.get_key() + self._plot_ctx_label + ".png")
+        filename = dir / (
+            self._key + "__" + plotter.get_key() + self._plot_ctx_label + ".png"
+        )
 
         # cache
         if self._use_cache and filename.exists():
@@ -106,6 +111,7 @@ class ProcessingData:
         df = pd.read_csv(path)
         return cls(df, path.stem, save=False)
 
+
 class AggregatedProcessingData:
     _dfs: List[pd.DataFrame]
     _keys: List[str]
@@ -114,9 +120,9 @@ class AggregatedProcessingData:
     _plot_ctx_label = ""
 
     def __init__(self, data: List[ProcessingData]):
-        self._dfs = list(map(lambda d:d._df, data))
-        self._keys = list(map(lambda d:d._key, data))
-        self._use_cache = all(map(lambda d:d._use_cache, data))
+        self._dfs = list(map(lambda d: d._df, data))
+        self._keys = list(map(lambda d: d._key, data))
+        self._use_cache = all(map(lambda d: d._use_cache, data))
         self._plot_ctx = {}
 
     def plot_context(self, label, ctx: dict):
@@ -126,7 +132,9 @@ class AggregatedProcessingData:
 
     def plot(self, plotter: AggregatedDfPlotter):
         dir = get_current_project().path.data_plot
-        filename = dir / (f"[{','.join(self._keys)}]__{plotter.get_key()}{self._plot_ctx_label}.png")
+        filename = dir / (
+            f"[{','.join(self._keys)}]__{plotter.get_key()}{self._plot_ctx_label}.png"
+        )
 
         # cache
         if self._use_cache and filename.exists():
@@ -137,29 +145,32 @@ class AggregatedProcessingData:
                 plotter.handler(self._dfs, filename)
             print(f"Saved plot: {filename.name}")
 
-        return self  
+        return self
 
     def combine(self, varname: str, values: list):
         dfs_copy = [df.copy() for df in self._dfs]
         for df, val in zip(dfs_copy, values):
             df[varname] = val
         return ProcessingData(
-            df=pd.concat(dfs_copy),
-            key=f"{varname}[{','.join(self._keys)}]"
+            df=pd.concat(dfs_copy), key=f"{varname}[{','.join(self._keys)}]"
         )
 
     def nocache(self):
         self._use_cache = False
         return self
 
+
 def aggregate(data: List[ProcessingData]) -> AggregatedProcessingData:
     return AggregatedProcessingData(data)
+
 
 def input(filename: str) -> ProcessingData:
     return ProcessingData.fromCsv(get_current_project().path.data_input / filename)
 
+
 def output(filename: str) -> ProcessingData:
     return ProcessingData.fromCsv(get_current_project().path.data_output / filename)
+
 
 def from_df(df: pd.DataFrame, key: str) -> ProcessingData:
     return ProcessingData(df, key)

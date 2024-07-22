@@ -2,6 +2,7 @@
 from ebilab.experiment import ExperimentProtocol, ExperimentContext
 from ebilab.experiment.options import FloatField
 
+
 class RandomWalkExperiment(ExperimentProtocol):
     columns = []
     name = "ctx-sleep"

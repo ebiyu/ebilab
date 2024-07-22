@@ -2,8 +2,15 @@
 import time
 import random
 
-from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, PlotterContext, launch_experiment
+from ebilab.experiment import (
+    ExperimentProtocol,
+    ExperimentPlotter,
+    ExperimentContext,
+    PlotterContext,
+    launch_experiment,
+)
 from ebilab.experiment.options import FloatField, SelectField
+
 
 class NothingExperiment(ExperimentProtocol):
     columns = []
@@ -11,8 +18,7 @@ class NothingExperiment(ExperimentProtocol):
     plotter_classes = []
 
     # available in GUI
-    options = {
-    }
+    options = {}
 
-    def steps(self, ctx: ExperimentContext) -> None: # step of measurement
+    def steps(self, ctx: ExperimentContext) -> None:  # step of measurement
         raise ValueError("Test error")

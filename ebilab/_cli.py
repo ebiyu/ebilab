@@ -7,7 +7,15 @@ import importlib
 import inspect
 from subprocess import PIPE, STDOUT, Popen
 import datetime
-from logging import getLogger, StreamHandler, FileHandler, Formatter, INFO, DEBUG, WARNING
+from logging import (
+    getLogger,
+    StreamHandler,
+    FileHandler,
+    Formatter,
+    INFO,
+    DEBUG,
+    WARNING,
+)
 
 from .project import get_current_project
 from .experiment import ExperimentProtocol, launch_experiment
@@ -25,9 +33,11 @@ from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import click
 
+
 @click.group()
 def cli():
     pass
+
 
 @cli.command(help="Discover experiment recipes and launch GUI")
 @click.argument("path")
@@ -40,6 +50,7 @@ def experiment(path: str):
     experiment_manager = ExperimentManager.discover(target)
     ui = ExperimentUITkinter(experiment_manager)
     ui.launch()
+
 
 def print_message_full(message):
     size = shutil.get_terminal_size((80, 20))
@@ -54,9 +65,15 @@ def print_message_full(message):
         # Message fits in terminal width
         print(f" {message} ".center(terminal_width, "="))
 
+
 @cli.command()
 @click.argument("path")
-@click.option("--watch-project", is_flag=True, default=False, help="Watch project directory instead of file.")
+@click.option(
+    "--watch-project",
+    is_flag=True,
+    default=False,
+    help="Watch project directory instead of file.",
+)
 def watch(path: str, watch_project: bool = False):
     target = Path(path).resolve()
     project = get_current_project()
@@ -69,11 +86,19 @@ def watch(path: str, watch_project: bool = False):
         print("Python please")
         exit(1)
 
-
     class Handler(PatternMatchingEventHandler):
         last_trigger_time: float | None = None
-        def __init__(self, patterns=None, ignore_patterns=None, ignore_directories=False, case_sensitive=False):
-            super().__init__(patterns, ignore_patterns, ignore_directories, case_sensitive)
+
+        def __init__(
+            self,
+            patterns=None,
+            ignore_patterns=None,
+            ignore_directories=False,
+            case_sensitive=False,
+        ):
+            super().__init__(
+                patterns, ignore_patterns, ignore_directories, case_sensitive
+            )
 
         def on_modified(self, event):
             current_time = time.time()
@@ -93,7 +118,12 @@ def watch(path: str, watch_project: bool = False):
                 my_env["LINES"] = str(size.lines)
                 my_env["EBILAB_SOURCE"] = "WATCH"
 
-                p = Popen(["python", target.absolute()], stdout=PIPE, stderr=STDOUT, env=my_env)
+                p = Popen(
+                    ["python", target.absolute()],
+                    stdout=PIPE,
+                    stderr=STDOUT,
+                    env=my_env,
+                )
                 if p.stdout is None:
                     return
                 while p.returncode == None:
@@ -126,12 +156,13 @@ def watch(path: str, watch_project: bool = False):
         observer.stop()
     observer.join()
 
+
 @cli.command()
 @click.argument("name")
 def init(name: str):
     path = Path(name)
     if path.exists():
-        print(f"file or directory \"{path}\" already exists.")
+        print(f'file or directory "{path}" already exists.')
         exit(1)
 
     template_dir = Path(__file__).resolve().parent / "data" / "project-template"
@@ -149,8 +180,7 @@ def init(name: str):
     except:
         print("Git initialization failed, skipping...")
 
-    print(f"Initialized project \"{name}\"")
-
+    print(f'Initialized project "{name}"')
 
 
 @cli.command()
@@ -159,10 +189,13 @@ def clean(f):
     project = get_current_project()
     project.clean_files(dry=not f)
 
+
 def setup_logger(libname: str):
     # Set up logging
     os.makedirs("logs", exist_ok=True)
-    formatter = Formatter("%(asctime)s %(name)s:%(lineno)s %(funcName)s [%(levelname)s]: %(message)s")
+    formatter = Formatter(
+        "%(asctime)s %(name)s:%(lineno)s %(funcName)s [%(levelname)s]: %(message)s"
+    )
     simple_formatter = Formatter("%(asctime)s [%(levelname)s]: %(message)s")
     dateTag = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     info_handler = FileHandler(filename=f"logs/{dateTag}.log")

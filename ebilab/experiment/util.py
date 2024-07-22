@@ -1,10 +1,13 @@
 from typing import TypeVar, Generic, Callable
 
 T = TypeVar("T")
+
+
 class Event(Generic[T]):
     """
     Event management class
     """
+
     def __init__(self) -> None:
         self.event_listeners: list[Callable[[T], None]] = []
 

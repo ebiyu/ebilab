@@ -10,23 +10,27 @@ from typing import TypedDict
 from threading import Thread
 from logging import getLogger
 
-from .protocol import * # FIXME
+from .protocol import *  # FIXME
 from .util import Event
 from ..project import get_current_project
 
 logger = getLogger(__name__)
 
+
 class ExperimentStoppedByUser(Exception):
     """
     Raised when user pressed 'stop' button
     """
+
     def __str__(self):
         return "User has stopped the experiment"
+
 
 class EventLog(TypedDict):
     t: float
     time: datetime.datetime
     message: str
+
 
 class ExperimentController(ExperimentContextDelegate):
     experiment: ExperimentProtocol
@@ -45,13 +49,15 @@ class ExperimentController(ExperimentContextDelegate):
 
     def _get_comment_line(self, experiment: ExperimentProtocol, options: dict) -> str:
         """
-        Returns: 
+        Returns:
             str: includes trailing NL
         """
         exp_name = experiment.name
         date = datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         pc_name = socket.gethostname()
-        options_str = ", ".join([f"{k}: {v}" for k, v in options.items()]) if options else ""
+        options_str = (
+            ", ".join([f"{k}: {v}" for k, v in options.items()]) if options else ""
+        )
 
         comment_str = ""
         comment_str += f"# {exp_name} experiment: Ran at {date} in {pc_name}\n"
@@ -80,8 +86,12 @@ class ExperimentController(ExperimentContextDelegate):
         dir = data_dir / datetime.datetime.now().strftime("%y%m%d")
         os.makedirs(dir, exist_ok=True)
         label = label or self.experiment.name
-        filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
-        log_filename = label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
+        filename = (
+            label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".csv"
+        )
+        log_filename = (
+            label + "-" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + ".log"
+        )
         self._filename = dir / filename
         logger.info(f"Output file: {self._filename}")
         self._file = open(self._filename, "w", newline="")
@@ -159,13 +169,14 @@ class ExperimentController(ExperimentContextDelegate):
     def experiment_ctx_delegate_send_log(self, message: str) -> None:
         t = self._get_t()
         time = datetime.datetime.now()
-        self.event_log.notify({
-            "t": t,
-            "time": time,
-            "message": message,
-        })
+        self.event_log.notify(
+            {
+                "t": t,
+                "time": time,
+                "message": message,
+            }
+        )
         self._log_file.write(f"{time} t={t}: {message}\n")
-
 
         # TODO: write to file
 
@@ -182,4 +193,3 @@ class ExperimentController(ExperimentContextDelegate):
     def __del__(self):
         if self._file is not None:
             self._file.close()
-

@@ -10,6 +10,7 @@ import pandas as pd
 
 from ebilab.project import get_current_project
 
+
 class PreprocessDfData:
     _df: pd.DataFrame
 
@@ -19,7 +20,7 @@ class PreprocessDfData:
     def apply(self, func: Callable[[pd.DataFrame], pd.DataFrame]):
         self._df = func(self._df)
         return self
-    
+
     def rename_cols(self, mapper: Dict[str, str]):
         self._df = self._df.rename(columns=mapper)
         return self
@@ -34,10 +35,12 @@ class PreprocessDfData:
             print(f"Written to: {path.name}")
         return self
 
+
 class PreprocessFileData:
     _filename: Union[str, Path]
     _tmp_filename: Optional[Union[str, Path]] = None
     _skip_rows: Optional[int] = None
+
     def __init__(self, filename: Union[str, Path]):
         self._filename = filename
 
@@ -49,11 +52,11 @@ class PreprocessFileData:
         with open(self._filename) as fin:
             fd, tmpfile = tempfile.mkstemp()
             os.close(fd)
-            with open(tmpfile, 'w') as fout:
+            with open(tmpfile, "w") as fout:
                 func(fin, fout)
             self._tmp_filename = tmpfile
         return self
-    
+
     def _remove_header_comment(self):
         def func(fin, fout):
             for line in fin:
@@ -62,6 +65,7 @@ class PreprocessFileData:
                     break
             for line in fin:
                 fout.write(line)
+
         self.apply(func)
 
     def csv(self) -> PreprocessDfData:
@@ -78,4 +82,3 @@ class PreprocessFileData:
 def original(filename: str) -> PreprocessFileData:
     path = get_current_project().path.data_original / filename
     return PreprocessFileData(path)
-

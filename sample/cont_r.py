@@ -1,11 +1,18 @@
 # sample of multi-thread measurement / plotting using Plotter / Experiment class
 import matplotlib.pyplot as plt
 
-from ebilab.experiment import ExperimentProtocol, ExperimentPlotter, ExperimentContext, launch_experiment
+from ebilab.experiment import (
+    ExperimentProtocol,
+    ExperimentPlotter,
+    ExperimentContext,
+    launch_experiment,
+)
 from ebilab.experiment.devices import K34411A
+
 
 class ResistancePlotter(ExperimentPlotter):
     name = "simple"
+
     def prepare(self):
         _, self._ax = plt.subplots(1, 1, num=self.fig.number)
 
@@ -18,6 +25,7 @@ class ResistancePlotter(ExperimentPlotter):
         self._ax.set_ylabel("Resistance / Ohm")
         self._ax.grid()
 
+
 class ContinuousResistanceMesurement(ExperimentProtocol):
     name = "resistance"
     columns = ["R"]
@@ -29,6 +37,7 @@ class ContinuousResistanceMesurement(ExperimentProtocol):
             r = multimeter.measure_resistance()
             ctx.send_row({"R": r})
             ctx.loop()
+
 
 if __name__ == "__main__":
     launch_experiment([ContinuousResistanceMesurement])

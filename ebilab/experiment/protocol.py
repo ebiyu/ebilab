@@ -10,9 +10,10 @@ from pathlib import Path
 from typing import List, Optional, Type, Dict
 import dataclasses
 
-import matplotlib.pyplot as plt # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
 
 from .options import OptionField
+
 
 # dependencies of ExperimentController
 class ExperimentContextDelegate(metaclass=abc.ABCMeta):
@@ -36,8 +37,10 @@ class ExperimentContextDelegate(metaclass=abc.ABCMeta):
     def experiment_ctx_delegate_loop(self) -> None:
         raise NotImplementedError()
 
+
 class ExperimentContext:
     _delegate: ExperimentContextDelegate
+
     def __init__(self, delegate: ExperimentContextDelegate):
         self._delegate = delegate
 
@@ -73,10 +76,12 @@ class ExperimentContext:
 
         time.sleep(target - time.time())
 
+
 @dataclasses.dataclass
 class PlotterContext:
     plotter_options: dict
     protocol_options: dict
+
 
 class ExperimentPlotter(metaclass=abc.ABCMeta):
     fig: plt.Figure
@@ -92,10 +97,12 @@ class ExperimentPlotter(metaclass=abc.ABCMeta):
     def update(self, df, ctx: PlotterContext):
         raise NotImplementedError()
 
+
 @dataclasses.dataclass(frozen=True)
-class ExperimentProtocolSourceInfo():
+class ExperimentProtocolSourceInfo:
     filepath: Path
     module_name: str
+
 
 class ExperimentProtocol(metaclass=abc.ABCMeta):
     name: str
@@ -116,7 +123,7 @@ class ExperimentProtocol(metaclass=abc.ABCMeta):
         if cls.__doc__ is None:
             return "There's no description"
         lines = cls.__doc__.strip().splitlines()[1:]
-        lines = map(lambda x:x.strip(), lines)
+        lines = map(lambda x: x.strip(), lines)
         return "\n".join(lines).strip()
 
     @abc.abstractmethod
@@ -128,6 +135,7 @@ class ExperimentProtocol(metaclass=abc.ABCMeta):
         if cls.plotter_classes is None:
             cls.plotter_classes = []
         cls.plotter_classes.append(plotter)
+
 
 @dataclasses.dataclass(frozen=True)
 class ExperimentProtocolGroup:

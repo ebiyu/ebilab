@@ -14,18 +14,21 @@ from .protocol import ExperimentProtocol, ExperimentProtocolGroup
 
 logger = getLogger(__name__)
 
+
 @dataclasses.dataclass
 class ExperimentProtocolInfo:
     label: str
     protocol: type[ExperimentProtocol] | None = None
     children: list[ExperimentProtocolInfo] | None = None
-    key: str = dataclasses.field(default_factory=lambda:str(uuid.uuid4()))
+    key: str = dataclasses.field(default_factory=lambda: str(uuid.uuid4()))
     filepath: Path | None = None
     module_name: str | None = None
-    module: Any = None # module
+    module: Any = None  # module
 
     @classmethod
-    def from_experiment(cls, obj: type[ExperimentProtocol] | ExperimentProtocolGroup)  -> ExperimentProtocolInfo:
+    def from_experiment(
+        cls, obj: type[ExperimentProtocol] | ExperimentProtocolGroup
+    ) -> ExperimentProtocolInfo:
         if isinstance(obj, ExperimentProtocolGroup):
             group = obj
             return ExperimentProtocolInfo(
@@ -40,7 +43,10 @@ class ExperimentProtocolInfo:
                 key=str(uuid.uuid4()),
             )
 
+
 ExperimentManagerHandler = Callable[[list[type[ExperimentProtocol]]], None]
+
+
 class ExperimentManager:
     """
     manages experiment protocols
@@ -72,7 +78,11 @@ class ExperimentManager:
             mod = importlib.import_module(module_name)
 
             for _, obj in inspect.getmembers(mod):
-                if inspect.isclass(obj) and issubclass(obj, ExperimentProtocol) and obj.__name__ != "ExperimentProtocol":
+                if (
+                    inspect.isclass(obj)
+                    and issubclass(obj, ExperimentProtocol)
+                    and obj.__name__ != "ExperimentProtocol"
+                ):
                     # if the class is protocol
                     logger.debug(f"Loaded {obj.__name__} from {file}")
                     loaded_experiment = ExperimentProtocolInfo(
@@ -86,17 +96,21 @@ class ExperimentManager:
                     protocols.append(loaded_experiment)
 
         # TODO: change sort method
-        protocols.sort(key=lambda p:p.protocol.name) # type: ignore
+        protocols.sort(key=lambda p: p.protocol.name)  # type: ignore
 
         logger.info(f"Found {len(protocols)} protocols")
 
         # FIXME: mypy error
-        discovered: list[ExperimentProtocolInfo | ExperimentProtocolGroupInfo] = protocols # type: ignore
+        discovered: list[ExperimentProtocolInfo | ExperimentProtocolGroupInfo] = (
+            protocols  # type: ignore
+        )
 
         return cls(discovered)
 
     @classmethod
-    def from_experiments(cls, experiments: list[type[ExperimentProtocol]]) -> ExperimentManager:
+    def from_experiments(
+        cls, experiments: list[type[ExperimentProtocol]]
+    ) -> ExperimentManager:
         return cls(list(map(ExperimentProtocolInfo.from_experiment, experiments)))
 
     def reload(self, key: str) -> None:
@@ -123,9 +137,9 @@ class ExperimentManager:
         # refresh
         experiment.module = module
         for _, obj in inspect.getmembers(module):
-            if hasattr(obj, '__name__') and obj.__name__ == protocol.__name__:
+            if hasattr(obj, "__name__") and obj.__name__ == protocol.__name__:
                 experiment.protocol = obj
-                logger.info(f'Reloaded {protocol.__name__}')
+                logger.info(f"Reloaded {protocol.__name__}")
 
     def update_experiments(self, experiments: list[ExperimentProtocolInfo]):
         self._experiments = experiments
@@ -141,7 +155,10 @@ class ExperimentManager:
         Args:
             key(str): like ".1.2.1", ".2", ...
         """
-        def _get_by_key(key: str, info_list: list[ExperimentProtocolInfo]) -> ExperimentProtocolInfo | None:
+
+        def _get_by_key(
+            key: str, info_list: list[ExperimentProtocolInfo]
+        ) -> ExperimentProtocolInfo | None:
             # recursive lookup
             for info in info_list:
                 if info.key == key:

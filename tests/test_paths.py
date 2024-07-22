@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ebilab.project import get_current_project
 
+
 class TestFoo(TestCase):
     def test_paths(self):
         os.chdir(Path(__file__).resolve().parent / "sample")

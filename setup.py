@@ -21,9 +21,7 @@ setup(
         "GitHub repository": "https://github.com/ebiyuu1121/ebilab",
     },
     include_package_data=True,
-    setup_requires=[
-        "setuptools_scm"
-    ],
+    setup_requires=["setuptools_scm"],
     # extras_require={
     #     "develop": ["dev-packageA", "dev-packageB"]
     # },

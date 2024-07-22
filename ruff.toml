@@ -1,0 +1,11 @@
+target-version = "py310"
+
+[lint]
+select = ["ALL"]
+ignore = [
+    "D", # pydocstyle
+
+    # To avoid conflict
+    "COM812",
+    "ISC001",
+]

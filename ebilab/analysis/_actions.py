@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+
 @dataclass
 class DfAction:
     handler: Callable[[pd.DataFrame], pd.DataFrame]
@@ -14,6 +15,7 @@ class DfAction:
     def get_key(self):
         return self.key
 
+
 @dataclass
 class DfPlotter:
     handler: Callable[[pd.DataFrame, Union[str, Path]], None]
@@ -21,6 +23,7 @@ class DfPlotter:
 
     def get_key(self):
         return self.key
+
 
 @dataclass
 class AggregatedDfPlotter:
@@ -34,16 +37,19 @@ class AggregatedDfPlotter:
 def df_action(key: str):
     def decorator(func: Callable[[pd.DataFrame], pd.DataFrame]):
         return DfAction(handler=func, key=key)
+
     return decorator
+
 
 def df_plotter(key: str):
     def decorator(func: Callable[[pd.DataFrame, Union[str, Path]], None]):
         return DfPlotter(handler=func, key=key)
+
     return decorator
+
 
 def agg_df_plotter(key: str):
     def decorator(func: Callable[[List[pd.DataFrame], Union[str, Path]], None]):
         return AggregatedDfPlotter(handler=func, key=key)
+
     return decorator
-
-

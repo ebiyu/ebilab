@@ -14,10 +14,12 @@ import pyvisa
 
 logger = getLogger(__name__)
 
+
 @dataclass
 class _VisaManagerDevice:
     idn: str
     inst: pyvisa.Resource
+
 
 class VisaManager:
     """
@@ -44,7 +46,9 @@ class VisaManager:
 
     def __init__(self):
         logger.debug(f"Initializing VisaManager")
-        os.add_dll_directory('C:\\Program Files\\Keysight\\IO Libraries Suite\\bin') # omajinai
+        os.add_dll_directory(
+            "C:\\Program Files\\Keysight\\IO Libraries Suite\\bin"
+        )  # omajinai
 
         rm = pyvisa.ResourceManager()
         logger.info(f"Resource manager initialized: {str(rm)}")
@@ -55,7 +59,7 @@ class VisaManager:
             try:
                 inst = rm.open_resource(addr)
                 try:
-                    idn = inst.query('*IDN?')
+                    idn = inst.query("*IDN?")
                     logger.debug(f"*IDN? to {addr}: {idn}")
                     self._devices[addr] = _VisaManagerDevice(idn, inst)
                 except:
@@ -80,8 +84,11 @@ class VisaManager:
                 return device.inst
         return None
 
+
 # To be singleton
 _visa_manager = None
+
+
 def get_visa_manager():
     """
     Function to get :py:class:`VisaManager <ebilab.experiment.devices.visa.VisaManager>` class.
@@ -99,6 +106,7 @@ def get_visa_manager():
 class DeviceNotFoundError(Exception):
     pass
 
+
 class VisaDevice:
     """
     Base class of visa device.
@@ -111,12 +119,15 @@ class VisaDevice:
     """
 
     _idn_pattern: Optional[str] = None
+
     def __init__(self, *, addr: str = None, **kwargs):
         if self._idn_pattern is None:
             raise NotImplementedError("idn_pattern is None")
         inst = get_visa_manager().get_inst(self._idn_pattern)
         if inst is None:
-            raise DeviceNotFoundError(f"Device matching \"{self._idn_pattern}\" is not found")
+            raise DeviceNotFoundError(
+                f'Device matching "{self._idn_pattern}" is not found'
+            )
         self.pyvisa_inst = inst
         self.pyvisa_inst.timeout = 10000
         logger.info(f"{self.__class__.__name__} is initializing...")
