@@ -6,7 +6,7 @@ import tkinter.font as tkf
 from logging import getLogger
 from pathlib import Path
 from tkinter import messagebox, ttk
-from typing import Any, Dict, Optional
+from typing import Any
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -155,7 +155,7 @@ class DevelopPane(ttk.Frame):
 # tk.Variable()
 class OptionsPane(ttk.Frame):
     __label: str
-    __fields: Dict[str, OptionField]
+    __fields: dict[str, OptionField]
     __enabled = True
     __options: dict
     __is_valid = True
@@ -169,7 +169,7 @@ class OptionsPane(ttk.Frame):
         self.columnconfigure(0, weight=1)
         self._build_fields({})
 
-    def _build_fields(self, fields: Dict[str, OptionField]):
+    def _build_fields(self, fields: dict[str, OptionField]):
         for widgets in self.winfo_children():
             widgets.destroy()
 
@@ -260,7 +260,7 @@ class OptionsPane(ttk.Frame):
         self.event_generate("<<OptionsPaneUpdate>>")
 
     @property
-    def fields(self) -> Dict[str, OptionField]:
+    def fields(self) -> dict[str, OptionField]:
         return self.__fields
 
     @fields.setter
@@ -268,7 +268,7 @@ class OptionsPane(ttk.Frame):
         self.__fields = fields
         self._build_fields(fields)
 
-    def _get_options(self) -> Optional[dict]:
+    def _get_options(self) -> dict | None:
         ret = {}
         for (key, field), widget, var in zip(
             self.fields.items(), self._options_widget, self._options_textvars
@@ -360,8 +360,8 @@ class ExperimentUITkinter:
     _log_cnt = 0
 
     _state: str = "stopped"
-    _plotter: Optional[ExperimentPlotter] = None
-    _update_experiment_loop_id: Optional[str] = None
+    _plotter: ExperimentPlotter | None = None
+    _update_experiment_loop_id: str | None = None
     _protocol_options_pane: OptionsPane
     _plotter_options_pane: OptionsPane
 

@@ -6,7 +6,6 @@ import itertools
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Union
 
 
 @dataclass(frozen=True)
@@ -26,7 +25,7 @@ class Project:
 
     _root_dir: Path
 
-    def __init__(self, root: Union[str, Path]):
+    def __init__(self, root: str | Path):
         if isinstance(root, str):
             root = Path(root)
         if not (root / "ebilab.ini").exists():

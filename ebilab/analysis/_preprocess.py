@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 import tempfile
+from collections.abc import Callable
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union
 
 import pandas as pd
 
@@ -21,7 +21,7 @@ class PreprocessDfData:
         self._df = func(self._df)
         return self
 
-    def rename_cols(self, mapper: Dict[str, str]):
+    def rename_cols(self, mapper: dict[str, str]):
         self._df = self._df.rename(columns=mapper)
         return self
 
@@ -37,11 +37,11 @@ class PreprocessDfData:
 
 
 class PreprocessFileData:
-    _filename: Union[str, Path]
-    _tmp_filename: Optional[Union[str, Path]] = None
-    _skip_rows: Optional[int] = None
+    _filename: str | Path
+    _tmp_filename: str | Path | None = None
+    _skip_rows: int | None = None
 
-    def __init__(self, filename: Union[str, Path]):
+    def __init__(self, filename: str | Path):
         self._filename = filename
 
     def skip(self, skip: int):

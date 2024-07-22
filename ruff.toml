@@ -8,8 +8,8 @@ exclude = [
 line-length = 100
 
 [lint]
-select = ["E", "F", "I"]
-# TODO: UP, B, SIM, D
+select = ["E", "F", "I", "UP"]
+# TODO: B, SIM, D
 #ignore = [
 #    # TODO
 #    "ANN", # annotation

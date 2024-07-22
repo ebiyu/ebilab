@@ -1,5 +1,3 @@
-from typing import Optional
-
 from ..visa import VisaDevice
 
 
@@ -40,7 +38,7 @@ class K34411A(VisaDevice):
         self.visa_write("RES:RANG:AUTO ON")
         self.visa_write("TRIG:SOUR BUS")
 
-    def measure_resistance(self, *, nplc: Optional[str] = None, range: str = "auto"):
+    def measure_resistance(self, *, nplc: str | None = None, range: str = "auto"):
         """
         Measure resistance once
 
@@ -69,7 +67,7 @@ class K34411A(VisaDevice):
         val = self.visa_query("READ?")
         return float(val)
 
-    def measure_resistance_4w(self, *, nplc: Optional[str] = None, range: str = "auto"):
+    def measure_resistance_4w(self, *, nplc: str | None = None, range: str = "auto"):
         """
         Measure resistance once by 4 wire method
 
@@ -98,7 +96,7 @@ class K34411A(VisaDevice):
         val = self.visa_query("READ?")
         return float(val)
 
-    def measure_voltage(self, *, nplc: Optional[str] = None, range: str = "auto"):
+    def measure_voltage(self, *, nplc: str | None = None, range: str = "auto"):
         """
         Measure resistance once
 

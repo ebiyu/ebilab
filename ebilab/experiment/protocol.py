@@ -8,7 +8,6 @@ import abc
 import dataclasses
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Type
 
 import matplotlib.pyplot as plt  # type: ignore
 
@@ -87,7 +86,7 @@ class ExperimentPlotter(metaclass=abc.ABCMeta):
     fig: plt.Figure
     name: str
 
-    options: Optional[Dict[str, OptionField]] = None
+    options: dict[str, OptionField] | None = None
 
     @abc.abstractmethod
     def prepare(self, ctx: PlotterContext):
@@ -106,11 +105,11 @@ class ExperimentProtocolSourceInfo:
 
 class ExperimentProtocol(metaclass=abc.ABCMeta):
     name: str
-    columns: List[str]
-    plotter_classes: List[Type[ExperimentPlotter]] | None = None
-    source_info: Optional[ExperimentProtocolSourceInfo] = None
+    columns: list[str]
+    plotter_classes: list[type[ExperimentPlotter]] | None = None
+    source_info: ExperimentProtocolSourceInfo | None = None
 
-    options: Optional[Dict[str, OptionField]] = None
+    options: dict[str, OptionField] | None = None
 
     @classmethod
     def get_summary(cls):
@@ -140,4 +139,4 @@ class ExperimentProtocol(metaclass=abc.ABCMeta):
 @dataclasses.dataclass(frozen=True)
 class ExperimentProtocolGroup:
     name: str
-    protocols: List[Type[ExperimentProtocol]]
+    protocols: list[type[ExperimentProtocol]]

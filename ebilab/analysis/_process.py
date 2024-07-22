@@ -4,7 +4,6 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -103,20 +102,20 @@ class ProcessingData:
         pass
 
     @classmethod
-    def fromCsv(cls, filename: Union[str, Path]):
+    def fromCsv(cls, filename: str | Path):
         path = Path(filename)
         df = pd.read_csv(path)
         return cls(df, path.stem, save=False)
 
 
 class AggregatedProcessingData:
-    _dfs: List[pd.DataFrame]
-    _keys: List[str]
+    _dfs: list[pd.DataFrame]
+    _keys: list[str]
     _use_cache = True
     _plot_ctx: dict
     _plot_ctx_label = ""
 
-    def __init__(self, data: List[ProcessingData]):
+    def __init__(self, data: list[ProcessingData]):
         self._dfs = list(map(lambda d: d._df, data))
         self._keys = list(map(lambda d: d._key, data))
         self._use_cache = all(map(lambda d: d._use_cache, data))
@@ -155,7 +154,7 @@ class AggregatedProcessingData:
         return self
 
 
-def aggregate(data: List[ProcessingData]) -> AggregatedProcessingData:
+def aggregate(data: list[ProcessingData]) -> AggregatedProcessingData:
     return AggregatedProcessingData(data)
 
 

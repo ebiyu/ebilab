@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, List, Union
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ class DfAction:
 
 @dataclass
 class DfPlotter:
-    handler: Callable[[pd.DataFrame, Union[str, Path]], None]
+    handler: Callable[[pd.DataFrame, str | Path], None]
     key: str
 
     def get_key(self):
@@ -27,7 +27,7 @@ class DfPlotter:
 
 @dataclass
 class AggregatedDfPlotter:
-    handler: Callable[[List[pd.DataFrame], Union[str, Path]], None]
+    handler: Callable[[list[pd.DataFrame], str | Path], None]
     key: str
 
     def get_key(self):
@@ -42,14 +42,14 @@ def df_action(key: str):
 
 
 def df_plotter(key: str):
-    def decorator(func: Callable[[pd.DataFrame, Union[str, Path]], None]):
+    def decorator(func: Callable[[pd.DataFrame, str | Path], None]):
         return DfPlotter(handler=func, key=key)
 
     return decorator
 
 
 def agg_df_plotter(key: str):
-    def decorator(func: Callable[[List[pd.DataFrame], Union[str, Path]], None]):
+    def decorator(func: Callable[[list[pd.DataFrame], str | Path], None]):
         return AggregatedDfPlotter(handler=func, key=key)
 
     return decorator

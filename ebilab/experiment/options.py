@@ -1,6 +1,5 @@
 import abc
 import dataclasses
-from typing import Optional
 
 
 class OptionField(metaclass=abc.ABCMeta):
@@ -10,8 +9,8 @@ class OptionField(metaclass=abc.ABCMeta):
 @dataclasses.dataclass(frozen=True)
 class FloatField(OptionField):
     default: float
-    max: Optional[float] = None
-    min: Optional[float] = None
+    max: float | None = None
+    min: float | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -23,8 +22,8 @@ class SelectField(OptionField):
 @dataclasses.dataclass(frozen=True)
 class IntField(OptionField):
     default: int
-    max: Optional[int] = None
-    min: Optional[int] = None
+    max: int | None = None
+    min: int | None = None
 
 
 @dataclasses.dataclass(frozen=True)

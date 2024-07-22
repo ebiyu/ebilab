@@ -1,5 +1,3 @@
-from typing import List, Type
-
 from ._experiment_controller import ExperimentController
 from ._experiment_manager import ExperimentManager
 from .protocol import (
@@ -11,7 +9,7 @@ from .protocol import (
 )
 
 
-def launch_experiment(experiments: List[Type[ExperimentProtocol]]):
+def launch_experiment(experiments: list[type[ExperimentProtocol]]):
     from ._ui_tkinter import ExperimentUITkinter
 
     experiment_manager = ExperimentManager.from_experiments(experiments)

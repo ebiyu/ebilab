@@ -5,9 +5,10 @@ import importlib
 import inspect
 import sys
 import uuid
+from collections.abc import Callable
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .protocol import ExperimentProtocol, ExperimentProtocolGroup
 from .util import Event

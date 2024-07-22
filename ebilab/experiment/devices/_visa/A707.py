@@ -1,5 +1,4 @@
 from time import sleep
-from typing import List
 
 from ..visa import VisaDevice
 
@@ -15,7 +14,7 @@ class A707(VisaDevice):
         self.visa_write("XRX")
         sleep(1)
 
-    def close_only(self, contacts: List[str]):
+    def close_only(self, contacts: list[str]):
         """
         Open all switch and close only specified switch
 

@@ -8,7 +8,6 @@ import os
 import re
 from dataclasses import dataclass
 from logging import getLogger
-from typing import Dict, Optional
 
 import pyvisa
 
@@ -29,8 +28,8 @@ class VisaManager:
     :py:meth:`get_visa_manager() <ebilab.experiment.devices.visa.get_visa_manager>` method instead.
     """
 
-    _rm: Optional[pyvisa.ResourceManager] = None
-    _devices: Dict[str, _VisaManagerDevice] = {}
+    _rm: pyvisa.ResourceManager | None = None
+    _devices: dict[str, _VisaManagerDevice] = {}
 
     @property
     def rm(self):
@@ -67,7 +66,7 @@ class VisaManager:
             except:  # noqa: E722
                 pass
 
-    def get_inst(self, pattern: str) -> Optional[pyvisa.Resource]:
+    def get_inst(self, pattern: str) -> pyvisa.Resource | None:
         """
         Get pyvisa instance from pattern that matches *IDN? result.
 
@@ -117,7 +116,7 @@ class VisaDevice:
             Please use this only when you use method which is not supported in VisaDevice class
     """
 
-    _idn_pattern: Optional[str] = None
+    _idn_pattern: str | None = None
 
     def __init__(self, *, addr: str | None = None, **kwargs):
         if self._idn_pattern is None:
