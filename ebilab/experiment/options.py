@@ -36,5 +36,5 @@ class StrField(OptionField):
 
 
 @dataclasses.dataclass(frozen=True)
-class BoolField:
+class BoolField(OptionField):
     default: bool = False
