@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+import warnings
+from typing import Any, overload
+
+from typing_extensions import deprecated
 
 from ..visa import VisaDevice
 
@@ -20,8 +23,41 @@ class E4980(VisaDevice):
         self.visa_write(":TRIG:DEL 0")
         self.visa_write("*SRE 1")
 
+    # ampl (deprecated)
+    @overload
+    @deprecated("Parameter 'ampl' is deprecated. Use 'voltage' instead.")
     def trigger(
-        self, f: float, *, time: str = "MED", ampl: float = 0.1, format: str = "ZTD"
+        self,
+        f: float,
+        *,
+        time: str = "MED",
+        ampl: float = 0.1,
+        format: str = "ZTD",
+    ) -> tuple[float, float]:
+        pass
+
+    # voltage / current (exclusive)
+    @overload
+    def trigger(
+        self,
+        f: float,
+        *,
+        time: str = "MED",
+        voltage: float | None = None,
+        current: float | None = None,
+        format: str = "ZTD",
+    ) -> tuple[float, float]:
+        pass
+
+    def trigger(
+        self,
+        f: float,
+        *,
+        time: str = "MED",
+        ampl: float | None = None,
+        voltage: float | None = None,
+        current: float | None = None,
+        format: str = "ZTD",
     ) -> tuple[float, float]:
         """
         measure impedance
@@ -30,7 +66,8 @@ class E4980(VisaDevice):
             f (float): frequency to measure
 
         Keyword Args:
-            ampl (float): measurement amplitude [V]
+            voltage (float): measurement amplitude [V]. Voltage and current are exclusive.
+            current (float): measurement amplitude [A]. Voltage and current are exclusive.
             time (str): measurement time from {"LONG", "MED", "SHORT"}
             format (str): format of return value from
                 {"CPD", "CPQ", "CPG", "CPRP", "CSD", "CSQ", "CSRS", "LPD", "LPQ", "LPG", "LPRP",
@@ -69,7 +106,17 @@ class E4980(VisaDevice):
 
         self.visa_write(f"FUNC:IMP {format}")
         self.visa_write(f"APER {time}")
-        self.visa_write(f"VOLT {ampl}")
+
+        if ampl is not None:
+            voltage = ampl
+            warnings.warn("ampl is deprecated. Use voltage instead.", DeprecationWarning)
+        if voltage is not None:
+            self.visa_write(f"VOLT {voltage}")
+        elif current is not None:
+            self.visa_write(f"CURR {current}")
+        else:
+            self.visa_write("VOLT 0.1")
+
         self.visa_write(f"FREQ:CW {f}")
 
         ret = self.visa_query("*TRG")
