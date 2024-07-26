@@ -66,38 +66,64 @@ class ExperimentManager:
             raise RuntimeError(f"File {dir} is not directory")
 
         # Discover protocols
-        # TODO: support experiment group
         sys.path.append(str(target.parent))
-        files = target.glob("*.py")
-        protocols: list[ExperimentProtocolInfo] = []
-        for file in files:
-            module_name = target.name + "." + file.stem
-            mod = importlib.import_module(module_name)
+        protocols = cls._read_file("", target)
 
-            for _, obj in inspect.getmembers(mod):
-                if (
-                    inspect.isclass(obj)
-                    and issubclass(obj, ExperimentProtocol)
-                    and obj.__name__ != "ExperimentProtocol"
-                ):
-                    # if the class is protocol
-                    logger.debug(f"Loaded {obj.__name__} from {file}")
-                    loaded_experiment = ExperimentProtocolInfo(
-                        protocol=obj,
-                        label=obj.get_summary(),
-                        key=str(uuid.uuid4()),
-                        filepath=file,
-                        module_name=module_name,
-                        module=mod,
-                    )
-                    protocols.append(loaded_experiment)
-
-        # TODO: change sort method
-        protocols.sort(key=lambda p: p.protocol.name)  # type: ignore
+        # TODO: sort by name
+        # protocols.sort(key=lambda p: p.protocol.name)  # type: ignore
 
         logger.info(f"Found {len(protocols)} protocols")
 
         return cls(protocols)
+
+    @classmethod
+    def _read_file(cls, baseModule: str, file: Path) -> list[ExperimentProtocolInfo]:
+        if file.is_dir():
+            files = file.glob("*")
+            children = []
+            if baseModule == "":
+                baseModule = file.name
+            else:
+                baseModule = baseModule + "." + file.name
+
+            for f in files:
+                children.extend(cls._read_file(baseModule, f))
+
+            if len(children) == 0:
+                return []
+            return [
+                ExperimentProtocolInfo(
+                    label=file.name,
+                    children=children,
+                    key=str(uuid.uuid4()),
+                )
+            ]
+
+        if file.suffix != ".py":
+            return []
+
+        ret: list[ExperimentProtocolInfo] = []
+        module_name = baseModule + "." + file.stem
+        mod = importlib.import_module(module_name)
+
+        for _, obj in inspect.getmembers(mod):
+            if (
+                inspect.isclass(obj)
+                and issubclass(obj, ExperimentProtocol)
+                and obj.__name__ != "ExperimentProtocol"
+            ):
+                # if the class is protocol, add to list
+                logger.debug(f"Loaded {obj.__name__} from {file}")
+                loaded_experiment = ExperimentProtocolInfo(
+                    protocol=obj,
+                    label=obj.get_summary(),
+                    key=str(uuid.uuid4()),
+                    filepath=file,
+                    module_name=module_name,
+                    module=mod,
+                )
+                ret.append(loaded_experiment)
+        return ret
 
     @classmethod
     def from_experiments(cls, experiments: list[type[ExperimentProtocol]]) -> ExperimentManager:
