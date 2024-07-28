@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from ._experiment_controller import ExperimentController
 from ._experiment_manager import ExperimentManager
 from .protocol import (
     ExperimentContext,
@@ -22,7 +21,6 @@ def launch_experiment(experiments: list[type[ExperimentProtocol]]) -> None:
 __all__ = [
     "ExperimentProtocol",
     "ExperimentContext",
-    "ExperimentController",
     "ExperimentPlotter",
     "PlotterContext",
     "ExperimentProtocolGroup",
