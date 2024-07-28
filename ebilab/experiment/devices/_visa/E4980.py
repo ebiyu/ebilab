@@ -108,6 +108,8 @@ class E4980(VisaDevice):
         self.visa_write(f"APER {time}")
 
         if ampl is not None:
+            if voltage is not None or current is not None:
+                raise ValueError("`ampl` is specified with voltage or current. Remove `ampl`.")
             voltage = ampl
             warnings.warn("ampl is deprecated. Use voltage instead.", DeprecationWarning)
         if voltage is not None:
