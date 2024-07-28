@@ -24,4 +24,6 @@ __all__ = [
     "ExperimentPlotter",
     "PlotterContext",
     "ExperimentProtocolGroup",
+    "launch_experiment",
 ]
+ 
