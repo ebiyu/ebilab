@@ -16,6 +16,9 @@ setup(
         "click",
         "pyvisa",
         "GitPython",
+        "chardet",
+        "pyyaml",
+        "pywin32; os_name=='nt'",
     ],
     project_urls={
         "GitHub repository": "https://github.com/ebiyuu1121/ebilab",
