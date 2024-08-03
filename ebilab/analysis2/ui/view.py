@@ -219,7 +219,9 @@ class View(tk.Tk):
         if not self._subproject.current_recipe:
             return
 
-        self.process_recipe_list.insert("", "end", text=self._subproject.current_recipe.input, iid="input", open=True)
+        self.process_recipe_list.insert(
+            "", "end", text=self._subproject.current_recipe.input, iid="input", open=True
+        )
 
         for i, step in enumerate(self._subproject.current_recipe.process_steps):
             self.process_recipe_list.insert("input", "end", text=step.df_process, iid=f"step-{i}")
@@ -248,10 +250,10 @@ class View(tk.Tk):
             self._subproject.plot_from_process_manifest(
                 self._subproject.current_recipe, self._plot_fig
             )
-            # plotter.plot(self._subproject.current_recipe.plotter.kwargs, self._plot_fig)
-        # TODO: implement
+            # plotter.plotself._subproject.current_recipe.plotter.kwargs, self._plot_fig)
+        # TODO: implement j
         # TODO: handle error
-        except Exception as e:
+        except Exception:
             logger.exception("Error occurred while plotting")
 
         self._plot_canvas.draw()
