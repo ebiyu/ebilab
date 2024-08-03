@@ -10,7 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..base import DfPlotter
 from ..project import Project
-from ..subproject import DfProcessManifest, InputManifest, PlotterStep, SubProject
+from ..subproject import DfProcessManifest, DfProcessStep, InputManifest, PlotterStep, SubProject
 
 logger = getLogger(__name__)
 
@@ -54,7 +54,7 @@ class View(tk.Tk):
         self.update_original_data_list()
         self.update_subproject_list()
 
-    def create_widgets(self):
+    def create_widgets(self) -> None:
         """
         Build widgets
         """
@@ -101,6 +101,9 @@ class View(tk.Tk):
         tk.Label(col2, text="Process List").pack()
         self.process_list = ttk.Treeview(col2)
         self.process_list.pack(fill="both", expand=True)
+
+        process_add_button = ttk.Button(col2, text="Add", command=self.handle_add_process)
+        process_add_button.pack(fill="x")
 
         # col3
         tk.Label(col3, text="Plotters").pack()
@@ -172,7 +175,7 @@ class View(tk.Tk):
             new_iid = path.relative_to(self.project.path.data_original).as_posix()
             if not self.original_list.exists(parent_iid):
                 relative_insert(path.parent)
-            self.original_list.insert(parent_iid, "end", text=path.name, iid=new_iid)
+            self.original_list.insert(parent_iid, "end", text=path.name, iid=new_iid, open=True)
 
         # insert files
         for item in self.project.get_original_files():
@@ -196,14 +199,30 @@ class View(tk.Tk):
         for item in self._subproject.inputs:
             self.input_list.insert("", "end", text=item.name)
 
+        # TODO: update output
+
+    def update_process_list(self) -> None:
+        self.process_list.delete(*self.process_list.get_children())
+
+        if not self._subproject:
+            return
+
+        for name in self._subproject.df_processes.keys():
+            self.process_list.insert("", "end", text=name)
+
     def update_process_recipe_list(self) -> None:
         self.process_recipe_list.delete(*self.process_recipe_list.get_children())
 
         if not self._subproject:
             return
 
-        if self._subproject.current_recipe:
-            self.process_recipe_list.insert("", "end", text=self._subproject.current_recipe.input)
+        if not self._subproject.current_recipe:
+            return
+
+        self.process_recipe_list.insert("", "end", text=self._subproject.current_recipe.input, iid="input", open=True)
+
+        for i, step in enumerate(self._subproject.current_recipe.process_steps):
+            self.process_recipe_list.insert("input", "end", text=step.df_process, iid=f"step-{i}")
 
     def update_plotter_list(self) -> None:
         self.plotter_list.delete(*self.plotter_list.get_children())
@@ -224,6 +243,7 @@ class View(tk.Tk):
             return
 
         # plotter = self._plotter_list[self._subproject.current_recipe.plotter.plotter]()
+        self._plot_fig.clear()
         try:
             self._subproject.plot_from_process_manifest(
                 self._subproject.current_recipe, self._plot_fig
@@ -265,7 +285,7 @@ class View(tk.Tk):
     def handle_on_select_subproject(self) -> None:
         self.update_input_output_list()
         self.update_process_recipe_list()
-        # self.update_process_list()
+        self.update_process_list()
         self.update_plotter_list()
 
     def handle_on_select_input(self) -> None:
@@ -310,6 +330,26 @@ class View(tk.Tk):
         self.original_data_window.deiconify()
         self.original_data_window.focus_force()
         self.original_data_window.grab_set()  # make modal
+
+    def handle_add_process(self) -> None:
+        if not self._subproject:
+            return
+
+        selected = self.process_list.selection()
+        if not selected:
+            return
+
+        iid = selected[0]
+        name = self.process_list.item(iid)["text"]
+
+        if not self._subproject.current_recipe:
+            return
+
+        self._subproject.current_recipe.process_steps.append(
+            DfProcessStep(df_process=name, kwargs={})
+        )
+
+        self.update_process_recipe_list()
 
     def handle_close_original_data_window(self) -> None:
         self.original_data_window.withdraw()
