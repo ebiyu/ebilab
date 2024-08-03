@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import tkinter as tk
+from logging import getLogger
 from pathlib import Path
 from tkinter import ttk
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ..plotter import DfPlotter
+from ..base import DfPlotter
 from ..project import Project
-from ..subproject import InputManifest, ProcessManifest, SubProject
+from ..subproject import DfProcessManifest, InputManifest, PlotterStep, SubProject
+
+logger = getLogger(__name__)
+
 
 # # windows dpi workaround
 # try:
@@ -85,7 +89,6 @@ class View(tk.Tk):
         self.input_list.pack(fill="both", expand=True)
         self.input_list.bind("<<TreeviewSelect>>", lambda _: self.handle_on_select_input())
 
-
         tk.Label(col1, text="Output").pack()
         self.output_list = ttk.Treeview(col1)
         self.output_list.pack(fill="both", expand=True)
@@ -103,11 +106,12 @@ class View(tk.Tk):
         tk.Label(col3, text="Plotters").pack()
         self.plotter_list = ttk.Treeview(col3)
         self.plotter_list.pack(fill="both", expand=True)
+        self.plotter_list.bind("<<TreeviewSelect>>", lambda _: self.handle_on_select_plotter())
 
-        self._fig = plt.figure(figsize=(6, 3), constrained_layout=True)
-        self._canvas = FigureCanvasTkAgg(self._fig, master=col3)
-        self._canvas.draw()
-        self._canvas.get_tk_widget().pack(fill="both", expand=True)
+        self._plot_fig = plt.figure(figsize=(6, 6), constrained_layout=True)
+        self._plot_canvas = FigureCanvasTkAgg(self._plot_fig, master=col3)
+        self._plot_canvas.draw()
+        self._plot_canvas.get_tk_widget().pack(fill="both", expand=True)
 
         # col4
 
@@ -207,9 +211,30 @@ class View(tk.Tk):
             self.plotter_list.insert("", "end", text=name)
 
     def update_plot(self) -> None:
+        logger.debug("update_plot called")
+        if not self._subproject:
+            logger.debug("no subproject")
+            return
+
+        if not self._subproject.current_recipe:
+            logger.debug("no current recipe")
+            return
+
+        if not self._subproject.current_recipe.plotter:
+            return
+
+        # plotter = self._plotter_list[self._subproject.current_recipe.plotter.plotter]()
+        try:
+            self._subproject.plot_from_process_manifest(
+                self._subproject.current_recipe, self._plot_fig
+            )
+            # plotter.plot(self._subproject.current_recipe.plotter.kwargs, self._plot_fig)
         # TODO: implement
         # TODO: handle error
-        pass
+        except Exception as e:
+            logger.exception("Error occurred while plotting")
+
+        self._plot_canvas.draw()
 
     # Event handlers
     def handle_add_to_input(self) -> None:
@@ -232,7 +257,7 @@ class View(tk.Tk):
         if self.original_list.get_children(iid):
             return
 
-        path = self.project.path.data_original / self.original_list.item(iid)["text"]
+        path = self.project.path.data_original / iid
         self._subproject.inputs.append(InputManifest(name=name, original=path))
 
         self.update_input_output_list()
@@ -255,11 +280,30 @@ class View(tk.Tk):
         name = self.input_list.item(iid)["text"]
 
         if not self._subproject.current_recipe:
-            self._subproject.current_recipe = ProcessManifest(input=name)
+            self._subproject.current_recipe = DfProcessManifest(input=name)
         else:
             self._subproject.current_recipe.input = name
 
         self.update_process_recipe_list()
+
+    def handle_on_select_plotter(self) -> None:
+        logger.debug("handle_on_select_plotter called")
+        if not self._subproject:
+            return
+
+        selected = self.plotter_list.selection()
+        if not selected:
+            return
+
+        iid = selected[0]
+        name = self.plotter_list.item(iid)["text"]
+
+        if not self._subproject.current_recipe:
+            return
+
+        self._subproject.current_recipe.plotter = PlotterStep(plotter=name, kwargs={})
+
+        self.update_plot()
 
     def handle_open_original_data_window(self) -> None:
         self.update_original_data_list()
