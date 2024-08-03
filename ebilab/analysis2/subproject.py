@@ -2,10 +2,47 @@ from __future__ import annotations
 
 import importlib
 import sys
+import dataclasses
 from pathlib import Path
 from typing import Any, Generator
 
+import pandas as pd
+
 from .plotter import DfPlotter
+
+
+@dataclasses.dataclass
+class ProcessStep:
+    process_step: str
+    kwargs: dict[str, Any]
+
+    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
+        # TODO: Implement apply method
+
+
+@dataclasses.dataclass
+class PlotterStep:
+    process_step: str
+    kwargs: dict[str, Any]
+
+    def apply(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError()
+        # TODO: Implement apply method
+
+
+@dataclasses.dataclass
+class InputManifest:
+    name: str
+    original: str  # posix path relative to "original" directory
+    process_steps: list[ProcessStep] | None = None
+
+
+@dataclasses.dataclass
+class ProcessManifest:
+    input: str
+    process_steps: list[ProcessStep] = dataclasses.field(default_factory=list)
+    plotter: PlotterStep | None = None
 
 
 def to_list(func):
@@ -23,10 +60,17 @@ def find_subclasses(module: Any, cls: type) -> Generator[tuple[str, type], None,
 
 class SubProject:
     modules: dict[str, Any]
+    inputs: list[InputManifest]  # TODO: sync with file
+    outputs: list[ProcessManifest]  # TODO: sync with file
+
+    current_recipe: ProcessManifest | None  # on memory recipe
 
     def __init__(self, path: Path):
         self.path = path
         self.modules = self._import_scripts()
+        self.inputs = []
+        self.outputs = []
+        self.current_recipe = None
 
     def __repr__(self) -> str:
         return f'<ebilib.subproject.SubProject("{self.path}")>'
@@ -46,11 +90,13 @@ class SubProject:
         Import all python scripts in the ./src directory
         """
         ret: dict[str, Any] = {}
+
+        project_path = self.path.resolve().parent
         old_path = sys.path
-        sys.path.append(self.src_path.as_posix())
+        sys.path.append(project_path.as_posix())
         for script in self._find_python_scripts():
             module_name = (
-                script.relative_to(self.src_path).with_suffix("").as_posix().replace("/", ".")
+                script.relative_to(project_path).with_suffix("").as_posix().replace("/", ".")
             )
             module = importlib.import_module(module_name)
             if reload:
