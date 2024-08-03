@@ -48,9 +48,7 @@ class Project:
         """
         Get list of original data files
         """
-        return [
-            path for path in self.path.data_original.rglob("*.csv")
-        ]
+        return [path for path in self.path.data_original.rglob("*.csv")]
 
 
 def _get_current_project() -> Project:
