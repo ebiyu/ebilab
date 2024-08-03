@@ -41,9 +41,7 @@ class InputManifest:
     original: str  # posix path relative to "original" directory
     # file_process_steps: list[FileProcessStep] = dataclasses.field(default_factory=list)
     file_process_steps: list[FileProcessStep] = dataclasses.field(
-        default_factory=lambda: [
-            FileProcessStep("ebilab.analysis2.process.RemoveCommentLine", {})
-        ]
+        default_factory=lambda: [FileProcessStep("ebilab.analysis2.process.RemoveCommentLine", {})]
     )
     df_process_steps: list[DfProcessStep] = dataclasses.field(default_factory=list)
 
@@ -132,6 +130,17 @@ class SubProject:
         res: dict[str, type[DfPlotter]] = {}
         for module_name, module in self.modules.items():
             for name, plotter in find_subclasses(module, DfPlotter):
+                res[module_name + "." + name] = plotter
+        return res
+
+    @property
+    def df_processes(self) -> dict[str, type[DfProcess]]:
+        """
+        Returns a dictionary of all DfPlotter subclasses in the subproject
+        """
+        res: dict[str, type[DfProcess]] = {}
+        for module_name, module in self.modules.items():
+            for name, plotter in find_subclasses(module, DfProcess):
                 res[module_name + "." + name] = plotter
         return res
 
