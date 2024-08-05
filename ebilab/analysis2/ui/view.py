@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import tkinter as tk
 import copy
+import tkinter as tk
 from logging import getLogger
 from pathlib import Path
 from tkinter import messagebox, ttk
+from typing import Any
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ..base import DfPlotter
+from ..base import DfPlotter, DfProcess
+from ..options import InvalidInputError, OptionField
 from ..project import Project
 from ..subproject import (
     DfProcessManifest,
@@ -30,6 +32,112 @@ try:
     ctypes.windll.shcore.SetProcessDpiAwareness(0)  # type: ignore
 except:  # noqa: E722
     pass
+
+
+class OptionsPane(ttk.Frame):
+    _fields: dict[str, OptionField]
+    _enabled = True
+    __options: dict[str, Any]
+    _is_valid = True
+
+    def __init__(self, master: ttk.Widget) -> None:
+        super().__init__(master)
+        self._fields = {}
+
+        # build UI
+        self.columnconfigure(0, weight=1)
+        self._build_fields({})
+
+        logger.debug("OptionsPane initialized")
+
+    def _build_fields(self, fields: dict[str, OptionField]) -> None:
+        for widgets in self.winfo_children():
+            widgets.destroy()
+
+        self._options_widgets = []
+        self._options_vars = []
+
+        for i, (key, field) in enumerate(fields.items()):
+            label = tk.Label(self, text=key)
+            label.grid(row=i, column=0, sticky=tk.W + tk.N)
+
+            var, widget = field.build_widget(self)
+            widget.grid(row=i, column=1, sticky=tk.EW + tk.N)
+            var.trace_add("write", lambda *_: self._on_update())
+
+            self._options_vars.append(var)
+            self._options_widgets.append(widget)
+
+        opt = self._get_options()
+        if opt is None:
+            raise RuntimeError("Unexpected invalid value")
+        self.__options = opt
+        self._is_valid = True
+
+    def _on_update(self) -> None:
+        logger.debug("OptionsPane._on_update called")
+        opt = self._get_options()
+        if opt is None:
+            self._is_valid = False
+        else:
+            self._is_valid = True
+            self.__options = opt
+
+        self.event_generate("<<OptionsPaneUpdate>>")
+
+    @property
+    def fields(self) -> dict[str, OptionField]:
+        return self._fields
+
+    @fields.setter
+    def fields(self, fields: dict[str, OptionField]) -> None:
+        self._fields = fields
+        self._build_fields(fields)
+
+    def _get_options(self) -> dict[str, Any] | None:
+        ret = {}
+        for (key, field), widget, var in zip(
+            self.fields.items(), self._options_widgets, self._options_vars
+        ):
+            try:
+                ret[key] = field.get_from_widget(var)
+            except InvalidInputError:
+                logger.debug(f"InvalidInputError: {key}")
+                return None
+        logger.debug(f"final ret: {ret}")
+
+        return ret
+
+    @property
+    def options(self) -> dict[str, Any]:
+        assert self.__options is not None
+        return self.__options
+
+    @options.setter
+    def options(self, options: dict[str, Any]) -> None:
+        for (key, field), var in zip(self.fields.items(), self._options_vars):
+            field.set_to_widget(var, options[key])
+
+    @property
+    def is_valid(self) -> bool:
+        return self._is_valid
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, enabled: bool) -> None:
+        self._enabled = enabled
+        if enabled:
+            for widget in self._options_widgets:
+                if isinstance(widget, ttk.Combobox):
+                    widget["state"] = "readonly"
+                else:
+                    widget["state"] = "normal"
+        else:
+            for widget in self._options_widgets:
+                widget["state"] = "disabled"
 
 
 class View(tk.Tk):
@@ -162,6 +270,15 @@ class View(tk.Tk):
         tk.Label(col2, text="Current Process").pack()
         self.process_recipe_list = ttk.Treeview(col2)
         self.process_recipe_list.pack(fill="both", expand=True)
+        self.process_recipe_list.bind(
+            "<<TreeviewSelect>>", lambda _: self.handle_on_select_process()
+        )
+
+        self.process_options_pane = OptionsPane(col2)
+        self.process_options_pane.pack(fill="both", expand=True)
+        self.process_options_pane.bind(
+            "<<OptionsPaneUpdate>>", lambda _: self.handle_on_edit_process_options()
+        )
 
         tk.Label(col2, text="Process List").pack()
         self.process_list = ttk.Treeview(col2)
@@ -392,8 +509,57 @@ class View(tk.Tk):
 
         self.output_name_var.set(name)
 
+    def handle_on_select_process(self) -> None:
+        if not self._subproject:
+            return
+
+        if not self._subproject.current_recipe:
+            return
+
+        selected = self.process_recipe_list.selection()
+        if not selected:
+            return
+
+        iid = selected[0]
+        if iid == "input":
+            return
+
+        step_i = int(iid.split("-")[1])
+        df_process = self._subproject.current_recipe.process_steps[step_i].df_process
+        process_class = self._subproject.get_class_from_name(df_process, DfProcess)
+
+        self.process_options_pane.fields = process_class.get_options()
+        self.process_options_pane.options = self._subproject.current_recipe.process_steps[
+            step_i].kwargs
+
+    def handle_on_edit_process_options(self) -> None:
+        logger.debug("handle_on_edit_process_options called")
+        logger.debug(f"options: {self.process_options_pane.options}")
+        logger.debug(f"fields: {self.process_options_pane.fields}")
+        logger.debug(f"is_valid: {self.process_options_pane.is_valid}")
+        options = self.process_options_pane.options
+
+        if not self._subproject:
+            return
+
+        if not self._subproject.current_recipe:
+            return
+
+        selected = self.process_recipe_list.selection()
+        if not selected:
+            return
+
+        iid = selected[0]
+        if iid == "input":
+            return
+
+        step_i = int(iid.split("-")[1])
+        self._subproject.current_recipe.process_steps[step_i].kwargs = options
+        self.saved = False
+
+        self.update_plot()
+
     def handle_on_select_plotter(self) -> None:
-        logger.debug("handle_on_select_plotter called")
         if not self._subproject:
             return
 
@@ -496,13 +662,9 @@ class View(tk.Tk):
         iid = selected[0]
         name = self.output_list.item(iid)["text"]
 
-        if not self._subproject.current_recipe:
-            return
-
         self._subproject.current_recipe = copy.deepcopy(self._subproject.manifest.outputs[name])
         self.update_process_recipe_list()
         self.update_plot()
-        # TODO: load
 
     def handle_save_output(self) -> None:
         if not self._subproject:
@@ -515,6 +677,7 @@ class View(tk.Tk):
         if not self._subproject.current_recipe:
             return
 
+        # TODO: don't save plotter
         self._subproject.manifest.outputs[output_name] = copy.deepcopy(
             self._subproject.current_recipe
         )
