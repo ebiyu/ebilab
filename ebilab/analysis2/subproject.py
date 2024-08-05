@@ -295,7 +295,7 @@ class SubProject:
         # Process DataFrame
         for process in process_manifest.process_steps:
             process_class = self.get_class_from_name(process.df_process, DfProcess)
-            process_instance = process_class()  # TODO: kwargs
+            process_instance = process_class(process.kwargs)
             df = process_instance.process(df)
             logger.info(f"Applied df process: {process.df_process}")
 
