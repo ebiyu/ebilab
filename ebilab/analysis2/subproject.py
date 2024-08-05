@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Generator, TypeVar
 
 import pandas as pd
+import yaml
 from matplotlib.figure import Figure
 
 from .base import DfPlotter, DfProcess, FileProcess
@@ -17,10 +18,18 @@ from .base import DfPlotter, DfProcess, FileProcess
 logger = getLogger(__name__)
 
 
+class ManifestParseError(Exception):
+    pass
+
+
 @dataclasses.dataclass
 class DfProcessStep:
     df_process: str
     kwargs: dict[str, Any]
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DfProcessStep:
+        return cls(df_process=data["df_process"], kwargs=data.get("kwargs", {}))
 
 
 @dataclasses.dataclass
@@ -28,22 +37,38 @@ class FileProcessStep:
     file_process: str
     kwargs: dict[str, Any]
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> FileProcessStep:
+        return cls(file_process=data["file_process"], kwargs=data.get("kwargs", {}))
+
 
 @dataclasses.dataclass
 class PlotterStep:
     plotter: str
     kwargs: dict[str, Any]
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> PlotterStep:
+        return cls(plotter=data["plotter"], kwargs=data.get("kwargs", {}))
+
 
 @dataclasses.dataclass
 class InputManifest:
-    name: str
     original: str  # posix path relative to "original" directory
-    # file_process_steps: list[FileProcessStep] = dataclasses.field(default_factory=list)
-    file_process_steps: list[FileProcessStep] = dataclasses.field(
-        default_factory=lambda: [FileProcessStep("ebilab.analysis2.process.RemoveCommentLine", {})]
-    )
+    file_process_steps: list[FileProcessStep] = dataclasses.field(default_factory=list)
     df_process_steps: list[DfProcessStep] = dataclasses.field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> InputManifest:
+        return cls(
+            original=data["original"],
+            file_process_steps=[
+                FileProcessStep.from_dict(step) for step in data.get("file_process_steps", [])
+            ],
+            df_process_steps=[
+                DfProcessStep.from_dict(step) for step in data.get("df_process_steps", [])
+            ],
+        )
 
 
 @dataclasses.dataclass
@@ -51,6 +76,35 @@ class DfProcessManifest:
     input: str
     process_steps: list[DfProcessStep] = dataclasses.field(default_factory=list)
     plotter: PlotterStep | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> DfProcessManifest:
+        return cls(
+            input=data["input"],
+            process_steps=[DfProcessStep.from_dict(step) for step in data.get("process_steps", [])],
+            plotter=PlotterStep.from_dict(data.get("plotter", {})),
+        )
+
+
+@dataclasses.dataclass
+class Manifest:
+    version: str
+    inputs: dict[str, InputManifest]
+    outputs: dict[str, DfProcessManifest]
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Manifest:
+        return cls(
+            version=data["version"],
+            inputs={
+                name: InputManifest.from_dict(input)
+                for name, input in data.get("inputs", {}).items()
+            },
+            outputs={
+                name: DfProcessManifest.from_dict(output)
+                for name, output in data.get("outputs", {}).items()
+            },
+        )
 
 
 def to_list(func):
@@ -71,20 +125,47 @@ T = TypeVar("T")
 
 class SubProject:
     modules: dict[str, Any]
-    inputs: list[InputManifest]  # TODO: sync with file
-    outputs: list[DfProcessManifest]  # TODO: sync with file
+
+    manifest: Manifest
 
     current_recipe: DfProcessManifest | None  # on memory recipe
 
     def __init__(self, path: Path):
         self.path = path
         self.modules = self._import_scripts()
-        self.inputs = []
-        self.outputs = []
+        self.manifest = Manifest(version="0.1", inputs={}, outputs={})
         self.current_recipe = None
+
+        self.load_manifest()
 
     def __repr__(self) -> str:
         return f'<ebilib.subproject.SubProject("{self.path}")>'
+
+    def load_manifest(self) -> None:
+        """
+        Load manifest file
+        """
+
+        yaml_path = self.path / "ebilab.sub.yml"
+        with open(yaml_path) as fin:
+            yaml_data = yaml.safe_load(fin)
+
+        manifest = Manifest.from_dict(yaml_data)
+        if manifest.version != "0.1":
+            raise ManifestParseError(f"Unsupported version: {manifest.version}")
+
+        self.manifest = manifest
+
+    def save_manifest(self) -> None:
+        """
+        Save subproject to file
+        """
+
+        yaml_data = dataclasses.asdict(self.manifest)
+
+        yaml_path = self.path / "ebilab.sub.yml"
+        with open(yaml_path, "w") as fout:
+            yaml.safe_dump(yaml_data, fout, sort_keys=False)
 
     @property
     def src_path(self) -> Path:
@@ -155,7 +236,6 @@ class SubProject:
         # TODO: look for df process
 
         # import module and find class
-        # module_name = name.rsplit(".", 1)[0]
         module_name, class_name = name.rsplit(".", 1)
         logger.debug(f"Importing module: {module_name}")
         module = importlib.import_module(module_name)
@@ -169,9 +249,9 @@ class SubProject:
         """
         Get pandas DataFrame from input manifest
         """
-        logger.info(f"Processing input manifest: {input_manifest.name}")
+        logger.info("Processing input manifest")
 
-        path = self.path / "data" / "original" / input_manifest.original
+        path = self.path.parent / "data" / "original" / input_manifest.original
         logger.info(f"Target file: {path}")
 
         # Process file
@@ -199,10 +279,10 @@ class SubProject:
         """
         Get input manifest from name
         """
-        for input_manifest in self.inputs:
-            if input_manifest.name == name:
-                return input_manifest
-        raise ValueError(f"Input manifest not found: {name}")
+        manifest = self.manifest.inputs.get(name)
+        if manifest is None:
+            raise ValueError(f"Input manifest not found: {name}")
+        return manifest
 
     def get_df_from_process_manifest(self, process_manifest: DfProcessManifest) -> pd.DataFrame:
         """
