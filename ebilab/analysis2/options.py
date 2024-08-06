@@ -37,7 +37,9 @@ class OptionField(metaclass=abc.ABCMeta):
     def get_default(self) -> Any:
         if hasattr(self, "default"):
             return self.default
-        raise NotImplementedError("default attribute or get_default() method must be implemented in subclas")
+        raise NotImplementedError(
+            "default attribute or get_default() method must be implemented in subclas"
+        )
 
 
 @dataclasses.dataclass(frozen=True)
