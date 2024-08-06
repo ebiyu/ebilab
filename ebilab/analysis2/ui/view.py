@@ -10,6 +10,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from .clipboard import copy_fig_to_clipboard
 from ..base import DfPlotter, DfProcess
 from ..manifest import (
     DfProcessManifest,
@@ -338,6 +339,9 @@ class View(tk.Tk):
         self._plot_canvas = FigureCanvasTkAgg(self._plot_fig, master=col3)
         self._plot_canvas.draw()
         self._plot_canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        copy_plotter_image_button = ttk.Button(col3, text="Copy image", command=self.handle_copy_plotter_image)
+        copy_plotter_image_button.pack(fill="x")
 
         self.plotter_options_pane = OptionsPane(col3)
         self.plotter_options_pane.pack(fill="both", expand=True)
@@ -751,6 +755,10 @@ class View(tk.Tk):
         self.update_process_recipe_list()
         self.update_process_options()
         self.update_plot()
+
+    @event_handler
+    def handle_copy_plotter_image(self) -> None:
+        copy_fig_to_clipboard(self._plot_fig)
 
     @event_handler
     def handle_close_original_data_window(self) -> None:
