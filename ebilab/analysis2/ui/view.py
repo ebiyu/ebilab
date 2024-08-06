@@ -10,7 +10,6 @@ from typing import Any
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from .clipboard import copy_fig_to_clipboard
 from ..base import DfPlotter, DfProcess
 from ..manifest import (
     DfProcessManifest,
@@ -22,6 +21,7 @@ from ..manifest import (
 from ..options import InvalidInputError, OptionField
 from ..project import Project
 from ..subproject import SubProject
+from .clipboard import copy_fig_to_clipboard
 
 logger = getLogger(__name__)
 
@@ -35,10 +35,13 @@ except:  # noqa: E722
     pass
 
 event_disabled: bool = False
+
+
 def update_method(func):
     """
     decorator to disable event
     """
+
     def wrapper(*args, **kwargs):
         global event_disabled
 
@@ -47,18 +50,22 @@ def update_method(func):
             return func(*args, **kwargs)
         finally:
             event_disabled = False
+
     return wrapper
+
 
 def event_handler(func):
     """
     decorator to add for event
     """
+
     def wrapper(*args, **kwargs):
         if event_disabled:
             logger.debug(f"event handler {func.__name__} skipped")
             return
         logger.debug(f"event handler {func.__name__} executed")
         func(*args, **kwargs)
+
     return wrapper
 
 
@@ -123,8 +130,9 @@ class OptionsPane(ttk.Frame):
         self._fields = fields
 
         # detect difference
-        if list((k, v.__class__) for k, v in old_fields.items()) != \
-            list((k, v.__class__) for k, v in fields.items()):
+        if list((k, v.__class__) for k, v in old_fields.items()) != list(
+            (k, v.__class__) for k, v in fields.items()
+        ):
             self._build_fields(fields)
             logger.debug("Widgets in OptionsPage has rebuilt.")
 
@@ -177,7 +185,7 @@ class View(tk.Tk):
     project: Project
     status_bar_timer: str | None = None
     _output_saved: bool = True
-    event_disabled: bool = False # avoid infinite loop
+    event_disabled: bool = False  # avoid infinite loop
 
     @property
     def output_saved(self) -> bool:
@@ -308,7 +316,6 @@ class View(tk.Tk):
             "<<TreeviewSelect>>", lambda _: self.handle_on_select_process()
         )
 
-
         self.process_name_var = tk.StringVar(value="-")
         process_name_label = tk.Label(col2, textvariable=self.process_name_var)
         process_name_label.pack(fill="x")
@@ -340,7 +347,9 @@ class View(tk.Tk):
         self._plot_canvas.draw()
         self._plot_canvas.get_tk_widget().pack(fill="both", expand=True)
 
-        copy_plotter_image_button = ttk.Button(col3, text="Copy image", command=self.handle_copy_plotter_image)
+        copy_plotter_image_button = ttk.Button(
+            col3, text="Copy image", command=self.handle_copy_plotter_image
+        )
         copy_plotter_image_button.pack(fill="x")
 
         self.plotter_options_pane = OptionsPane(col3)
@@ -348,7 +357,6 @@ class View(tk.Tk):
         self.plotter_options_pane.bind(
             "<<OptionsPaneUpdate>>", lambda _: self.handle_on_edit_plotter_options()
         )
-
 
         # col4
 
@@ -470,7 +478,9 @@ class View(tk.Tk):
         for i, step in enumerate(self._subproject.current_recipe.process_steps):
             process_class = self._subproject.get_class_from_name(step.df_process, DfProcess)
             process_instance = process_class(step.kwargs)
-            self.process_recipe_list.insert("input", "end", text=process_instance.get_caption(), iid=f"step-{i}")
+            self.process_recipe_list.insert(
+                "input", "end", text=process_instance.get_caption(), iid=f"step-{i}"
+            )
 
         self.process_recipe_list.selection_set(current)
 
@@ -671,7 +681,7 @@ class View(tk.Tk):
             return
 
         plotter = self._subproject.current_recipe.plotter
-        if plotter is  None:
+        if plotter is None:
             self.plotter_options_pane.fields = {}
             return
 
@@ -696,7 +706,9 @@ class View(tk.Tk):
             return
 
         plotter_class = self._subproject.get_class_from_name(name, DfPlotter)
-        self._subproject.current_recipe.plotter = PlotterStep(plotter=name, kwargs=plotter_class.get_default_options())
+        self._subproject.current_recipe.plotter = PlotterStep(
+            plotter=name, kwargs=plotter_class.get_default_options()
+        )
         self.plotter_saved = False
 
         self.update_plot()
@@ -847,6 +859,7 @@ class View(tk.Tk):
         self.output_saved = True
 
         self.update_input_output_list()
+
 
 class StatusBar(tk.Frame):
     def __init__(self, master=None, idle_text: str = "Status: Ready"):

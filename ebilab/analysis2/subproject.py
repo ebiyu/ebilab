@@ -8,10 +8,10 @@ from logging import getLogger
 from pathlib import Path
 from typing import Any, Generator, TypeVar
 
+import chardet
 import pandas as pd
 import yaml
 from matplotlib.figure import Figure
-import chardet
 
 from .base import DfPlotter, DfProcess, FileProcess
 from .manifest import DfProcessManifest, InputManifest, Manifest, ManifestParseError
@@ -34,11 +34,11 @@ def find_subclasses(module: Any, cls: type) -> Generator[tuple[str, type], None,
 
 T = TypeVar("T")
 
-def get_encoding_type(file):
-    with open(file, 'rb') as f:
-        rawdata = f.read()
-    return chardet.detect(rawdata)['encoding']
 
+def get_encoding_type(file):
+    with open(file, "rb") as f:
+        rawdata = f.read()
+    return chardet.detect(rawdata)["encoding"]
 
 
 class SubProject:
