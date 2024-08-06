@@ -33,6 +33,34 @@ try:
 except:  # noqa: E722
     pass
 
+event_disabled: bool = False
+def disable_event(func):
+    """
+    decorator to disable event
+    """
+    def wrapper(*args, **kwargs):
+        global event_disabled
+
+        event_disabled = True
+        try:
+            return func(*args, **kwargs)
+        finally:
+            event_disabled = False
+    return wrapper
+
+def event_handler(func):
+    """
+    decorator to add for event
+    """
+    def wrapper(*args, **kwargs):
+        if event_disabled:
+            logger.debug(f"event handler {func.__name__} skipped")
+            return
+        logger.debug(f"event handler {func.__name__} executed")
+        func(*args, **kwargs)
+        return
+    return wrapper
+
 
 class OptionsPane(ttk.Frame):
     _fields: dict[str, OptionField]
@@ -142,15 +170,16 @@ class OptionsPane(ttk.Frame):
 class View(tk.Tk):
     project: Project
     status_bar_timer: str | None = None
-    _saved: bool = True
+    _output_saved: bool = True
+    event_disabled: bool = False # avoid infinite loop
 
     @property
-    def saved(self) -> bool:
-        return self._saved
+    def output_saved(self) -> bool:
+        return self._output_saved
 
-    @saved.setter
-    def saved(self, value: bool) -> None:
-        self._saved = value
+    @output_saved.setter
+    def output_saved(self, value: bool) -> None:
+        self._output_saved = value
         if value:
             self.title("ebilab.analysis2")
         else:
@@ -272,6 +301,11 @@ class View(tk.Tk):
         self.process_recipe_list.bind(
             "<<TreeviewSelect>>", lambda _: self.handle_on_select_process()
         )
+
+
+        self.process_name_var = tk.StringVar(value="-")
+        process_name_label = tk.Label(col2, textvariable=self.process_name_var)
+        process_name_label.pack(fill="x")
 
         self.process_options_pane = OptionsPane(col2)
         self.process_options_pane.pack(fill="both", expand=True)
@@ -395,7 +429,9 @@ class View(tk.Tk):
         for name in self._subproject.df_processes.keys():
             self.process_list.insert("", "end", text=name)
 
+    @disable_event
     def update_process_recipe_list(self) -> None:
+        current = self.process_recipe_list.selection()
         self.process_recipe_list.delete(*self.process_recipe_list.get_children())
 
         if not self._subproject:
@@ -409,7 +445,41 @@ class View(tk.Tk):
         )
 
         for i, step in enumerate(self._subproject.current_recipe.process_steps):
-            self.process_recipe_list.insert("input", "end", text=step.df_process, iid=f"step-{i}")
+            process_class = self._subproject.get_class_from_name(step.df_process, DfProcess)
+            process_instance = process_class(step.kwargs)
+            self.process_recipe_list.insert("input", "end", text=process_instance.get_caption(), iid=f"step-{i}")
+
+        self.process_recipe_list.selection_set(current)
+
+    @disable_event
+    def update_process_options(self) -> None:
+        if not self._subproject:
+            return
+
+        if not self._subproject.current_recipe:
+            return
+
+        selected = self.process_recipe_list.selection()
+        if not selected:
+            self.process_options_pane.fields = {}
+            self.process_name_var.set("-")
+            return
+
+        iid = selected[0]
+        if iid == "input":
+            self.process_options_pane.fields = {}
+            self.process_name_var.set("-")
+            return
+
+        step_i = int(iid.split("-")[1])
+        df_process = self._subproject.current_recipe.process_steps[step_i].df_process
+        process_class = self._subproject.get_class_from_name(df_process, DfProcess)
+
+        self.process_options_pane.fields = process_class.get_options()
+        self.process_options_pane.options = self._subproject.current_recipe.process_steps[
+            step_i
+        ].kwargs
+        self.process_name_var.set(df_process)
 
     def update_plotter_list(self) -> None:
         self.plotter_list.delete(*self.plotter_list.get_children())
@@ -441,6 +511,7 @@ class View(tk.Tk):
         self._plot_canvas.draw()
 
     # Event handlers
+    @event_handler
     def handle_add_to_input(self) -> None:
         """
         Add selected items in original list to the input list
@@ -470,12 +541,14 @@ class View(tk.Tk):
 
         self.update_input_output_list()
 
+    @event_handler
     def handle_on_select_subproject(self) -> None:
         self.update_input_output_list()
         self.update_process_recipe_list()
         self.update_process_list()
         self.update_plotter_list()
 
+    @event_handler
     def handle_on_select_input(self) -> None:
         if not self._subproject:
             return
@@ -491,12 +564,13 @@ class View(tk.Tk):
             self._subproject.current_recipe = DfProcessManifest(input=name)
         else:
             self._subproject.current_recipe.input = name
-        self.saved = False
+        self.output_saved = False
 
         self.update_process_recipe_list()
         self.update_process_list()
         self.update_plot()
 
+    @event_handler
     def handle_on_select_output(self) -> None:
         """
         Just update entry widget
@@ -513,35 +587,13 @@ class View(tk.Tk):
 
         self.output_name_var.set(name)
 
+    @event_handler
     def handle_on_select_process(self) -> None:
-        if not self._subproject:
-            return
+        self.update_process_options()
 
-        if not self._subproject.current_recipe:
-            return
-
-        selected = self.process_recipe_list.selection()
-        if not selected:
-            return
-
-        iid = selected[0]
-        if iid == "input":
-            return
-
-        step_i = int(iid.split("-")[1])
-        df_process = self._subproject.current_recipe.process_steps[step_i].df_process
-        process_class = self._subproject.get_class_from_name(df_process, DfProcess)
-
-        self.process_options_pane.fields = process_class.get_options()
-        self.process_options_pane.options = self._subproject.current_recipe.process_steps[
-            step_i
-        ].kwargs
-
+    @event_handler
     def handle_on_edit_process_options(self) -> None:
         logger.debug("handle_on_edit_process_options called")
-        logger.debug(f"options: {self.process_options_pane.options}")
-        logger.debug(f"fields: {self.process_options_pane.fields}")
-        logger.debug(f"is_valid: {self.process_options_pane.is_valid}")
         options = self.process_options_pane.options
 
         if not self._subproject:
@@ -560,10 +612,13 @@ class View(tk.Tk):
 
         step_i = int(iid.split("-")[1])
         self._subproject.current_recipe.process_steps[step_i].kwargs = options
-        self.saved = False
+        self.output_saved = False
 
         self.update_plot()
+        self.update_process_recipe_list()
+        logger.debug("handle_on_edit_process_options finished")
 
+    @event_handler
     def handle_on_select_plotter(self) -> None:
         if not self._subproject:
             return
@@ -579,16 +634,18 @@ class View(tk.Tk):
             return
 
         self._subproject.current_recipe.plotter = PlotterStep(plotter=name, kwargs={})
-        self.saved = False
+        self.output_saved = False
 
         self.update_plot()
 
+    @event_handler
     def handle_open_original_data_window(self) -> None:
         self.update_original_data_list()
         self.original_data_window.deiconify()
         self.original_data_window.focus_force()
         self.original_data_window.grab_set()  # make modal
 
+    @event_handler
     def handle_add_process(self) -> None:
         if not self._subproject:
             return
@@ -606,10 +663,11 @@ class View(tk.Tk):
         self._subproject.current_recipe.process_steps.append(
             DfProcessStep(df_process=name, kwargs={})
         )
-        self.saved = False
+        self.output_saved = False
 
         self.update_process_recipe_list()
 
+    @event_handler
     def handle_delete_process_step(self):
         if not self._subproject:
             return
@@ -630,14 +688,17 @@ class View(tk.Tk):
 
         self.update_process_list()
         self.update_process_recipe_list()
+        self.update_process_options()
         self.update_plot()
 
+    @event_handler
     def handle_close_original_data_window(self) -> None:
         self.original_data_window.withdraw()
         self.original_data_window.grab_release()
 
+    @event_handler
     def handle_close_main_window(self) -> None:
-        if not self.saved:
+        if not self.output_saved:
             message = "Unsaved changes will be lost. Are you sure you want to exit?"
             if not messagebox.askyesno("Load", message):
                 return
@@ -645,6 +706,7 @@ class View(tk.Tk):
         self.destroy()
         self.quit()
 
+    @event_handler
     def handle_save(self) -> None:
         if not self._subproject:
             return
@@ -652,14 +714,14 @@ class View(tk.Tk):
         self.update_idletasks()
         self._subproject.save_manifest()
         self.status_bar.show("Saved")
-        self.saved = True
 
+    @event_handler
     def handle_load(self) -> None:
         if not self._subproject:
             return
 
         # dialogue
-        if not self.saved:
+        if not self.output_saved:
             message = (
                 "Unsaved changes will be lost. Are you sure you want to reload the manifest file?"
             )
@@ -678,6 +740,7 @@ class View(tk.Tk):
 
         self.status_bar.show("Loaded")
 
+    @event_handler
     def handle_load_output(self) -> None:
         if not self._subproject:
             return
@@ -690,9 +753,12 @@ class View(tk.Tk):
         name = self.output_list.item(iid)["text"]
 
         self._subproject.current_recipe = copy.deepcopy(self._subproject.manifest.outputs[name])
+        self.output_saved = True
+
         self.update_process_recipe_list()
         self.update_plot()
 
+    @event_handler
     def handle_save_output(self) -> None:
         if not self._subproject:
             return
@@ -704,14 +770,14 @@ class View(tk.Tk):
         if not self._subproject.current_recipe:
             return
 
-        # TODO: don't save plotter
         recipe_to_save = copy.deepcopy(self._subproject.current_recipe)
         recipe_to_save.plotter = None
         self._subproject.manifest.outputs[output_name] = recipe_to_save
-        self.update_input_output_list()
-
         self._subproject.save_manifest()
 
+        self.output_saved = True
+
+        self.update_input_output_list()
 
 class StatusBar(tk.Frame):
     def __init__(self, master=None, idle_text: str = "Status: Ready"):
