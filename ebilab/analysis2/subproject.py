@@ -181,6 +181,8 @@ class SubProject:
         # read_csv
         logger.info(f"Reading file: {path}")
         df = pd.read_csv(path)
+        logger.debug(df.shape)
+        logger.debug(df.columns)
 
         # TODO: process_steps
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from io import TextIOWrapper
+from typing import Any
 
 import pandas as pd  # type: ignore
 from matplotlib.figure import Figure  # type: ignore
@@ -57,3 +58,11 @@ class DfProcess:
             + ", ".join([f"{k}={repr(self.kwargs[k])}" for k, v in options.items()])
             + ")"
         )
+
+    @classmethod
+    def get_default_options(cls) -> dict[str, Any]:
+        default_options = {}
+        fields = cls.get_options()
+        for k, field in fields.items():
+            default_options[k] = field.get_default()
+        return default_options
