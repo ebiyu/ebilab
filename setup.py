@@ -16,6 +16,7 @@ setup(
         "click",
         "pyvisa",
         "GitPython",
+        "chardet",
     ],
     project_urls={
         "GitHub repository": "https://github.com/ebiyuu1121/ebilab",
