@@ -11,16 +11,16 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..base import DfPlotter, DfProcess
-from ..options import InvalidInputError, OptionField
-from ..project import Project
-from ..subproject import (
+from ..manifest import (
     DfProcessManifest,
     DfProcessStep,
     FileProcessStep,
     InputManifest,
     PlotterStep,
-    SubProject,
 )
+from ..options import InvalidInputError, OptionField
+from ..project import Project
+from ..subproject import SubProject
 
 logger = getLogger(__name__)
 
@@ -104,7 +104,6 @@ class OptionsPane(ttk.Frame):
             except InvalidInputError:
                 logger.debug(f"InvalidInputError: {key}")
                 return None
-        logger.debug(f"final ret: {ret}")
 
         return ret
 
@@ -492,6 +491,8 @@ class View(tk.Tk):
         self.saved = False
 
         self.update_process_recipe_list()
+        self.update_process_list()
+        self.update_plot()
 
     def handle_on_select_output(self) -> None:
         """
@@ -530,7 +531,8 @@ class View(tk.Tk):
 
         self.process_options_pane.fields = process_class.get_options()
         self.process_options_pane.options = self._subproject.current_recipe.process_steps[
-            step_i].kwargs
+            step_i
+        ].kwargs
 
     def handle_on_edit_process_options(self) -> None:
         logger.debug("handle_on_edit_process_options called")
@@ -678,9 +680,9 @@ class View(tk.Tk):
             return
 
         # TODO: don't save plotter
-        self._subproject.manifest.outputs[output_name] = copy.deepcopy(
-            self._subproject.current_recipe
-        )
+        recipe_to_save = copy.deepcopy(self._subproject.current_recipe)
+        recipe_to_save.plotter = None
+        self._subproject.manifest.outputs[output_name] = recipe_to_save
         self.update_input_output_list()
 
         self._subproject.save_manifest()

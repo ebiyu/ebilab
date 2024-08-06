@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 import importlib
 import os
 import sys
@@ -14,97 +13,9 @@ import yaml
 from matplotlib.figure import Figure
 
 from .base import DfPlotter, DfProcess, FileProcess
+from .manifest import DfProcessManifest, InputManifest, Manifest, ManifestParseError
 
 logger = getLogger(__name__)
-
-
-class ManifestParseError(Exception):
-    pass
-
-
-@dataclasses.dataclass
-class DfProcessStep:
-    df_process: str
-    kwargs: dict[str, Any]
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> DfProcessStep:
-        return cls(df_process=data["df_process"], kwargs=data.get("kwargs", {}))
-
-
-@dataclasses.dataclass
-class FileProcessStep:
-    file_process: str
-    kwargs: dict[str, Any]
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> FileProcessStep:
-        return cls(file_process=data["file_process"], kwargs=data.get("kwargs", {}))
-
-
-@dataclasses.dataclass
-class PlotterStep:
-    plotter: str
-    kwargs: dict[str, Any]
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PlotterStep:
-        return cls(plotter=data["plotter"], kwargs=data.get("kwargs", {}))
-
-
-@dataclasses.dataclass
-class InputManifest:
-    original: str  # posix path relative to "original" directory
-    file_process_steps: list[FileProcessStep] = dataclasses.field(default_factory=list)
-    df_process_steps: list[DfProcessStep] = dataclasses.field(default_factory=list)
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> InputManifest:
-        return cls(
-            original=data["original"],
-            file_process_steps=[
-                FileProcessStep.from_dict(step) for step in data.get("file_process_steps", [])
-            ],
-            df_process_steps=[
-                DfProcessStep.from_dict(step) for step in data.get("df_process_steps", [])
-            ],
-        )
-
-
-@dataclasses.dataclass
-class DfProcessManifest:
-    input: str
-    process_steps: list[DfProcessStep] = dataclasses.field(default_factory=list)
-    plotter: PlotterStep | None = None
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> DfProcessManifest:
-        return cls(
-            input=data["input"],
-            process_steps=[DfProcessStep.from_dict(step) for step in data.get("process_steps", [])],
-            plotter=PlotterStep.from_dict(data.get("plotter", {})),
-        )
-
-
-@dataclasses.dataclass
-class Manifest:
-    version: str
-    inputs: dict[str, InputManifest]
-    outputs: dict[str, DfProcessManifest]
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Manifest:
-        return cls(
-            version=data["version"],
-            inputs={
-                name: InputManifest.from_dict(input)
-                for name, input in data.get("inputs", {}).items()
-            },
-            outputs={
-                name: DfProcessManifest.from_dict(output)
-                for name, output in data.get("outputs", {}).items()
-            },
-        )
 
 
 def to_list(func):
@@ -161,7 +72,7 @@ class SubProject:
         Save subproject to file
         """
 
-        yaml_data = dataclasses.asdict(self.manifest)
+        yaml_data = self.manifest.as_dict()
 
         yaml_path = self.path / "ebilab.sub.yml"
         with open(yaml_path, "w") as fout:
