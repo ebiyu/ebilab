@@ -53,6 +53,7 @@ class DfProcess:
             return self.__class__.__name__
         return (
             self.__class__.__name__
-            + " "
-            + ", ".join([f"{k}={self.kwargs[k]}" for k, v in options.items()])
+            + "("
+            + ", ".join([f"{k}={repr(self.kwargs[k])}" for k, v in options.items()])
+            + ")"
         )
