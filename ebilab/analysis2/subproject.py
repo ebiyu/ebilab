@@ -11,6 +11,7 @@ from typing import Any, Generator, TypeVar
 import pandas as pd
 import yaml
 from matplotlib.figure import Figure
+import chardet
 
 from .base import DfPlotter, DfProcess, FileProcess
 from .manifest import DfProcessManifest, InputManifest, Manifest, ManifestParseError
@@ -32,6 +33,12 @@ def find_subclasses(module: Any, cls: type) -> Generator[tuple[str, type], None,
 
 
 T = TypeVar("T")
+
+def get_encoding_type(file):
+    with open(file, 'rb') as f:
+        rawdata = f.read()
+    return chardet.detect(rawdata)['encoding']
+
 
 
 class SubProject:
@@ -169,7 +176,11 @@ class SubProject:
         for process in input_manifest.file_process_steps:
             process_class = self.get_class_from_name(process.file_process, FileProcess)
             process_instance = process_class()  # TODO: kwargs
-            with open(str(path)) as fin:
+
+            codec = get_encoding_type(str(path))
+            logger.debug(f"Detected encoding: {codec}")
+
+            with open(str(path), encoding=codec) as fin:
                 fd, tmpfile = tempfile.mkstemp()
                 os.close(fd)
                 with open(tmpfile, "w") as fout:
