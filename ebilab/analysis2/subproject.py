@@ -225,5 +225,5 @@ class SubProject:
 
         logger.info(f"Plotting process manifest: {process_manifest.input}")
         plotter_class = self.get_class_from_name(process_manifest.plotter.plotter, DfPlotter)
-        plotter_instance = plotter_class()
+        plotter_instance = plotter_class(process_manifest.plotter.kwargs)
         plotter_instance.plot(df, fig)
