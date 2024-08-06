@@ -279,6 +279,9 @@ class View(tk.Tk):
             "<<OptionsPaneUpdate>>", lambda _: self.handle_on_edit_process_options()
         )
 
+        delete_button = ttk.Button(col2, text="Delete", command=self.handle_delete_process_step)
+        delete_button.pack(fill="x")
+
         tk.Label(col2, text="Process List").pack()
         self.process_list = ttk.Treeview(col2)
         self.process_list.pack(fill="both", expand=True)
@@ -606,6 +609,28 @@ class View(tk.Tk):
         self.saved = False
 
         self.update_process_recipe_list()
+
+    def handle_delete_process_step(self):
+        if not self._subproject:
+            return
+
+        if not self._subproject.current_recipe:
+            return
+
+        selected = self.process_recipe_list.selection()
+        if not selected:
+            return
+
+        iid = selected[0]
+        if iid == "input":
+            return
+
+        step_i = int(iid.split("-")[1])
+        self._subproject.current_recipe.process_steps.pop(step_i)
+
+        self.update_process_list()
+        self.update_process_recipe_list()
+        self.update_plot()
 
     def handle_close_original_data_window(self) -> None:
         self.original_data_window.withdraw()
