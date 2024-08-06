@@ -339,6 +339,13 @@ class View(tk.Tk):
         self._plot_canvas.draw()
         self._plot_canvas.get_tk_widget().pack(fill="both", expand=True)
 
+        self.plotter_options_pane = OptionsPane(col3)
+        self.plotter_options_pane.pack(fill="both", expand=True)
+        self.plotter_options_pane.bind(
+            "<<OptionsPaneUpdate>>", lambda _: self.handle_on_edit_plotter_options()
+        )
+
+
         # col4
 
     def create_widgets_subwin(self):
@@ -494,6 +501,25 @@ class View(tk.Tk):
         self.process_name_var.set(df_process)
 
     @update_method
+    def update_plotter_options(self) -> None:
+        if not self._subproject:
+            return
+
+        if not self._subproject.current_recipe:
+            return
+
+        plotter = self._subproject.current_recipe.plotter
+        if not plotter:
+            self.plotter_options_pane.fields = {}
+            return
+
+        plotter_name = plotter.plotter
+        plotter_class = self._subproject.get_class_from_name(plotter_name, DfPlotter)
+
+        self.plotter_options_pane.fields = plotter_class.get_options()
+        self.plotter_options_pane.options = plotter.kwargs
+
+    @update_method
     def update_plotter_list(self) -> None:
         self.plotter_list.delete(*self.plotter_list.get_children())
         for name in self._plotter_list.keys():
@@ -607,7 +633,6 @@ class View(tk.Tk):
 
     @event_handler
     def handle_on_edit_process_options(self) -> None:
-        logger.debug("handle_on_edit_process_options called")
         options = self.process_options_pane.options
 
         if not self._subproject:
@@ -630,7 +655,26 @@ class View(tk.Tk):
 
         self.update_plot()
         self.update_process_recipe_list()
-        logger.debug("handle_on_edit_process_options finished")
+
+    @event_handler
+    def handle_on_edit_plotter_options(self) -> None:
+        options = self.plotter_options_pane.options
+
+        if not self._subproject:
+            return
+
+        if not self._subproject.current_recipe:
+            return
+
+        plotter = self._subproject.current_recipe.plotter
+        if plotter is  None:
+            self.plotter_options_pane.fields = {}
+            return
+
+        plotter.kwargs = options
+        self.plotter_saved = False
+
+        self.update_plot()
 
     @event_handler
     def handle_on_select_plotter(self) -> None:
@@ -647,9 +691,12 @@ class View(tk.Tk):
         if not self._subproject.current_recipe:
             return
 
-        self._subproject.current_recipe.plotter = PlotterStep(plotter=name, kwargs={})
+        plotter_class = self._subproject.get_class_from_name(name, DfPlotter)
+        self._subproject.current_recipe.plotter = PlotterStep(plotter=name, kwargs=plotter_class.get_default_options())
+        self.plotter_saved = False
 
         self.update_plot()
+        self.update_plotter_options()
 
     @event_handler
     def handle_open_original_data_window(self) -> None:

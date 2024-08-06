@@ -9,20 +9,7 @@ from matplotlib.figure import Figure  # type: ignore
 from .options import OptionField
 
 
-class DfPlotter:
-    def plot(self, df: pd.DataFrame, fig: Figure) -> None:
-        raise NotImplementedError("plot method must be implemented in subclass")
-
-
-class FileProcess:
-    def process(self, fin: TextIOWrapper, fout: TextIOWrapper) -> None:
-        raise NotImplementedError("process method must be implemented in subclass")
-
-
-class DfProcess:
-    def process(self, df: pd.DataFrame) -> pd.DataFrame:
-        raise NotImplementedError("process method must be implemented in subclass")
-
+class ClassWithOption:
     def __init__(self, kwargs):
         self.kwargs = kwargs
 
@@ -66,3 +53,15 @@ class DfProcess:
         for k, field in fields.items():
             default_options[k] = field.get_default()
         return default_options
+
+class DfPlotter(ClassWithOption):
+    def plot(self, df: pd.DataFrame, fig: Figure) -> None:
+        raise NotImplementedError("plot method must be implemented in subclass")
+
+class FileProcess:
+    def process(self, fin: TextIOWrapper, fout: TextIOWrapper) -> None:
+        raise NotImplementedError("process method must be implemented in subclass")
+
+class DfProcess(ClassWithOption):
+    def process(self, df: pd.DataFrame) -> pd.DataFrame:
+        raise NotImplementedError("process method must be implemented in subclass")
