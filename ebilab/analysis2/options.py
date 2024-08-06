@@ -56,7 +56,7 @@ class FloatField(OptionField):
         if self.max is not None and val > self.max:
             raise InvalidInputError(f"{val} > {self.max}.")
         return val
-    
+
     def set_to_widget(self, var: tk.Variable, value: Any) -> None:
         var.set(str(value))
 
@@ -82,7 +82,8 @@ class SelectField(OptionField):
             return var.get()
 
     def set_to_widget(self, var: tk.Variable, value: Any) -> None:
-        var.set(str(value)) # TODO: test this
+        var.set(str(value))  # TODO: test this
+
 
 @dataclasses.dataclass(frozen=True)
 class IntField(OptionField):
@@ -109,6 +110,7 @@ class IntField(OptionField):
     def set_to_widget(self, var: tk.Variable, value: Any) -> None:
         var.set(str(value))
 
+
 @dataclasses.dataclass(frozen=True)
 class StrField(OptionField):
     default: str
@@ -127,6 +129,7 @@ class StrField(OptionField):
 
     def set_to_widget(self, var: tk.Variable, value: Any) -> None:
         var.set(value)
+
 
 @dataclasses.dataclass(frozen=True)
 class BoolField(OptionField):
