@@ -34,7 +34,7 @@ except:  # noqa: E722
     pass
 
 event_disabled: bool = False
-def disable_event(func):
+def update_method(func):
     """
     decorator to disable event
     """
@@ -58,7 +58,6 @@ def event_handler(func):
             return
         logger.debug(f"event handler {func.__name__} executed")
         func(*args, **kwargs)
-        return
     return wrapper
 
 
@@ -119,8 +118,14 @@ class OptionsPane(ttk.Frame):
 
     @fields.setter
     def fields(self, fields: dict[str, OptionField]) -> None:
+        old_fields = self._fields
         self._fields = fields
-        self._build_fields(fields)
+
+        # detect difference
+        if list((k, v.__class__) for k, v in old_fields.items()) != \
+            list((k, v.__class__) for k, v in fields.items()):
+            self._build_fields(fields)
+            logger.debug("Widgets in OptionsPage has rebuilt.")
 
     def _get_options(self) -> dict[str, Any] | None:
         ret = {}
@@ -382,6 +387,7 @@ class View(tk.Tk):
         return self._subproject.df_plotters
 
     # Update methods (idempotent / 冪等)
+    @update_method
     def update_original_data_list(self) -> None:
         # clear list
         self.original_list.delete(*self.original_list.get_children())
@@ -399,14 +405,19 @@ class View(tk.Tk):
         for item in self.project.get_original_files():
             relative_insert(item)
 
+    @update_method
     def update_subproject_list(self) -> None:
         self.subprojects_dropdown["values"] = list(self.project.subprojects.keys())
         self.subprojects_dropdown["state"] = "readonly"
         if not self.subprojects_dropdown.get():
             self.subprojects_dropdown.set(list(self.project.subprojects.keys())[0])
 
-        self.handle_on_select_subproject()
+        self.update_input_output_list()
+        self.update_process_recipe_list()
+        self.update_process_list()
+        self.update_plotter_list()
 
+    @update_method
     def update_input_output_list(self) -> None:
         self.input_list.delete(*self.input_list.get_children())
         self.output_list.delete(*self.output_list.get_children())
@@ -420,6 +431,7 @@ class View(tk.Tk):
         for output_name in self._subproject.manifest.outputs.keys():
             self.output_list.insert("", "end", text=output_name)
 
+    @update_method
     def update_process_list(self) -> None:
         self.process_list.delete(*self.process_list.get_children())
 
@@ -429,7 +441,7 @@ class View(tk.Tk):
         for name in self._subproject.df_processes.keys():
             self.process_list.insert("", "end", text=name)
 
-    @disable_event
+    @update_method
     def update_process_recipe_list(self) -> None:
         current = self.process_recipe_list.selection()
         self.process_recipe_list.delete(*self.process_recipe_list.get_children())
@@ -451,7 +463,7 @@ class View(tk.Tk):
 
         self.process_recipe_list.selection_set(current)
 
-    @disable_event
+    @update_method
     def update_process_options(self) -> None:
         if not self._subproject:
             return
@@ -481,11 +493,13 @@ class View(tk.Tk):
         ].kwargs
         self.process_name_var.set(df_process)
 
+    @update_method
     def update_plotter_list(self) -> None:
         self.plotter_list.delete(*self.plotter_list.get_children())
         for name in self._plotter_list.keys():
             self.plotter_list.insert("", "end", text=name)
 
+    @update_method
     def update_plot(self) -> None:
         logger.debug("update_plot called")
         if not self._subproject:
@@ -634,7 +648,6 @@ class View(tk.Tk):
             return
 
         self._subproject.current_recipe.plotter = PlotterStep(plotter=name, kwargs={})
-        self.output_saved = False
 
         self.update_plot()
 
@@ -660,8 +673,9 @@ class View(tk.Tk):
         if not self._subproject.current_recipe:
             return
 
+        process_class = self._subproject.get_class_from_name(name, DfProcess)
         self._subproject.current_recipe.process_steps.append(
-            DfProcessStep(df_process=name, kwargs={})
+            DfProcessStep(df_process=name, kwargs=process_class.get_default_options())
         )
         self.output_saved = False
 

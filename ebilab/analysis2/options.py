@@ -34,6 +34,11 @@ class OptionField(metaclass=abc.ABCMeta):
         except InvalidInputError:
             return False
 
+    def get_default(self) -> Any:
+        if hasattr(self, "default"):
+            return self.default
+        raise NotImplementedError("default attribute or get_default() method must be implemented in subclas")
+
 
 @dataclasses.dataclass(frozen=True)
 class FloatField(OptionField):
