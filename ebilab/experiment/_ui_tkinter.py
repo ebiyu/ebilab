@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import queue
 import subprocess
 import time
@@ -435,6 +436,16 @@ class ExperimentUITkinter:
         self._quit_button = ttk.Button(buttons_pane, text="Quit", command=self._handle_quit)
         self._quit_button.pack(side=tk.TOP, fill=tk.X, expand=False)
 
+        self._current_time = tk.StringVar(value="")
+        current_time_label = tk.Label(
+            buttons_pane, textvariable=self._current_time, font=("Arial", 18)
+        )
+        current_time_label.pack(side=tk.TOP, fill=tk.X, expand=False)
+
+        self._current_t = tk.StringVar(value="-")
+        current_t_label = tk.Label(buttons_pane, textvariable=self._current_t, font=("Arial", 18))
+        current_t_label.pack(side=tk.TOP, fill=tk.X, expand=False)
+
         self._plotter_nb = ttk.Notebook(main_frm)
         tab1 = tk.Frame(self._plotter_nb)
         self._plotter_nb.pack(side=tk.TOP, fill=tk.BOTH)
@@ -588,6 +599,16 @@ class ExperimentUITkinter:
 
         try:
             self._update_ui_from_state()
+            # update clock
+            time_str = datetime.datetime.now().strftime("%H:%M:%S")
+            self._current_time.set(time_str)
+
+            if self._state == "stopped":
+                self._current_t.set("-")
+            else:
+                t = self.experiment_controller._get_t()
+                self._current_t.set(f"t = {t:.0f}")
+
             if self._state != "stopped":
                 data = self._get_data_from_queue(self._data_queue)
 
