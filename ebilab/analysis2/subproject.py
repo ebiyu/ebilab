@@ -191,7 +191,10 @@ class SubProject:
 
         # read_csv
         logger.info(f"Reading file: {path}")
-        df = pd.read_csv(path)
+        codec = get_encoding_type(str(path))
+        logger.debug(f"Detected encoding: {codec}")
+
+        df = pd.read_csv(path, encoding=codec)
         logger.debug(df.shape)
         logger.debug(df.columns)
 
