@@ -606,8 +606,9 @@ class ExperimentUITkinter:
             if self._state == "stopped":
                 self._current_t.set("-")
             else:
-                t = self.experiment_controller._get_t()
-                self._current_t.set(f"t = {t:.0f}")
+                if self.experiment_controller is not None:
+                    t = self.experiment_controller._get_t()
+                    self._current_t.set(f"t = {t:.0f}")
 
             if self._state != "stopped":
                 data = self._get_data_from_queue(self._data_queue)
