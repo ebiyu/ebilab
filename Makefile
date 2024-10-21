@@ -5,7 +5,7 @@ test:
 .PHONY: fix
 fix:
 	python -m ruff format
-	python -m ruff check
+	python -m ruff check --fix
 	python -m mypy .
 
 .PHONY: check

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import io
 import tkinter as tk
 from logging import getLogger
 from pathlib import Path
@@ -8,7 +9,7 @@ from tkinter import messagebox, ttk
 from typing import Any
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PIL import Image, ImageTk
 
 from ..base import DfPlotter, DfProcess
 from ..manifest import (
@@ -21,7 +22,7 @@ from ..manifest import (
 from ..options import InvalidInputError, OptionField
 from ..project import Project
 from ..subproject import SubProject
-from .clipboard import copy_fig_to_clipboard
+from .clipboard import copy_img_to_clipboard
 
 logger = getLogger(__name__)
 
@@ -342,10 +343,9 @@ class View(tk.Tk):
         self.plotter_list.pack(fill="both", expand=True)
         self.plotter_list.bind("<<TreeviewSelect>>", lambda _: self.handle_on_select_plotter())
 
-        self._plot_fig = plt.figure(figsize=(6, 6), constrained_layout=True)
-        self._plot_canvas = FigureCanvasTkAgg(self._plot_fig, master=col3)
-        self._plot_canvas.draw()
-        self._plot_canvas.get_tk_widget().pack(fill="both", expand=True)
+        # plotter canvas
+        self._plot_canvas = tk.Canvas(master=col3)
+        self._plot_canvas.pack(fill="both", expand=True)
 
         copy_plotter_image_button = ttk.Button(
             col3, text="Copy image", command=self.handle_copy_plotter_image
@@ -553,16 +553,40 @@ class View(tk.Tk):
         if not self._subproject.current_recipe.plotter:
             return
 
-        self._plot_fig.clear()
+        fig = plt.figure(figsize=(8, 6), constrained_layout=True)
         try:
-            self._subproject.plot_from_process_manifest(
-                self._subproject.current_recipe, self._plot_fig
-            )
+            self._subproject.plot_from_process_manifest(self._subproject.current_recipe, fig)
         # TODO: handle error
         except Exception:
             logger.exception("Error occurred while plotting")
+            return
 
-        self._plot_canvas.draw()
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png")
+        buf.seek(0)
+        img = Image.open(buf)
+        self._plot_image_pil = img
+
+        self.update()
+        canvas_width = self._plot_canvas.winfo_width()
+        canvas_height = self._plot_canvas.winfo_height()
+
+        resize_ratio = min(canvas_width / img.width, canvas_height / img.height) * 0.9
+
+        resized_img = img.resize(
+            size=(
+                int(img.width * resize_ratio),
+                int(img.height * resize_ratio),
+            )
+        )
+        img_tk = ImageTk.PhotoImage(resized_img)
+
+        self._plot_canvas.create_image(
+            canvas_width / 2,
+            canvas_height / 2,
+            image=img_tk,
+        )
+        self._plot_image_tk = img_tk  # keep reference to avoid GC
 
     # Event handlers
     @event_handler
@@ -770,7 +794,9 @@ class View(tk.Tk):
 
     @event_handler
     def handle_copy_plotter_image(self) -> None:
-        copy_fig_to_clipboard(self._plot_fig)
+        self._plot_image_pil
+        if hasattr(self, "_plot_image_pil") and self._plot_image_pil:
+            copy_img_to_clipboard(self._plot_image_pil)
 
     @event_handler
     def handle_close_original_data_window(self) -> None:

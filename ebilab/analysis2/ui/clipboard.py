@@ -4,11 +4,6 @@ from PIL import Image
 
 
 def copy_fig_to_clipboard(fig):
-    import win32clipboard
-
-    """
-    pip install winclip32 pillow
-    """
     # figure -> BytesIO
     buf = BytesIO()
     fig.savefig(buf, format="png")
@@ -16,6 +11,16 @@ def copy_fig_to_clipboard(fig):
 
     # BytesIO -> Pillow
     image = Image.open(buf)
+
+    copy_img_to_clipboard(image)
+
+
+def copy_img_to_clipboard(image):
+    import win32clipboard
+
+    """
+    pip install winclip32 pillow
+    """
 
     # Convert data
     output = BytesIO()
