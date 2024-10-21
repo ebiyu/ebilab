@@ -845,7 +845,7 @@ class View(tk.Tk):
             return
 
         output_name = self.output_name_var.get()
-        if not output_name:
+        if not output_name or output_name.replace(" ", "") == "":
             messagebox.showerror("Error", "Output name is required")
 
         if not self._subproject.current_recipe:
