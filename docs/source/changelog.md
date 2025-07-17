@@ -1,6 +1,34 @@
 更新履歴
 ========
 
+v2.9.0 (Jul 17, 2025)
+---------------------
+
+### Deprecations
+
+- `ebilab.analysis` / `ebilab.analysis2` パッケージを非推奨化しました。
+    - これらのパッケージは非推奨化され、今後のメンテナンスは行われません。また、今後のバージョンでは削除される予定です。
+
+### Features
+
+- `ebilab.experiment` で実験UIに t(経過時間)/time(絶対時刻) を表示するようにしました。
+- `ebilab.experiment` でレシピのサブディレクトリ対応を追加しました。
+- `ebilab.experiment` でソースコードのリロード機能、ソースコードを開く機能を追加しました。
+- `ebilab.experiment` でdocstringからsummary/descriptionを取得・表示するようにしました。
+- `device.E4980` で電圧/電流指定を追加し、amplを非推奨にしました。
+    - Old: `E4980.trigger(ampl=0.1)`
+    - New: `E4980.trigger(voltage=0.1)` or `E4980.trigger(current=0.001)`
+
+### Bug Fixes
+
+- `ebilab.experiment` でWindowを閉じた場合にエラーが発生する問題を修正しました。
+- `ebilab.experiment` でPlotterが無い場合のエラーを防止しました。
+- 出力名が空白のみの場合にエラーとするようバリデーションを追加しました。
+
+### Changes
+
+- `device.E4980` でamplと電圧/電流指定が同時に指定された場合に `ValueError` を発生させるよう変更しました。
+
 v2.8.0 (July 5, 2024)
 ---------------------
 
