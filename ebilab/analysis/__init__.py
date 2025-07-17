@@ -5,8 +5,8 @@ from ._preprocess import original
 from ._process import aggregate, from_df, input, output
 
 warnings.warn(
-    "ebilab.analysis package is still in development and may not be stable."
-    "You are recommended to lock the version if you are using it in production.",
+    "ebilab.analysis package is no longer maintained and will be removed in the future."
+    "You are recommended to lock the version if you are using it.",
     UserWarning,
 )
 
