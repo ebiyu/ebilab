@@ -649,8 +649,13 @@ class ExperimentUITkinter:
         if len(self._data) > 0 and self._plotter:
             df = pd.DataFrame(self._data)
             time_before_plot = time.perf_counter()
-            self._plotter.update(df, self._get_plotter_context())
-            logger.debug(f"Plotter.update took {time.perf_counter() - time_before_plot} s")
+
+            try:
+                self._plotter.update(df, self._get_plotter_context())
+                logger.debug(f"Plotter.update took {time.perf_counter() - time_before_plot} s")
+            except Exception as e:
+                logger.error(f"Error in Plotter.update: {e}")
+
             time_before_draw = time.perf_counter()
             self._canvas.draw()
             logger.debug(f"canvas.draw took {time.perf_counter() - time_before_draw} s")
