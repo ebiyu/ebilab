@@ -1,8 +1,0 @@
-tqdm
-numpy
-pandas
-matplotlib
-watchdog
-click
-pyvisa
-GitPython

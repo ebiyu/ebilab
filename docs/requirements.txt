@@ -1,3 +1,14 @@
+# Package requirements
+tqdm
+numpy
+pandas
+matplotlib
+watchdog
+click
+pyvisa
+GitPython
+
+# Documentation requirements
 sphinx
 sphinx-autobuild
 sphinx-rtd-theme
