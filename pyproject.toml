@@ -1,0 +1,56 @@
+[project]
+name = "ebilab"
+description = "Python package for my research"
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [
+    { name = "Yusuke Ebihara", email = "yusuke@ebihara.me" }
+]
+requires-python = ">=3.8"
+dependencies = [
+    "tqdm",
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "watchdog",
+    "click",
+    "pyvisa",
+    "GitPython",
+    "chardet",
+    "pyyaml",
+    "pywin32; os_name=='nt'",
+]
+dynamic = ["version"]
+classifiers = [
+    "Programming Language :: Python :: 3.8",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://ebilab.readthedocs.io/"
+"GitHub repository" = "https://github.com/ebiyuu1121/ebilab"
+
+[project.scripts]
+ebilab = "ebilab._cli:cli"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0+UNKNOWN"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/ebilab",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["ebilab"]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.14.1",
+    "ruff>=0.12.5",
+]

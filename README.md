@@ -29,6 +29,12 @@ This repository requires VISA driver.
 Please install Keysight-VISA or NI-VISA.
 
 
+## Development
+
+```
+uv sync --all-extras --dev
+```
+
 # translation
 
 Translation is conducted under transifex: https://www.transifex.com/ebilab/ebilab/
