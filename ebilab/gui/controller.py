@@ -1,4 +1,5 @@
 import asyncio
+from logging import getLogger
 import threading
 from typing import Type, Dict, Any, Optional, List
 from pathlib import Path
@@ -12,22 +13,20 @@ from ..api.plotting import BasePlotter
 from ..core.service import ExperimentService, ExperimentStatus
 from .view import View
 
+logger = getLogger(__name__)
 
 class ExperimentController:
     """
     View と Service を結ぶコントローラークラス。
     UIイベントを処理し、実験サービスと連携します。
+    アプリケーションの寿命全体を通じて存続します。
     """
 
     def __init__(self, experiment_classes: List[Type[BaseExperiment]]):
         self.experiment_classes = experiment_classes
         self.current_experiment_class: Optional[Type[BaseExperiment]] = None
-        self.service: Optional[ExperimentService] = None
+        self.service: ExperimentService = ExperimentService()  # 単一のサービスインスタンス
         self.app: Optional[View] = None
-
-        # イベントループ管理
-        self.loop: Optional[asyncio.AbstractEventLoop] = None
-        self.loop_thread: Optional[threading.Thread] = None
 
         # データ記録
         self.experiment_data: List[Dict[str, Any]] = []
@@ -38,6 +37,12 @@ class ExperimentController:
 
     def initialize(self):
         """コントローラーの初期化"""
+        # サービスを初期化（軽量初期化）
+        self.service.initialize()
+        
+        # ステータス変更コールバックを設定
+        self.service.add_status_callback(self._on_status_changed)
+        
         # UIを作成
         self.app = View()
 
@@ -46,9 +51,6 @@ class ExperimentController:
 
         # 実験リストの初期化
         self._populate_experiment_list()
-
-        # 非同期イベントループの開始
-        self._start_async_loop()
 
     def _setup_event_handlers(self):
         """イベントハンドラーの設定"""
@@ -72,17 +74,6 @@ class ExperimentController:
         # 最初の実験を選択
         if experiment_names:
             self.on_experiment_selected(experiment_names[0])
-
-    def _start_async_loop(self):
-        """非同期イベントループを別スレッドで開始"""
-
-        def run_loop():
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
-            self.loop.run_forever()
-
-        self.loop_thread = threading.Thread(target=run_loop, daemon=True)
-        self.loop_thread.start()
 
     def on_experiment_selected(self, experiment_name: str):
         """実験が選択されたときの処理"""
@@ -159,26 +150,11 @@ class ExperimentController:
         if not self.current_experiment_class or not self.app:
             return
 
-        # 実験クラスに基づいてパラメータフィールドを動的に生成
-        # デフォルトのパラメータを設定
-        default_params = self._get_default_parameters()
-        self.app.set_experiment_parameters(default_params)
-
-    def _get_default_parameters(self) -> Dict[str, Any]:
-        """実験クラスに基づいてデフォルトパラメータを取得"""
-        # この部分は実験クラスの実装に依存します
-        # 今回は汎用的なデフォルト値を返します
-        return {
-            "測定間隔(秒)": 1.0,
-            "測定回数": 100,
-            "開始値": 0.0,
-            "終了値": 10.0,
-            "a": 19,
-        }
+        self.app.set_experiment_parameters(self.current_experiment_class._get_option_fields())
 
     def on_start_experiment(self, params: Dict[str, Any]):
         """実験開始ボタンが押されたときの処理"""
-        if not self.current_experiment_class or not self.loop or not self.app:
+        if not self.current_experiment_class or not self.app:
             return
 
         # 結果をクリア
@@ -188,17 +164,28 @@ class ExperimentController:
         # プロッターを初期化
         self._initialize_plotter()
 
-        # サービスを作成
-        self.service = ExperimentService(self.current_experiment_class)
-
-        # 非同期で実験を開始
-        asyncio.run_coroutine_threadsafe(self._start_experiment_async(params), self.loop)
-
-        # UIの状態を更新
-        self.app.update_experiment_state("running")
+        # サービス経由で実験を開始
+        self.service.start_experiment(self.current_experiment_class, params)
 
         # データストリームの監視を開始
         self._start_data_monitoring()
+
+    def _on_status_changed(self, status):
+        """サービスのステータス変更時の処理"""
+        if not self.app:
+            return
+            
+        # UIスレッドで状態を更新
+        status_map = {
+            ExperimentStatus.IDLE: "idle",
+            ExperimentStatus.RUNNING: "running", 
+            ExperimentStatus.STOPPING: "stopping",
+            ExperimentStatus.FINISHED: "finished",
+            ExperimentStatus.ERROR: "error"
+        }
+        
+        ui_status = status_map.get(status, "idle")
+        self.app.after(0, lambda: self.app.update_experiment_state(ui_status))
 
     def _initialize_plotter(self):
         """プロッターを初期化"""
@@ -265,23 +252,28 @@ class ExperimentController:
 
         self.app.update_plot(times, values, "Time", "Value", "実験データ")
 
-    async def _start_experiment_async(self, params: Dict[str, Any]):
-        """非同期で実験を開始"""
-        if self.service:
-            try:
-                await self.service.start_experiment(params)
-            except Exception as e:
-                # エラーが発生した場合はUIに通知
-                if self.app:
-                    self.app.after(0, lambda: self.app.add_log_message(f"実験開始エラー: {e}"))
-                    self.app.after(0, lambda: self.app.update_experiment_state("idle"))
-
     def _start_data_monitoring(self):
         """データストリームの監視を開始"""
-        if not self.service or not self.loop:
+        if not self.service or not self.service._experiment_active:
             return
 
-        asyncio.run_coroutine_threadsafe(self._monitor_data_stream(), self.loop)
+        # 実験スレッドの準備を待つ
+        def wait_and_start():
+            import time
+            max_wait = 5  # 最大5秒待機
+            wait_time = 0
+            
+            while wait_time < max_wait:
+                if self.service.loop and self.service._experiment_active:
+                    asyncio.run_coroutine_threadsafe(self._monitor_data_stream(), self.service.loop)
+                    break
+                time.sleep(0.1)
+                wait_time += 0.1
+            else:
+                if self.app:
+                    self.app.after(0, lambda: self.app.add_log_message("データ監視の開始に失敗しました"))
+        
+        threading.Thread(target=wait_and_start, daemon=True).start()
 
     async def _monitor_data_stream(self):
         """データストリームを監視してUIを更新"""
@@ -337,27 +329,11 @@ class ExperimentController:
 
     def on_stop_experiment(self):
         """実験中断ボタンが押されたときの処理"""
-        if not self.service or not self.loop or not self.app:
+        if not self.service or not self.app:
             return
 
-        # 非同期で実験を停止
-        asyncio.run_coroutine_threadsafe(self._stop_experiment_async(), self.loop)
-
-        # UIの状態を更新
-        self.app.update_experiment_state("stopping")
-
-    async def _stop_experiment_async(self):
-        """非同期で実験を停止"""
-        if self.service:
-            try:
-                await self.service.stop_experiment()
-                # 停止完了後にUIを更新
-                if self.app:
-                    self.app.after(0, lambda: self.app.update_experiment_state("finished"))
-            except Exception as e:
-                if self.app:
-                    self.app.after(0, lambda: self.app.add_log_message(f"実験停止エラー: {e}"))
-                    self.app.after(0, lambda: self.app.update_experiment_state("idle"))
+        # サービス経由で実験を停止
+        self.service.stop_experiment_sync()
 
     def on_experiment_history_selected(self, experiment_id: str):
         """実験履歴が選択されたときの処理"""
@@ -388,16 +364,9 @@ class ExperimentController:
 
     def cleanup(self):
         """リソースのクリーンアップ"""
-        # 実行中の実験を停止
-        if self.service and self.loop:
-            asyncio.run_coroutine_threadsafe(self.service.stop_experiment(), self.loop)
-
-        # イベントループを停止
-        if self.loop:
-            self.loop.call_soon_threadsafe(self.loop.stop)
-
-        if self.loop_thread:
-            self.loop_thread.join(timeout=1.0)
+        # サービスをシャットダウン（実行中の実験も停止される）
+        if self.service:
+            self.service.shutdown()
 
 
 # 使用例
@@ -417,26 +386,3 @@ def launch_gui(experiment_classes: List[Type[BaseExperiment]]):
         controller.run()
     finally:
         controller.cleanup()
-
-
-# 統合関数 - 既存の実験システムとも互換性を持たせる
-def launch_experiment_gui(experiments=None, experiment_classes=None):
-    """
-    実験GUIを起動する統合関数
-
-    Args:
-        experiments: 既存のExperimentProtocolクラスのリスト（後方互換性のため）
-        experiment_classes: 新しいBaseExperimentクラスのリスト
-    """
-    if experiment_classes:
-        # 新しいシステムを使用
-        launch_gui(experiment_classes)
-    elif experiments:
-        # 既存のシステムを使用（実装は省略）
-        # from ..experiment import launch_experiment
-        # launch_experiment(experiments)
-        raise NotImplementedError(
-            "既存システムとの統合は未実装です。experiment_classesを使用してください。"
-        )
-    else:
-        raise ValueError("experiment_classes または experiments のいずれかを指定してください")

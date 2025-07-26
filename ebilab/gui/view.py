@@ -1,10 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Optional, Dict, Any, List
+from logging import getLogger
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from ..api.fields import OptionField, FloatField, IntField, StrField, BoolField, SelectField
+
+logger = getLogger(__name__)
 
 class View(tk.Tk):
     def __init__(self):
@@ -212,6 +216,7 @@ class View(tk.Tk):
         """実験開始ボタンがクリックされたとき"""
         if self.on_start_experiment:
             params = self.get_experiment_parameters()
+            logger.debug(f"Starting experiment with parameters: {params}")
             self.on_start_experiment(params)
 
     def _on_stop_clicked(self):
@@ -245,36 +250,116 @@ class View(tk.Tk):
 
     def get_experiment_parameters(self) -> Dict[str, Any]:
         """現在の実験パラメータを取得"""
+        # TODO: validationを追加する
         params = {}
-        for name, entry in self.param_entries.items():
+        for name, widget in self.param_entries.items():
             try:
-                value = entry.get()
-                # 数値変換を試行
-                if "." in value:
-                    params[name] = float(value)
+                if isinstance(widget, ttk.Checkbutton):
+                    # チェックボックスの場合
+                    params[name] = widget.var.get()
+                elif isinstance(widget, ttk.Combobox):
+                    # コンボボックスの場合
+                    value = widget.get()
+                    # param_entries[name]に対応するOptionFieldがSelectFieldかつchoices型がint/floatなら変換
+                    field = self.param_fields[name]
+                    if field and isinstance(field, SelectField):
+                        # choicesの型を推測
+                        if field.choices and isinstance(field.choices[0], int):
+                            try:
+                                params[name] = int(value)
+                            except ValueError:
+                                params[name] = value
+                        elif field.choices and isinstance(field.choices[0], float):
+                            try:
+                                params[name] = float(value)
+                            except ValueError:
+                                params[name] = value
+                        else:
+                            params[name] = value
+                    else:
+                        params[name] = value
+                elif isinstance(widget, ttk.Entry):
+                    # エントリーの場合
+                    value = widget.get()
+                    # param_fieldsの型に応じて変換
+                    field = self.param_fields.get(name) if hasattr(self, "param_fields") else None
+                    if field:
+                        if isinstance(field, FloatField):
+                            try:
+                                params[name] = float(value)
+                            except ValueError:
+                                params[name] = value
+                        elif isinstance(field, IntField):
+                            try:
+                                params[name] = int(value)
+                            except ValueError:
+                                params[name] = value
+                        elif isinstance(field, BoolField):
+                            params[name] = bool(value)
+                        else:
+                            params[name] = value
+                    else:
+                        params[name] = value
+                    if "." in value:
+                        params[name] = float(value)
+                    else:
+                        try:
+                            params[name] = int(value)
+                        except ValueError:
+                            params[name] = value  # 文字列として保存
                 else:
-                    params[name] = int(value)
-            except ValueError:
-                params[name] = value  # 文字列として保存
+                    # その他のウィジェットの場合
+                    params[name] = widget.get() if hasattr(widget, 'get') else None
+            except (ValueError, AttributeError):
+                params[name] = None
         return params
 
-    def set_experiment_parameters(self, param_fields: Dict[str, Any]):
+    def set_experiment_parameters(self, param_fields: Dict[str, OptionField]):
         """実験パラメータフィールドを動的に設定"""
         # 既存のパラメータエントリをクリア
         for widget in self.params_frame.winfo_children():
             widget.destroy()
         self.param_entries.clear()
+        self.param_fields = param_fields
 
         # 新しいパラメータフィールドを作成
-        for i, (name, default_value) in enumerate(param_fields.items()):
+        for i, (name, field) in enumerate(param_fields.items()):
             label = ttk.Label(self.params_frame, text=f"{name}:")
             label.grid(row=i, column=0, sticky="w", pady=2)
 
-            entry = ttk.Entry(self.params_frame)
-            entry.grid(row=i, column=1, sticky="ew", pady=2)
-            entry.insert(0, str(default_value))
+            widget = self._create_field_widget(field)
+            widget.grid(row=i, column=1, sticky="ew", pady=2)
+            
+            self.param_entries[name] = widget
 
-            self.param_entries[name] = entry
+    def _create_field_widget(self, field: OptionField) -> tk.Widget:
+        """OptionFieldの種類に応じて適切なウィジェットを作成"""
+        if isinstance(field, FloatField):
+            entry = ttk.Entry(self.params_frame)
+            entry.insert(0, str(field.default))
+            return entry
+        elif isinstance(field, IntField):
+            entry = ttk.Entry(self.params_frame)
+            entry.insert(0, str(field.default))
+            return entry
+        elif isinstance(field, StrField):
+            entry = ttk.Entry(self.params_frame)
+            entry.insert(0, field.default)
+            return entry
+        elif isinstance(field, BoolField):
+            var = tk.BooleanVar(value=field.default)
+            checkbox = ttk.Checkbutton(self.params_frame, variable=var)
+            checkbox.var = var  # 変数を保存しておく
+            return checkbox
+        elif isinstance(field, SelectField):
+            combo = ttk.Combobox(self.params_frame, values=field.choices, state="readonly")
+            if 0 <= field.default_index < len(field.choices):
+                combo.current(field.default_index)
+            return combo
+        else:
+            # デフォルトはEntry
+            entry = ttk.Entry(self.params_frame)
+            return entry
 
     def update_experiment_state(self, state: str):
         """実験状態に基づいてUIを更新"""

@@ -1,7 +1,6 @@
 # sample of GUI app
 import random
 import asyncio
-from logging import basicConfig, DEBUG
 
 from ebilab.api import BaseExperiment, BasePlotter, FloatField, SelectField
 from ebilab.gui.controller import launch_gui
@@ -21,12 +20,6 @@ class RandomWalkExperiment(BaseExperiment):
 
     initial = FloatField(default=2.0)
     step = SelectField(choices=[1, 2, 4], default_index=1)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # デバッグ出力
-        print(f"初期化後: initial={self.initial} (type: {type(self.initial)})")
-        print(f"初期化後: step={self.step} (type: {type(self.step)})")
 
     async def setup(self):
         self.v = self.initial
@@ -102,7 +95,22 @@ class HistgramPlotter(BasePlotter):
 
 
 if __name__ == "__main__":
-    basicConfig(level=DEBUG)
+    import logging
+
+    # Setup logging
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
+    handler.setFormatter(formatter)
+    
+    logger = logging.getLogger("ebilab")
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
+    logger = logging.getLogger(__name__)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
     # This is a sample code to run the experiment
     # You can run this file directly to see the experiment in action
     launch_gui([RandomWalkExperiment])

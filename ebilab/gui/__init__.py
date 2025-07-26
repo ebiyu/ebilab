@@ -10,12 +10,11 @@ ebilab.gui - 実験GUI管理モジュール
 """
 
 from .view import View
-from .controller import ExperimentController, create_controller, launch_gui, launch_experiment_gui
+from .controller import ExperimentController, create_controller, launch_gui
 
 __all__ = [
     "View",
     "ExperimentController",
     "create_controller",
     "launch_gui",
-    "launch_experiment_gui",
 ]

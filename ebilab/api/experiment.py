@@ -8,7 +8,6 @@ from .fields import OptionField
 
 logger = getLogger(__name__)
 
-
 class BaseExperiment:
     """
     Inherit this class to define an experiment.
@@ -33,17 +32,19 @@ class BaseExperiment:
         self._setup_option_value(options)
         self.logger = getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
 
-    def _get_option_fields(self) -> Dict[str, Any]:
+    @classmethod
+    def _get_option_fields(cls) -> Dict[str, Any]:
         """Return dict of field which inherits OptionField"""
         result = {}
-        for attr_name in dir(self.__class__):
-            attr_value = getattr(self.__class__, attr_name)
+        for attr_name in dir(cls):
+            attr_value = getattr(cls, attr_name)
             if isinstance(attr_value, OptionField):
-                result[attr_name] = getattr(self, attr_name, None)
+                result[attr_name] = getattr(cls, attr_name, None)
         return result
 
     def _setup_option_value(self, options):
         """Overwrite OptionField values with provided options"""
+        self._options = options
         for key, value in options.items():
             if hasattr(self, key) and isinstance(getattr(self, key), OptionField):
                 setattr(self, key, value)
