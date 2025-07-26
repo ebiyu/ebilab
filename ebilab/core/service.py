@@ -1,10 +1,12 @@
 # src/ebilab/services/application.py
 
 import asyncio
+import queue
 import threading
 from enum import Enum, auto
 from typing import Type, Dict, Any
 from logging import getLogger
+import time
 
 from ..api.experiment import BaseExperiment
 from .event import Event
@@ -92,8 +94,9 @@ class ExperimentService:
 
     def _stop_current_experiment(self):
         """現在の実験を強制停止"""
-        if self.status == ExperimentStatus.RUNNING and self.loop:
-            asyncio.run_coroutine_threadsafe(self.stop_experiment(), self.loop)
+        if self.status == ExperimentStatus.RUNNING:
+            # threading.Eventを直接使用（マルチスレッドセーフ）
+            self.stop_experiment()
             
         self._stop_experiment_thread()
 
@@ -145,48 +148,21 @@ class ExperimentService:
         self._set_status(ExperimentStatus.RUNNING)
 
         # 新しいキューとイベントを作成（実験ごとに新規作成）
-        self.data_queue = asyncio.Queue()
-        self.stop_event = asyncio.Event()
+        self.data_queue = queue.Queue()  # マルチスレッドセーフなqueue.Queueを使用
+        self.stop_event = threading.Event()  # マルチスレッドセーフなthreading.Eventを使用
 
         experiment_instance = experiment_cls(params)
 
-        
-        # スレッドが完全に起動するまで少し待つ
-        import time
+        # Wait for the thread to fully start
         time.sleep(0.1)
 
         # 非同期タスクとして実験のライフサイクルを実行
-        # self._worker_task = asyncio.create_task()
         asyncio.run_coroutine_threadsafe(
             self._run_lifecycle(experiment_instance),
-            # self.start_experiment(experiment_cls, params), 
             self.loop,
         )
 
-    # def start_experiment_sync(self, experiment_cls: Type[BaseExperiment], params: Dict[str, Any]):
-    #     """
-    #     同期的に実験を開始する（UIスレッドから呼び出し用）
-    #     実験ごとに新しいスレッドを作成する
-    #     """
-    #     if self.status == ExperimentStatus.RUNNING:
-    #         logger.warning("Experiment is already running.")
-    #         return
-
-    #     # 実験専用スレッドを開始
-    #     if not self._start_experiment_thread():
-    #         logger.error("Failed to start experiment thread")
-    #         return
-
-    #     # スレッドが完全に起動するまで少し待つ
-    #     import time
-    #     time.sleep(0.1)
-            
-    #     asyncio.run_coroutine_threadsafe(
-    #         self.start_experiment(experiment_cls, params), 
-    #         self.loop
-    #     )
-
-    async def stop_experiment(self):
+    def stop_experiment(self):
         """実行中の実験を中断する。"""
         if self.status != ExperimentStatus.RUNNING:
             return
@@ -194,32 +170,6 @@ class ExperimentService:
         logger.info("Service: Stopping experiment...")
         self._set_status(ExperimentStatus.STOPPING)
         self.stop_event.set()
-        if self._worker_task:
-            await self._worker_task
-            
-        # 実験終了後にスレッドも停止
-        self._stop_experiment_thread()
-
-    def stop_experiment_sync(self):
-        """
-        同期的に実験を停止する（UIスレッドから呼び出し用）
-        """
-        if not self.loop or not self._experiment_active:
-            logger.error("No active experiment to stop.")
-            return
-            
-        asyncio.run_coroutine_threadsafe(self.stop_experiment(), self.loop)
-
-    async def get_data_stream(self):
-        """実験データをリアルタイムで取得するための非同期ジェネレータ。"""
-        while self.status == ExperimentStatus.RUNNING or not self.data_queue.empty():
-            try:
-                # タイムアウト付きで待機し、定期的にステータスをチェック
-                data = await asyncio.wait_for(self.data_queue.get(), timeout=0.1)
-                yield data
-                self.data_queue.task_done()
-            except asyncio.TimeoutError:
-                continue
 
     async def _run_lifecycle(self, exp: BaseExperiment):
         """実験のsetup -> steps -> cleanupのライフサイクルを管理する内部メソッド。"""
@@ -248,7 +198,8 @@ class ExperimentService:
                 # TODO: Save data to file
                 # self.save_to_file(data)
 
-                await self.data_queue.put(data)
+                # Add to queue (Send to UI)
+                self.data_queue.put(data)
 
         except Exception as e:
             logger.error(f"Error during experiment execution: {e}")

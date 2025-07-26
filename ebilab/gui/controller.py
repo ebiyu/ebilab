@@ -1,5 +1,6 @@
 import asyncio
-from logging import getLogger
+from logging import getLogger, Handler, LogRecord
+import queue
 import threading
 from typing import Type, Dict, Any, Optional, List
 from pathlib import Path
@@ -14,6 +15,28 @@ from ..core.service import ExperimentService, ExperimentStatus
 from .view import View
 
 logger = getLogger(__name__)
+
+class TkinterLogHandler(Handler):
+    """A simple handler to add log to Queue"""
+    
+    def __init__(self):
+        super().__init__()
+        self.log_queue = queue.Queue()
+        
+    def emit(self, record: LogRecord):
+        """ログレコードをキューに追加するだけ"""
+        try:
+            # ログメッセージをフォーマット
+            timestamp = datetime.datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
+            level = record.levelname
+            message = record.getMessage()
+            formatted_message = f"{timestamp} - {level} - {message}\n"
+            
+            # キューにメッセージを追加
+            self.log_queue.put(formatted_message)
+        except Exception:
+            # ハンドラー内でエラーが発生してもアプリケーションを止めない
+            pass
 
 class ExperimentController:
     """
@@ -49,6 +72,12 @@ class ExperimentController:
         # イベントハンドラーの設定
         self._setup_event_handlers()
 
+        # ログハンドラーを設定
+        self._setup_logging()
+
+        # Timerを使って定期的にUIを更新
+        self.app.after(100, self._after_callback_update)
+
         # 実験リストの初期化
         self._populate_experiment_list()
 
@@ -63,6 +92,34 @@ class ExperimentController:
         self.app.on_stop_experiment = self.on_stop_experiment
         self.app.on_history_selected = self.on_experiment_history_selected
 
+    def _after_callback_update(self):
+        """定期的にUIを更新するためのコールバック"""
+        if not self.app:
+            return
+
+        try:
+            self._on_timer_update_log()
+            self.on_timer_update_experiment_data()
+        finally:
+            # 再度呼び出す
+            self.app.after(100, self._after_callback_update)
+
+    def _setup_logging(self):
+        """ログハンドラーを設定してloggerの出力をUIに表示"""
+        # カスタムログハンドラーを作成（キューを渡す）
+        self.log_handler = TkinterLogHandler()
+        
+        # ルートロガーに追加（すべてのloggerの出力をキャッチ）
+        import logging
+        root_logger = logging.getLogger()
+        root_logger.addHandler(self.log_handler)
+        
+        # ログレベルを設定（DEBUG以上のメッセージを表示）
+        self.log_handler.setLevel(logging.DEBUG)
+        
+        # 初期メッセージを追加
+        logger.info("アプリケーションが開始されました。")
+
     def _populate_experiment_list(self):
         """実験リストをUIに設定"""
         if not self.app or not self.experiment_classes:
@@ -74,6 +131,26 @@ class ExperimentController:
         # 最初の実験を選択
         if experiment_names:
             self.on_experiment_selected(experiment_names[0])
+
+    def _on_timer_update_log(self):
+        for _ in range(50):
+            try:
+                message = self.log_handler.log_queue.get_nowait()
+                self.app._append_log_to_text(message)
+            except queue.Empty:
+                break
+
+    def on_timer_update_experiment_data(self):
+        if self.service.data_queue is None:
+            return
+
+        for _ in range(50):
+            try:
+                data = self.service.data_queue.get_nowait()
+                self.experiment_data.append(data)
+                self._update_ui_with_data(data)
+            except queue.Empty:
+                break
 
     def on_experiment_selected(self, experiment_name: str):
         """実験が選択されたときの処理"""
@@ -89,23 +166,26 @@ class ExperimentController:
         self._update_parameter_ui()
 
         # ログメッセージを追加
-        if self.app:
-            self.app.add_log_message(f"実験 '{experiment_name}' が選択されました。")
+        logger.info(f"実験 '{experiment_name}' が選択されました。")
 
     def _update_available_plotters(self):
         """利用可能なプロッターを更新"""
         if not self.current_experiment_class:
+            logger.warning("No current experiment class set.")
             self.available_plotters = []
             return
 
         # 実験クラスに登録されたプロッターを取得
         if hasattr(self.current_experiment_class, "_plotters"):
             self.available_plotters = self.current_experiment_class._plotters.copy()
+            logger.info(f"Available plotters for {self.current_experiment_class.__name__}: {[p.name for p in self.available_plotters]}")
         else:
+            logger.warning("`_plotters` attribute not found in experiment class.")
             self.available_plotters = []
 
         # デフォルトプロッターがない場合は、シンプルなプロッターを作成
         if not self.available_plotters:
+            logger.warning("No plotters available, using default plotter.")
             self.available_plotters = [self._create_default_plotter()]
 
     def _create_default_plotter(self):
@@ -168,7 +248,7 @@ class ExperimentController:
         self.service.start_experiment(self.current_experiment_class, params)
 
         # データストリームの監視を開始
-        self._start_data_monitoring()
+        # self._start_data_monitoring()
 
     def _on_status_changed(self, status):
         """サービスのステータス変更時の処理"""
@@ -199,10 +279,12 @@ class ExperimentController:
 
         # プロッターのセットアップを実行
         try:
+            self.current_plotter.fig.clear()
             self.current_plotter.setup()
         except Exception as e:
-            if self.app:
-                self.app.add_log_message(f"プロッター初期化エラー: {e}")
+            logger.error(f"プロッター初期化エラー: {e}")
+
+        logger.info(f"Using plotter: {self.current_plotter.name}")
 
     def _update_plot(self):
         """プロットの更新（プロッター使用）"""
@@ -226,10 +308,9 @@ class ExperimentController:
                 self.app.canvas.draw()
 
         except Exception as e:
-            if self.app:
-                self.app.add_log_message(f"プロット更新エラー: {e}")
-                # フォールバック: シンプルなプロット
-                self._fallback_plot()
+            logger.error(f"プロット更新エラー: {e}")
+            # フォールバック: シンプルなプロット
+            self._fallback_plot()
 
     def _fallback_plot(self):
         """フォールバック用のシンプルなプロット"""
@@ -252,49 +333,6 @@ class ExperimentController:
 
         self.app.update_plot(times, values, "Time", "Value", "実験データ")
 
-    def _start_data_monitoring(self):
-        """データストリームの監視を開始"""
-        if not self.service or not self.service._experiment_active:
-            return
-
-        # 実験スレッドの準備を待つ
-        def wait_and_start():
-            import time
-            max_wait = 5  # 最大5秒待機
-            wait_time = 0
-            
-            while wait_time < max_wait:
-                if self.service.loop and self.service._experiment_active:
-                    asyncio.run_coroutine_threadsafe(self._monitor_data_stream(), self.service.loop)
-                    break
-                time.sleep(0.1)
-                wait_time += 0.1
-            else:
-                if self.app:
-                    self.app.after(0, lambda: self.app.add_log_message("データ監視の開始に失敗しました"))
-        
-        threading.Thread(target=wait_and_start, daemon=True).start()
-
-    async def _monitor_data_stream(self):
-        """データストリームを監視してUIを更新"""
-        if not self.service:
-            return
-
-        try:
-            async for data in self.service.get_data_stream():
-                # データをリストに追加
-                self.experiment_data.append(data)
-
-                # UIスレッドでUIを更新
-                if self.app:
-                    self.app.after(0, lambda d=data: self._update_ui_with_data(d))
-
-        except Exception as e:
-            # データストリーム監視中にエラーが発生
-            if self.app:
-                self.app.after(0, lambda: self.app.add_log_message(f"データ監視エラー: {e}"))
-                self.app.after(0, lambda: self.app.update_experiment_state("idle"))
-
     def _update_ui_with_data(self, data: Dict[str, Any]):
         """新しいデータでUIを更新"""
         if not self.app:
@@ -306,39 +344,17 @@ class ExperimentController:
         # プロットを更新
         self._update_plot()
 
-    def _update_plot(self):
-        """プロットの更新"""
-        if not self.app or len(self.experiment_data) < 2:
-            return
-
-        # 時系列データとしてプロット
-        times = []
-        values = []
-
-        for i, data in enumerate(self.experiment_data):
-            times.append(i)  # インデックスを時間として使用
-            # データから最初の数値を取得
-            for key, value in data.items():
-                if isinstance(value, (int, float)):
-                    values.append(value)
-                    break
-            else:
-                values.append(0)  # 数値が見つからない場合は0
-
-        self.app.update_plot(times, values, "Time", "Value", "実験データ")
-
     def on_stop_experiment(self):
         """実験中断ボタンが押されたときの処理"""
         if not self.service or not self.app:
             return
 
         # サービス経由で実験を停止
-        self.service.stop_experiment_sync()
+        self.service.stop_experiment()
 
     def on_experiment_history_selected(self, experiment_id: str):
         """実験履歴が選択されたときの処理"""
-        if self.app:
-            self.app.add_log_message(f"履歴実験 '{experiment_id}' が選択されました。")
+        logger.info(f"履歴実験 '{experiment_id}' が選択されました。")
 
         # 過去の実験データを読み込んでプロット
         self._load_and_plot_historical_data(experiment_id)
@@ -355,7 +371,7 @@ class ExperimentController:
         values = [random.random() * 10 for _ in times]
 
         self.app.update_plot(times, values, "Time", "Value", f"履歴データ: {experiment_id}")
-        self.app.add_log_message(f"履歴データ '{experiment_id}' をプロットしました。")
+        logger.info(f"履歴データ '{experiment_id}' をプロットしました。")
 
     def run(self):
         """アプリケーションの実行"""

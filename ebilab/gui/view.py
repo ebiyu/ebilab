@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Optional, Dict, Any, List
-from logging import getLogger
+from logging import getLogger, Handler, LogRecord
+import datetime
+import queue
+import threading
 
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -9,6 +12,29 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from ..api.fields import OptionField, FloatField, IntField, StrField, BoolField, SelectField
 
 logger = getLogger(__name__)
+
+
+class TkinterLogHandler(Handler):
+    """tkinterのTextウィジェットにログを出力するシンプルなハンドラー"""
+    
+    def __init__(self, log_queue: queue.Queue):
+        super().__init__()
+        self.log_queue = log_queue
+        
+    def emit(self, record: LogRecord):
+        """ログレコードをキューに追加するだけ"""
+        try:
+            # ログメッセージをフォーマット
+            timestamp = datetime.datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
+            level = record.levelname
+            message = record.getMessage()
+            formatted_message = f"{timestamp} - {level} - {message}\n"
+            
+            # キューにメッセージを追加
+            self.log_queue.put(formatted_message)
+        except Exception:
+            # ハンドラー内でエラーが発生してもアプリケーションを止めない
+            pass
 
 class View(tk.Tk):
     def __init__(self):
@@ -37,6 +63,20 @@ class View(tk.Tk):
         self.canvas: Optional[FigureCanvasTkAgg] = None
 
         self._create_ui()
+
+    def _append_log_to_text(self, message: str):
+        """ログテキストウィジェットにメッセージを追加"""
+        try:
+            if self.log_text:
+                self.log_text.insert("end", message)
+                self.log_text.see("end")
+                
+                # 行数が多くなりすぎた場合は古い行を削除
+                lines = int(self.log_text.index('end-1c').split('.')[0])
+                if lines > 1000:  # 1000行を超えたら古い行を削除
+                    self.log_text.delete('1.0', '100.0')
+        except Exception:
+            pass
 
     def _create_ui(self):
         """UIの構築"""
@@ -171,7 +211,18 @@ class View(tk.Tk):
         result_log_notebook = ttk.Notebook(display_pane)
         display_pane.add(result_log_notebook, weight=1)
 
-        # -- タブ1: 結果テーブル --
+        
+        # -- タブ1: ログビュー --
+        log_tab = ttk.Frame(result_log_notebook, padding=5)
+        result_log_notebook.add(log_tab, text="ログ")
+
+        self.log_text = tk.Text(log_tab, height=10)
+        self.log_text.pack(side="left", fill="both", expand=True)
+        log_scrollbar = ttk.Scrollbar(log_tab, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=log_scrollbar.set)
+        log_scrollbar.pack(side="right", fill="y")
+
+        # -- タブ2: 結果テーブル --
         result_tab = ttk.Frame(result_log_notebook, padding=5)
         result_log_notebook.add(result_tab, text="結果")
 
@@ -191,17 +242,6 @@ class View(tk.Tk):
         )
         self.result_tree.configure(yscrollcommand=result_scrollbar.set)
         result_scrollbar.pack(side="right", fill="y")
-
-        # -- タブ2: ログビュー --
-        log_tab = ttk.Frame(result_log_notebook, padding=5)
-        result_log_notebook.add(log_tab, text="ログ")
-
-        self.log_text = tk.Text(log_tab, height=10)
-        self.log_text.pack(side="left", fill="both", expand=True)
-        log_scrollbar = ttk.Scrollbar(log_tab, orient="vertical", command=self.log_text.yview)
-        self.log_text.configure(yscrollcommand=log_scrollbar.set)
-        log_scrollbar.pack(side="right", fill="y")
-        self.log_text.insert("end", "12:15:30 - INFO - アプリケーションが開始されました。\n")
 
         return display_pane
 
@@ -400,13 +440,8 @@ class View(tk.Tk):
                 self.result_tree.see(children[-1])
 
     def add_log_message(self, message: str):
-        """ログメッセージを追加"""
-        if self.log_text:
-            import datetime
-
-            timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-            self.log_text.insert("end", f"{timestamp} - {message}\n")
-            self.log_text.see("end")
+        """ログメッセージを追加（loggerを使用）"""
+        logger.info(message)
 
     def clear_results(self):
         """結果をクリア"""

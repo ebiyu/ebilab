@@ -21,6 +21,7 @@ class BaseExperiment:
     @classmethod
     def register_plotter(cls, plotter_class: Type[BasePlotter]) -> Type[BasePlotter]:
         """decorator to register a plotter class"""
+        logger.debug(f"Registering plotter: {plotter_class.__name__} in {cls.__name__}")
         if not issubclass(plotter_class, BasePlotter):
             raise TypeError("Registered class must be a subclass of BasePlotter.")
         if not hasattr(cls, "_plotters"):

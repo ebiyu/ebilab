@@ -1,6 +1,7 @@
 # sample of GUI app
 import random
 import asyncio
+import time
 
 from ebilab.api import BaseExperiment, BasePlotter, FloatField, SelectField
 from ebilab.gui.controller import launch_gui
