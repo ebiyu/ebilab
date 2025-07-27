@@ -138,21 +138,29 @@ class ExperimentController:
             self.app.after(100, self._after_callback_update)
 
     def _setup_logging(self):
-        """ログハンドラーを設定してloggerの出力をUIに表示"""
-        # カスタムログハンドラーを作成（キューを渡す）
-        self.log_handler = TkinterLogHandler()
-
-        # ルートロガーに追加（すべてのloggerの出力をキャッチ）
+        # Setup logging
         import logging
 
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+        handler.setFormatter(formatter)
+
+        logger = logging.getLogger("ebilab")
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger = logging.getLogger(__name__)
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        # Setup custom log handler for Tkinter (attach to root logger)
+        self.log_handler = TkinterLogHandler()
+        self.log_handler.setLevel(logging.DEBUG)
         root_logger = logging.getLogger()
         root_logger.addHandler(self.log_handler)
 
-        # ログレベルを設定（DEBUG以上のメッセージを表示）
-        self.log_handler.setLevel(logging.DEBUG)
-
-        # 初期メッセージを追加
-        logger.info("アプリケーションが開始されました。")
+        logger.info("Loggging initialized for ebilab GUI.")
 
     def _populate_experiment_list(self):
         """実験リストをUIに設定"""
