@@ -113,7 +113,7 @@ class View(tk.Tk):
         frame.columnconfigure(0, weight=1)
 
         ttk.Label(frame, text="実験選択").grid(row=0, column=0, sticky="w", pady=(0, 2))
-        self.exp_combo = ttk.Combobox(frame, values=["IV測定", "抵抗の時間変化"])
+        self.exp_combo = ttk.Combobox(frame, values=["IV測定", "抵抗の時間変化"], state="readonly")
         self.exp_combo.current(0)
         self.exp_combo.bind("<<ComboboxSelected>>", self._on_experiment_combo_changed)
         self.exp_combo.grid(row=1, column=0, sticky="ew", pady=(0, 15))
