@@ -18,6 +18,8 @@ dependencies = [
     "chardet",
     "pyyaml",
     "pywin32; os_name=='nt'",
+    "tomli; python_version<'3.11'",
+    "pydantic>=2.10.6",
 ]
 dynamic = ["version"]
 classifiers = [
@@ -54,3 +56,10 @@ dev = [
     "mypy>=1.14.1",
     "ruff>=0.12.5",
 ]
+
+[tool.ebilab.data]
+csv_base_dir = "data"
+filename_format = "{name}-{timestamp}"
+timestamp_format = "%Y%m%d-%H%M%S"
+use_date_subfolder = true
+date_folder_format = "%y%m%d"

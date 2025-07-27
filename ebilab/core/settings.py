@@ -4,17 +4,26 @@ Settings management for ebilab.
 
 from __future__ import annotations
 
-import configparser
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pydantic import BaseModel, Field
 
-@dataclass
-class DataSettings:
-    """データ保存に関する設定"""
 
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        raise ImportError("tomli is required for Python < 3.11. Install with: pip install tomli")
+
+
+# @dataclass
+class DataSettings(BaseModel):
     # CSV保存先のベースディレクトリ
-    csv_base_dir: Path = field(default_factory=lambda: Path("data"))
+    csv_base_dir: Path = Field(default_factory=lambda: Path("data"))
 
     # ファイル名のフォーマット
     filename_format: str = "{name}-{timestamp}"
@@ -29,11 +38,9 @@ class DataSettings:
     date_folder_format: str = "%y%m%d"
 
 
-@dataclass
-class Settings:
-    """アプリケーション全体の設定"""
-
-    data: DataSettings = field(default_factory=DataSettings)
+# @dataclass
+class Settings(BaseModel):
+    data: DataSettings = Field(default_factory=DataSettings)
 
 
 class SettingsManager:
@@ -41,74 +48,34 @@ class SettingsManager:
 
     def __init__(self, config_file: Path | None = None):
         self.config_file = config_file or self._find_config_file()
-        self._settings = Settings()
         self._load_settings()
 
     def _find_config_file(self) -> Path | None:
         """設定ファイルを検索"""
-        # 現在のディレクトリから上位に向かってebilab.iniを探す
+        # 現在のディレクトリから上位に向かってpyproject.tomlを探す
         current = Path.cwd()
         for path in [current] + list(current.parents):
-            config_file = path / "ebilab.ini"
+            config_file = path / "pyproject.toml"
             if config_file.exists():
                 return config_file
         return None
 
     def _load_settings(self):
-        """設定ファイルから設定を読み込み"""
+        """Load config file from pyproject.toml"""
         if not self.config_file or not self.config_file.exists():
             return
 
-        config = configparser.ConfigParser()
-        config.read(self.config_file, encoding="utf-8")
+        try:
+            with open(self.config_file, "rb") as f:
+                config = tomllib.load(f)
+        except Exception:
+            return
 
-        # データ設定の読み込み
-        if "data" in config:
-            data_section = config["data"]
-
-            if "csv_base_dir" in data_section:
-                self._settings.data.csv_base_dir = Path(data_section["csv_base_dir"])
-
-            if "filename_format" in data_section:
-                self._settings.data.filename_format = data_section["filename_format"]
-
-            if "timestamp_format" in data_section:
-                self._settings.data.timestamp_format = data_section["timestamp_format"]
-
-            if "use_date_subfolder" in data_section:
-                self._settings.data.use_date_subfolder = data_section.getboolean(
-                    "use_date_subfolder"
-                )
-
-            if "date_folder_format" in data_section:
-                self._settings.data.date_folder_format = data_section["date_folder_format"]
+        config_dict = config.get("tool", {}).get("ebilab", {})
+        self._settings = Settings.model_validate(config_dict)
 
     def get_settings(self) -> Settings:
-        """設定を取得"""
         return self._settings
-
-    def update_csv_base_dir(self, new_dir: Path):
-        """CSV保存先を更新"""
-        self._settings.data.csv_base_dir = new_dir
-
-    def save_settings(self):
-        """設定をファイルに保存"""
-        if not self.config_file:
-            self.config_file = Path.cwd() / "ebilab.ini"
-
-        config = configparser.ConfigParser()
-
-        # データ設定の保存
-        config["data"] = {
-            "csv_base_dir": str(self._settings.data.csv_base_dir),
-            "filename_format": self._settings.data.filename_format,
-            "timestamp_format": self._settings.data.timestamp_format,
-            "use_date_subfolder": str(self._settings.data.use_date_subfolder),
-            "date_folder_format": self._settings.data.date_folder_format,
-        }
-
-        with open(self.config_file, "w", encoding="utf-8") as f:
-            config.write(f)
 
 
 # グローバル設定管理インスタンス
