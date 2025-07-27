@@ -8,6 +8,7 @@ from .fields import OptionField
 
 logger = getLogger(__name__)
 
+
 class BaseExperiment:
     """
     Inherit this class to define an experiment.
@@ -31,7 +32,6 @@ class BaseExperiment:
 
     def __init__(self, options):
         self._setup_option_value(options)
-        self.logger = getLogger(f"{self.__class__.__module__}.{self.__class__.__name__}")
 
     @classmethod
     def _get_option_fields(cls) -> Dict[str, Any]:

@@ -3,18 +3,20 @@
 import asyncio
 import queue
 import threading
+import logging
 from enum import Enum, auto
-from typing import Type, Dict, Any
-from logging import getLogger
+from typing import Type, Dict, Any, Optional
+from logging import getLogger, FileHandler
 import time
 import datetime
+from pathlib import Path
 
 from ..api.experiment import BaseExperiment
 from .event import Event
+from .data_saver import ExperimentDataSaver, ExperimentLoggerManager
 
 logger = getLogger(__name__)
 
-logger = getLogger(__name__)
 
 class ExperimentStatus(Enum):
     IDLE = auto()
@@ -36,12 +38,17 @@ class ExperimentService:
         self.data_queue = None
         self.stop_event = None
         self._worker_task = None
-        
+
         # 実験ごとのリソース管理（実験開始時に作成）
         self.loop: asyncio.AbstractEventLoop = None
         self.loop_thread: threading.Thread = None
         self._experiment_active = False
-        
+
+        # データ保存関連
+        self.data_saver: Optional[ExperimentDataSaver] = None
+        self.experiment_logger: Optional[getLogger] = None
+        self.experiment_file_handler: Optional[FileHandler] = None
+
         # ステータス変更コールバック
         self._status_callbacks = []
 
@@ -52,7 +59,7 @@ class ExperimentService:
     def shutdown(self):
         """サービスのシャットダウン"""
         logger.info("Service: Shutting down...")
-        
+
         # 実行中の実験があれば停止
         if self._experiment_active:
             self._stop_current_experiment()
@@ -64,7 +71,7 @@ class ExperimentService:
             return False
 
         logger.info("Service: Starting experiment thread...")
-        
+
         def run_loop():
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
@@ -79,16 +86,16 @@ class ExperimentService:
         """実験専用のイベントループとスレッドを停止"""
         if not self._experiment_active:
             return
-            
+
         logger.info("Service: Stopping experiment thread...")
-        
+
         # イベントループを停止
         if self.loop:
             self.loop.call_soon_threadsafe(self.loop.stop)
 
         if self.loop_thread:
             self.loop_thread.join(timeout=2.0)
-            
+
         self.loop = None
         self.loop_thread = None
         self._experiment_active = False
@@ -98,7 +105,7 @@ class ExperimentService:
         if self.status == ExperimentStatus.RUNNING:
             # threading.Eventを直接使用（マルチスレッドセーフ）
             self.stop_experiment()
-            
+
         self._stop_experiment_thread()
 
     def get_status(self) -> ExperimentStatus:
@@ -118,8 +125,8 @@ class ExperimentService:
         for callback in self._status_callbacks:
             try:
                 callback(self.status)
-            except Exception as e:
-                logger.error(f"Status callback error: {e}")
+            except Exception:
+                logger.exception("Status callback failed")
 
     def _set_status(self, status: ExperimentStatus):
         """ステータスを設定し、コールバックに通知"""
@@ -154,6 +161,12 @@ class ExperimentService:
 
         experiment_instance = experiment_cls(params)
 
+        # データ保存の準備
+        self._setup_data_saving(experiment_instance)
+
+        # 実験ロガーのセットアップ
+        self._setup_experiment_logging(experiment_instance)
+
         # Wait for the thread to fully start
         time.sleep(0.1)
 
@@ -162,6 +175,27 @@ class ExperimentService:
             self._run_lifecycle(experiment_instance),
             self.loop,
         )
+
+    def _setup_data_saving(self, experiment_instance: BaseExperiment):
+        """データ保存の初期化"""
+        # CSV保存の準備
+        self.data_saver = ExperimentDataSaver(
+            experiment_name=experiment_instance.name, columns=experiment_instance.columns
+        )
+        self.data_saver.start_writing()
+
+        logger.info("Data saving initialized successfully")
+
+    def _setup_experiment_logging(self, experiment_instance: BaseExperiment):
+        """実験ロガーのセットアップ"""
+        # Create a logger and file handler for the experiment
+        self.experiment_logger_manager = ExperimentLoggerManager(experiment_instance.name)
+        self.experiment_logger = self.experiment_logger_manager.experiment_logger
+
+        # inject logger into the experiment instance
+        experiment_instance.logger = self.experiment_logger
+
+        logger.info(f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, {self.experiment_logger_manager.log_path_debug}")
 
     def stop_experiment(self):
         """実行中の実験を中断する。"""
@@ -176,10 +210,14 @@ class ExperimentService:
         """実験のsetup -> steps -> cleanupのライフサイクルを管理する内部メソッド。"""
 
         logger.debug(f"Starting lifecycle for {exp.name} with parameters: {exp._options}")
-        import time
 
         try:
+            exp.logger.info(f"[system] Starting experiment: {exp.name}")
+            setup_start_time = time.perf_counter()
             await exp.setup()
+            exp.logger.info(f"[system] Setup complete for experiment: {exp.name}, took {time.perf_counter() - setup_start_time:.2f} seconds.")
+            exp.logger.info(f"[system] Running steps...")
+
             start_time = time.perf_counter()
 
             async for data in exp.steps():
@@ -195,44 +233,74 @@ class ExperimentService:
                     data["t"] = current_time - start_time
                     data["time"] = datetime.datetime.now().isoformat()
 
-                # ここでファイルへのデータ保存処理などを挟むことができる
-                # TODO: Save data to file
-                # self.save_to_file(data)
+                # Save data to file
+                if not self.data_saver:
+                    logger.error("Data saver is not initialized")
+                    raise RuntimeError("Data saver is not initialized")
+
+                try:
+                    self.data_saver.write_data(data)
+                except Exception:
+                    logger.exception("Failed to save data to file")
+                    raise
 
                 # Add to queue (Send to UI)
                 self.data_queue.put(data)
 
-        except Exception as e:
-            logger.error(f"Error during experiment execution: {e}")
+        except Exception:
+            logger.exception("Error during experiment execution")
+            exp.logger.exception(f"[system] Error during experiment execution")
             self._set_status(ExperimentStatus.ERROR)
+            # TODO: open dialogue
         finally:
             logger.info("Service: Executing cleanup...")
+            exp.logger.info(f"[system] Experiment finished. Cleaning up...")
             await exp.cleanup()
+            exp.logger.info(f"[system] cleanup() complete for experiment: {exp.name}")
+
+            # データ保存のクリーンアップ
+            self._cleanup_data_saving()
+
             if self.status != ExperimentStatus.ERROR:
                 self._set_status(ExperimentStatus.FINISHED)
 
             # ワーカースレッドの終了を通知
             self._worker_task = None
             logger.info(f"Service: Lifecycle finished with status {self.status.name}.")
-            
+
             # Stop the experiment thread
             logger.info("Service: Scheduling thread shutdown after experiment completion...")
             asyncio.create_task(self._shutdown_after_delay())
+
+    def _cleanup_data_saving(self):
+        """データ保存のクリーンアップ"""
+        if self.data_saver:
+            self.data_saver.stop_writing()
+            logger.info(f"CSV saved to: {self.data_saver.get_save_path()}")
+            self.data_saver = None
+
+        # 実験ロガーのクリーンアップ
+        if self.experiment_logger and self.experiment_file_handler:
+            self.experiment_logger.info(f"Experiment completed")
+            self.experiment_logger.removeHandler(self.experiment_file_handler)
+            self.experiment_file_handler.close()
+            self.experiment_logger = None
+            self.experiment_file_handler = None
 
     async def _shutdown_after_delay(self):
         """実験終了後、少し遅延してスレッドを停止"""
         await asyncio.sleep(0.5)  # データストリームの処理完了を待つ
         if not self._experiment_active:
             return
-            
+
         logger.info("Service: Shutting down experiment thread after completion...")
-        
+
         # 現在のイベントループからスレッド停止をスケジュール
         def shutdown_thread():
             if self.loop and self.loop.is_running():
                 self.loop.call_soon_threadsafe(self.loop.stop)
-        
+
         threading.Thread(target=shutdown_thread, daemon=True).start()
-        
+
         # フラグを更新
         self._experiment_active = False

@@ -16,11 +16,11 @@ logger = getLogger(__name__)
 
 class TkinterLogHandler(Handler):
     """tkinterのTextウィジェットにログを出力するシンプルなハンドラー"""
-    
+
     def __init__(self, log_queue: queue.Queue):
         super().__init__()
         self.log_queue = log_queue
-        
+
     def emit(self, record: LogRecord):
         """ログレコードをキューに追加するだけ"""
         try:
@@ -29,12 +29,13 @@ class TkinterLogHandler(Handler):
             level = record.levelname
             message = record.getMessage()
             formatted_message = f"{timestamp} - {level} - {message}\n"
-            
+
             # キューにメッセージを追加
             self.log_queue.put(formatted_message)
         except Exception:
             # ハンドラー内でエラーが発生してもアプリケーションを止めない
             pass
+
 
 class View(tk.Tk):
     def __init__(self):
@@ -70,11 +71,11 @@ class View(tk.Tk):
             if self.log_text:
                 self.log_text.insert("end", message)
                 self.log_text.see("end")
-                
+
                 # 行数が多くなりすぎた場合は古い行を削除
-                lines = int(self.log_text.index('end-1c').split('.')[0])
+                lines = int(self.log_text.index("end-1c").split(".")[0])
                 if lines > 1000:  # 1000行を超えたら古い行を削除
-                    self.log_text.delete('1.0', '100.0')
+                    self.log_text.delete("1.0", "100.0")
         except Exception:
             pass
 
@@ -211,7 +212,6 @@ class View(tk.Tk):
         result_log_notebook = ttk.Notebook(display_pane)
         display_pane.add(result_log_notebook, weight=1)
 
-        
         # -- タブ1: ログビュー --
         log_tab = ttk.Frame(result_log_notebook, padding=5)
         result_log_notebook.add(log_tab, text="ログ")
@@ -349,7 +349,7 @@ class View(tk.Tk):
                             params[name] = value  # 文字列として保存
                 else:
                     # その他のウィジェットの場合
-                    params[name] = widget.get() if hasattr(widget, 'get') else None
+                    params[name] = widget.get() if hasattr(widget, "get") else None
             except (ValueError, AttributeError):
                 params[name] = None
         return params
@@ -369,7 +369,7 @@ class View(tk.Tk):
 
             widget = self._create_field_widget(field)
             widget.grid(row=i, column=1, sticky="ew", pady=2)
-            
+
             self.param_entries[name] = widget
 
     def _create_field_widget(self, field: OptionField) -> tk.Widget:
@@ -447,7 +447,7 @@ class View(tk.Tk):
             # 既存の結果をクリア
             for item in self.result_tree.get_children():
                 self.result_tree.delete(item)
-    
+
     def set_result_columns(self, columns: List[str]):
         """結果テーブルの列を設定"""
         if self.result_tree:

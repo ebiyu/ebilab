@@ -16,6 +16,7 @@ from .view import View
 
 logger = getLogger(__name__)
 
+
 class DefaultPlotter(BasePlotter):
     name = "default"
 
@@ -48,13 +49,14 @@ class DefaultPlotter(BasePlotter):
             if len(numeric_columns) > 1:
                 self._ax.legend()
 
+
 class TkinterLogHandler(Handler):
     """A simple handler to add log to Queue"""
-    
+
     def __init__(self):
         super().__init__()
         self.log_queue = queue.Queue()
-        
+
     def emit(self, record: LogRecord):
         """ログレコードをキューに追加するだけ"""
         try:
@@ -63,12 +65,13 @@ class TkinterLogHandler(Handler):
             level = record.levelname
             message = record.getMessage()
             formatted_message = f"{timestamp} - {level} - {message}\n"
-            
+
             # キューにメッセージを追加
             self.log_queue.put(formatted_message)
         except Exception:
             # ハンドラー内でエラーが発生してもアプリケーションを止めない
             pass
+
 
 class ExperimentController:
     """
@@ -94,10 +97,10 @@ class ExperimentController:
         """コントローラーの初期化"""
         # サービスを初期化（軽量初期化）
         self.service.initialize()
-        
+
         # ステータス変更コールバックを設定
         self.service.add_status_callback(self._on_status_changed)
-        
+
         # UIを作成
         self.app = View()
 
@@ -140,15 +143,16 @@ class ExperimentController:
         """ログハンドラーを設定してloggerの出力をUIに表示"""
         # カスタムログハンドラーを作成（キューを渡す）
         self.log_handler = TkinterLogHandler()
-        
+
         # ルートロガーに追加（すべてのloggerの出力をキャッチ）
         import logging
+
         root_logger = logging.getLogger()
         root_logger.addHandler(self.log_handler)
-        
+
         # ログレベルを設定（DEBUG以上のメッセージを表示）
         self.log_handler.setLevel(logging.DEBUG)
-        
+
         # 初期メッセージを追加
         logger.info("アプリケーションが開始されました。")
 
@@ -213,7 +217,9 @@ class ExperimentController:
         # 実験クラスに登録されたプロッターを取得
         if hasattr(self.current_experiment_class, "_plotters"):
             self.available_plotters = self.current_experiment_class._plotters.copy()
-            logger.info(f"Available plotters for {self.current_experiment_class.__name__}: {[p.name for p in self.available_plotters]}")
+            logger.info(
+                f"Available plotters for {self.current_experiment_class.__name__}: {[p.name for p in self.available_plotters]}"
+            )
         else:
             logger.warning("`_plotters` attribute not found in experiment class.")
             self.available_plotters = []
@@ -259,16 +265,16 @@ class ExperimentController:
         """サービスのステータス変更時の処理"""
         if not self.app:
             return
-            
+
         # UIスレッドで状態を更新
         status_map = {
             ExperimentStatus.IDLE: "idle",
-            ExperimentStatus.RUNNING: "running", 
+            ExperimentStatus.RUNNING: "running",
             ExperimentStatus.STOPPING: "stopping",
             ExperimentStatus.FINISHED: "finished",
-            ExperimentStatus.ERROR: "error"
+            ExperimentStatus.ERROR: "error",
         }
-        
+
         ui_status = status_map.get(status, "idle")
         self.app.after(0, lambda: self.app.update_experiment_state(ui_status))
 
@@ -292,7 +298,7 @@ class ExperimentController:
         logger.info(f"Using plotter: {self.current_plotter.name}")
 
     def _update_plot(self):
-        """ Update plot using the current plotter """
+        """Update plot using the current plotter"""
         if not self.app or not self.current_plotter or len(self.experiment_data) < 1:
             logger.debug("Skipping _update_plot()")
             return
