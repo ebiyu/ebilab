@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import List, Type, Any, Dict
+from typing import Any
 
-from .plotting import BasePlotter
 from .fields import OptionField
+from .plotting import BasePlotter
 
 logger = getLogger(__name__)
 
@@ -14,13 +14,13 @@ class BaseExperiment:
     Inherit this class to define an experiment.
     """
 
-    columns: List[str] = []  # Columns to be saved in CSV files
+    columns: list[str] = []  # Columns to be saved in CSV files
     name: str = "experiment"  # Base name for the experiment (used in file names)
 
-    _plotters: List[Type[BasePlotter]] = []  # This will be set by @register_plotter decorator
+    _plotters: list[type[BasePlotter]] = []  # This will be set by @register_plotter decorator
 
     @classmethod
-    def register_plotter(cls, plotter_class: Type[BasePlotter]) -> Type[BasePlotter]:
+    def register_plotter(cls, plotter_class: type[BasePlotter]) -> type[BasePlotter]:
         """decorator to register a plotter class"""
         logger.debug(f"Registering plotter: {plotter_class.__name__} in {cls.__name__}")
         if not issubclass(plotter_class, BasePlotter):
@@ -34,7 +34,7 @@ class BaseExperiment:
         self._setup_option_value(options)
 
     @classmethod
-    def _get_option_fields(cls) -> Dict[str, Any]:
+    def _get_option_fields(cls) -> dict[str, Any]:
         """Return dict of field which inherits OptionField"""
         result = {}
         for attr_name in dir(cls):

@@ -4,11 +4,9 @@ Settings management for ebilab.
 
 from __future__ import annotations
 
-import os
+import configparser
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-import configparser
 
 
 @dataclass
@@ -41,12 +39,12 @@ class Settings:
 class SettingsManager:
     """設定の読み込み・保存を管理するクラス"""
 
-    def __init__(self, config_file: Optional[Path] = None):
+    def __init__(self, config_file: Path | None = None):
         self.config_file = config_file or self._find_config_file()
         self._settings = Settings()
         self._load_settings()
 
-    def _find_config_file(self) -> Optional[Path]:
+    def _find_config_file(self) -> Path | None:
         """設定ファイルを検索"""
         # 現在のディレクトリから上位に向かってebilab.iniを探す
         current = Path.cwd()
@@ -114,7 +112,7 @@ class SettingsManager:
 
 
 # グローバル設定管理インスタンス
-_settings_manager: Optional[SettingsManager] = None
+_settings_manager: SettingsManager | None = None
 
 
 def get_settings_manager() -> SettingsManager:

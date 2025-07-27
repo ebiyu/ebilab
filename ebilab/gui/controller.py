@@ -1,12 +1,10 @@
-import asyncio
-from logging import getLogger, Handler, LogRecord
-import queue
-import threading
-from typing import Type, Dict, Any, Optional, List
-from pathlib import Path
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from __future__ import annotations
+
 import datetime
+import queue
+from logging import Handler, LogRecord, getLogger
+from typing import Any
+
 import pandas as pd
 
 from ..api.experiment import BaseExperiment
@@ -80,18 +78,18 @@ class ExperimentController:
     アプリケーションの寿命全体を通じて存続します。
     """
 
-    def __init__(self, experiment_classes: List[Type[BaseExperiment]]):
+    def __init__(self, experiment_classes: list[type[BaseExperiment]]):
         self.experiment_classes = experiment_classes
-        self.current_experiment_class: Optional[Type[BaseExperiment]] = None
+        self.current_experiment_class: type[BaseExperiment] | None = None
         self.service: ExperimentService = ExperimentService()  # 単一のサービスインスタンス
-        self.app: Optional[View] = None
+        self.app: View | None = None
 
         # データ記録
-        self.experiment_data: List[Dict[str, Any]] = []
+        self.experiment_data: list[dict[str, Any]] = []
 
         # プロッター関連
-        self.current_plotter: Optional[BasePlotter] = None
-        self.available_plotters: List[Type[BasePlotter]] = []
+        self.current_plotter: BasePlotter | None = None
+        self.available_plotters: list[type[BasePlotter]] = []
 
     def initialize(self):
         """コントローラーの初期化"""
@@ -218,7 +216,8 @@ class ExperimentController:
         if hasattr(self.current_experiment_class, "_plotters"):
             self.available_plotters = self.current_experiment_class._plotters.copy()
             logger.info(
-                f"Available plotters for {self.current_experiment_class.__name__}: {[p.name for p in self.available_plotters]}"
+                f"Available plotters for {self.current_experiment_class.__name__}: "
+                f"{[p.name for p in self.available_plotters]}"
             )
         else:
             logger.warning("`_plotters` attribute not found in experiment class.")
@@ -246,7 +245,7 @@ class ExperimentController:
 
         self.experiment_data.clear()
 
-    def on_start_experiment(self, params: Dict[str, Any]):
+    def on_start_experiment(self, params: dict[str, Any]):
         """実験開始ボタンが押されたときの処理"""
         if not self.current_experiment_class or not self.app:
             return
@@ -311,7 +310,7 @@ class ExperimentController:
         except Exception:
             logger.exception("Error updating plot")
 
-    def _update_ui_with_data(self, data: Dict[str, Any]):
+    def _update_ui_with_data(self, data: dict[str, Any]):
         """新しいデータでUIを更新"""
         if not self.app:
             return
@@ -364,7 +363,7 @@ class ExperimentController:
 
 
 # 使用例
-def create_controller(experiment_classes: List[Type[BaseExperiment]]) -> ExperimentController:
+def create_controller(experiment_classes: list[type[BaseExperiment]]) -> ExperimentController:
     """コントローラーのファクトリー関数"""
     controller = ExperimentController(experiment_classes)
     controller.initialize()
@@ -372,7 +371,7 @@ def create_controller(experiment_classes: List[Type[BaseExperiment]]) -> Experim
 
 
 # コンビニエンス関数
-def launch_gui(experiment_classes: List[Type[BaseExperiment]]):
+def launch_gui(experiment_classes: list[type[BaseExperiment]]):
     """GUIアプリケーションを起動"""
     controller = create_controller(experiment_classes)
 

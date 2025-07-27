@@ -7,9 +7,9 @@ from __future__ import annotations
 import csv
 import datetime
 import logging
+from logging import FileHandler, Formatter, getLogger
 from pathlib import Path
-from typing import Dict, Any, List, Optional, TextIO
-from logging import getLogger, FileHandler, Formatter
+from typing import Any, TextIO
 
 from .settings import get_settings
 
@@ -21,10 +21,10 @@ class ExperimentLoggerManager:
 
     def __init__(self, experiment_name: str):
         self.experiment_name = experiment_name
-        self.file_handler: Optional[FileHandler] = None
-        self.file_handler_debug: Optional[FileHandler] = None
-        self.log_path: Optional[Path] = None
-        self.log_path_debug: Optional[Path] = None
+        self.file_handler: FileHandler | None = None
+        self.file_handler_debug: FileHandler | None = None
+        self.log_path: Path | None = None
+        self.log_path_debug: Path | None = None
         self.experiment_logger = getLogger(f"ebilab.experiment.{experiment_name}")
 
         self._initialize()
@@ -35,15 +35,18 @@ class ExperimentLoggerManager:
         data_settings = settings.data
 
         # Create directory if it doesn't exist
-        save_dir = data_settings.csv_base_dir / datetime.datetime.now().strftime(data_settings.date_folder_format)
+        save_dir = data_settings.csv_base_dir / datetime.datetime.now().strftime(
+            data_settings.date_folder_format
+        )
         save_dir.mkdir(parents=True, exist_ok=True)
 
         # Create log file path
         timestamp = datetime.datetime.now().strftime(data_settings.timestamp_format)
-        filename = data_settings.filename_format.format(name=self.experiment_name, timestamp=timestamp)
+        filename = data_settings.filename_format.format(
+            name=self.experiment_name, timestamp=timestamp
+        )
         self.log_path = save_dir / f"{filename}.log"
         self.log_path_debug = save_dir / f"{filename}.debug.log"
-
 
         # Create file handler
         formatter = Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -64,15 +67,16 @@ class ExperimentLoggerManager:
         logger.debug(f"Created experiment log handler: {self.log_path}")
         logger.debug(f"Created experiment debug log handler: {self.log_path_debug}")
 
+
 class ExperimentDataSaver:
     """実験データをCSVファイルに保存するクラス"""
 
-    def __init__(self, experiment_name: str, columns: List[str]):
+    def __init__(self, experiment_name: str, columns: list[str]):
         self.experiment_name = experiment_name
         self.columns = columns
-        self.csv_file: Optional[TextIO] = None
-        self.csv_writer: Optional[csv.writer] = None
-        self.csv_path: Optional[Path] = None
+        self.csv_file: TextIO | None = None
+        self.csv_writer: csv.writer | None = None
+        self.csv_path: Path | None = None
 
         # 保存先パスを決定
         self._prepare_save_path()
@@ -131,7 +135,7 @@ class ExperimentDataSaver:
                 self.csv_writer = None
             raise
 
-    def write_data(self, data: Dict[str, Any]):
+    def write_data(self, data: dict[str, Any]):
         """データを1行書き込み"""
         if self.csv_writer is None:
             logger.error("CSV writer is not initialized")
@@ -164,6 +168,6 @@ class ExperimentDataSaver:
                 self.csv_file = None
                 self.csv_writer = None
 
-    def get_save_path(self) -> Optional[Path]:
+    def get_save_path(self) -> Path | None:
         """保存先パスを取得"""
         return self.csv_path

@@ -1,7 +1,6 @@
 # sample of GUI app
-import random
 import asyncio
-import time
+import random
 
 from ebilab.api import BaseExperiment, BasePlotter, FloatField, SelectField
 from ebilab.gui.controller import launch_gui
@@ -101,9 +100,9 @@ if __name__ == "__main__":
     # Setup logging
     handler = logging.StreamHandler()
     handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
     handler.setFormatter(formatter)
-    
+
     logger = logging.getLogger("ebilab")
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)

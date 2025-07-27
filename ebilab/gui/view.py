@@ -1,15 +1,16 @@
-import tkinter as tk
-from tkinter import ttk
-from typing import Callable, Optional, Dict, Any, List
-from logging import getLogger, Handler, LogRecord
+from __future__ import annotations
+
 import datetime
 import queue
-import threading
+import tkinter as tk
+from logging import Handler, LogRecord, getLogger
+from tkinter import ttk
+from typing import Any, Callable
 
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 
-from ..api.fields import OptionField, FloatField, IntField, StrField, BoolField, SelectField
+from ..api.fields import BoolField, FloatField, IntField, OptionField, SelectField, StrField
 
 logger = getLogger(__name__)
 
@@ -44,24 +45,24 @@ class View(tk.Tk):
         self.geometry("1200x700")
 
         # コントローラーからのコールバック
-        self.on_experiment_selected: Optional[Callable[[str], None]] = None
-        self.on_start_experiment: Optional[Callable[[Dict[str, Any]], None]] = None
-        self.on_stop_experiment: Optional[Callable[[], None]] = None
-        self.on_history_selected: Optional[Callable[[str], None]] = None
+        self.on_experiment_selected: Callable[[str], None] | None = None
+        self.on_start_experiment: Callable[[dict[str, Any]], None] | None = None
+        self.on_stop_experiment: Callable[[], None] | None = None
+        self.on_history_selected: Callable[[str], None] | None = None
 
         # UI要素の参照
-        self.exp_combo: Optional[ttk.Combobox] = None
-        self.start_button: Optional[ttk.Button] = None
-        self.stop_button: Optional[ttk.Button] = None
-        self.param_entries: Dict[str, ttk.Entry] = {}
-        self.result_tree: Optional[ttk.Treeview] = None
-        self.log_text: Optional[tk.Text] = None
-        self.history_tree: Optional[ttk.Treeview] = None
+        self.exp_combo: ttk.Combobox | None = None
+        self.start_button: ttk.Button | None = None
+        self.stop_button: ttk.Button | None = None
+        self.param_entries: dict[str, ttk.Entry] = {}
+        self.result_tree: ttk.Treeview | None = None
+        self.log_text: tk.Text | None = None
+        self.history_tree: ttk.Treeview | None = None
 
         # matplotlib関連
-        self.figure: Optional[Figure] = None
+        self.figure: Figure | None = None
         self.ax = None
-        self.canvas: Optional[FigureCanvasTkAgg] = None
+        self.canvas: FigureCanvasTkAgg | None = None
 
         self._create_ui()
 
@@ -281,14 +282,14 @@ class View(tk.Tk):
                 self.on_history_selected(values[0])
 
     # パブリックメソッド（コントローラーから呼び出される）
-    def set_experiment_list(self, experiment_names: List[str]):
+    def set_experiment_list(self, experiment_names: list[str]):
         """実験リストを設定"""
         if self.exp_combo:
             self.exp_combo["values"] = experiment_names
             if experiment_names:
                 self.exp_combo.current(0)
 
-    def get_experiment_parameters(self) -> Dict[str, Any]:
+    def get_experiment_parameters(self) -> dict[str, Any]:
         """現在の実験パラメータを取得"""
         # TODO: validationを追加する
         params = {}
@@ -300,7 +301,6 @@ class View(tk.Tk):
                 elif isinstance(widget, ttk.Combobox):
                     # コンボボックスの場合
                     value = widget.get()
-                    # param_entries[name]に対応するOptionFieldがSelectFieldかつchoices型がint/floatなら変換
                     field = self.param_fields[name]
                     if field and isinstance(field, SelectField):
                         # choicesの型を推測
@@ -354,7 +354,7 @@ class View(tk.Tk):
                 params[name] = None
         return params
 
-    def set_experiment_parameters(self, param_fields: Dict[str, OptionField]):
+    def set_experiment_parameters(self, param_fields: dict[str, OptionField]):
         """実験パラメータフィールドを動的に設定"""
         # 既存のパラメータエントリをクリア
         for widget in self.params_frame.winfo_children():
@@ -423,7 +423,7 @@ class View(tk.Tk):
             if state == "finished":
                 self.add_log_message("実験が完了しました。")
 
-    def add_result_row(self, data: Dict[str, Any]):
+    def add_result_row(self, data: dict[str, Any]):
         """結果テーブルに新しい行を追加"""
 
         if self.result_tree:
@@ -448,7 +448,7 @@ class View(tk.Tk):
             for item in self.result_tree.get_children():
                 self.result_tree.delete(item)
 
-    def set_result_columns(self, columns: List[str]):
+    def set_result_columns(self, columns: list[str]):
         """結果テーブルの列を設定"""
         if self.result_tree:
             # 列をクリアして新しい列を設定
@@ -461,8 +461,8 @@ class View(tk.Tk):
 
     def update_plot(
         self,
-        x_data: List[float],
-        y_data: List[float],
+        x_data: list[float],
+        y_data: list[float],
         xlabel: str = "X-axis",
         ylabel: str = "Y-axis",
         title: str = "Real-time Plot",

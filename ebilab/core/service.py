@@ -1,18 +1,16 @@
 # src/ebilab/services/application.py
+from __future__ import annotations
 
 import asyncio
+import datetime
 import queue
 import threading
-import logging
-from enum import Enum, auto
-from typing import Type, Dict, Any, Optional
-from logging import getLogger, FileHandler
 import time
-import datetime
-from pathlib import Path
+from enum import Enum, auto
+from logging import FileHandler, getLogger
+from typing import Any
 
 from ..api.experiment import BaseExperiment
-from .event import Event
 from .data_saver import ExperimentDataSaver, ExperimentLoggerManager
 
 logger = getLogger(__name__)
@@ -33,7 +31,7 @@ class ExperimentService:
     """
 
     def __init__(self):
-        self.current_experiment_cls: Type[BaseExperiment] = None
+        self.current_experiment_cls: type[BaseExperiment] = None
         self.status = ExperimentStatus.IDLE
         self.data_queue = None
         self.stop_event = None
@@ -45,9 +43,9 @@ class ExperimentService:
         self._experiment_active = False
 
         # データ保存関連
-        self.data_saver: Optional[ExperimentDataSaver] = None
-        self.experiment_logger: Optional[getLogger] = None
-        self.experiment_file_handler: Optional[FileHandler] = None
+        self.data_saver: ExperimentDataSaver | None = None
+        self.experiment_logger: getLogger | None = None
+        self.experiment_file_handler: FileHandler | None = None
 
         # ステータス変更コールバック
         self._status_callbacks = []
@@ -134,7 +132,7 @@ class ExperimentService:
             self.status = status
             self._notify_status_change()
 
-    def start_experiment(self, experiment_cls: Type[BaseExperiment], params: Dict[str, Any]):
+    def start_experiment(self, experiment_cls: type[BaseExperiment], params: dict[str, Any]):
         """
         新しい実験を開始する。
 
@@ -195,7 +193,10 @@ class ExperimentService:
         # inject logger into the experiment instance
         experiment_instance.logger = self.experiment_logger
 
-        logger.info(f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, {self.experiment_logger_manager.log_path_debug}")
+        logger.info(
+            f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, "
+            f"{self.experiment_logger_manager.log_path_debug}"
+        )
 
     def stop_experiment(self):
         """実行中の実験を中断する。"""
@@ -215,8 +216,11 @@ class ExperimentService:
             exp.logger.info(f"[system] Starting experiment: {exp.name}")
             setup_start_time = time.perf_counter()
             await exp.setup()
-            exp.logger.info(f"[system] Setup complete for experiment: {exp.name}, took {time.perf_counter() - setup_start_time:.2f} seconds.")
-            exp.logger.info(f"[system] Running steps...")
+            exp.logger.info(
+                f"[system] Setup complete for experiment: {exp.name}, "
+                f"took {time.perf_counter() - setup_start_time:.2f} seconds."
+            )
+            exp.logger.info("[system] Running steps...")
 
             start_time = time.perf_counter()
 
@@ -249,12 +253,12 @@ class ExperimentService:
 
         except Exception:
             logger.exception("Error during experiment execution")
-            exp.logger.exception(f"[system] Error during experiment execution")
+            exp.logger.exception("[system] Error during experiment execution")
             self._set_status(ExperimentStatus.ERROR)
             # TODO: open dialogue
         finally:
             logger.info("Service: Executing cleanup...")
-            exp.logger.info(f"[system] Experiment finished. Cleaning up...")
+            exp.logger.info("[system] Experiment finished. Cleaning up...")
             await exp.cleanup()
             exp.logger.info(f"[system] cleanup() complete for experiment: {exp.name}")
 
@@ -281,7 +285,7 @@ class ExperimentService:
 
         # 実験ロガーのクリーンアップ
         if self.experiment_logger and self.experiment_file_handler:
-            self.experiment_logger.info(f"Experiment completed")
+            self.experiment_logger.info("Experiment completed")
             self.experiment_logger.removeHandler(self.experiment_file_handler)
             self.experiment_file_handler.close()
             self.experiment_logger = None

@@ -9,8 +9,8 @@ ebilab.gui - 実験GUI管理モジュール
 - launch_gui: 実験GUIを起動するための便利関数
 """
 
-from .view import View
 from .controller import ExperimentController, create_controller, launch_gui
+from .view import View
 
 __all__ = [
     "View",
