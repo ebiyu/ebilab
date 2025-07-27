@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+from typing import Any
+
 import pandas as pd
+
+from .fields import OptionField
 
 
 class BasePlotter:
@@ -15,6 +21,16 @@ class BasePlotter:
 
         # matplotlib figure (コントローラーから設定される)
         self.fig = None
+
+    @classmethod
+    def _get_option_fields(cls) -> dict[str, Any]:
+        """Return dict of field which inherits OptionField"""
+        result = {}
+        for attr_name in dir(cls):
+            attr_value = getattr(cls, attr_name)
+            if isinstance(attr_value, OptionField):
+                result[attr_name] = getattr(cls, attr_name, None)
+        return result
 
     def _setup_fields(self):
         """クラスに定義されたフィールドのデフォルト値を設定"""

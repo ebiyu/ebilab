@@ -46,15 +46,19 @@ class View(tk.Tk):
 
         # コントローラーからのコールバック
         self.on_experiment_selected: Callable[[str], None] | None = None
+        self.on_plotter_selected: Callable[[str], None] | None = None
+        self.on_plotter_parameter_changed: Callable[[], None] | None = None
         self.on_start_experiment: Callable[[dict[str, Any]], None] | None = None
         self.on_stop_experiment: Callable[[], None] | None = None
         self.on_history_selected: Callable[[str], None] | None = None
 
         # UI要素の参照
         self.exp_combo: ttk.Combobox | None = None
+        self.plotter_combo: ttk.Combobox | None = None
         self.start_button: ttk.Button | None = None
         self.stop_button: ttk.Button | None = None
         self.param_entries: dict[str, ttk.Entry] = {}
+        self.plotter_param_entries: dict[str, ttk.Entry] = {}
         self.result_tree: ttk.Treeview | None = None
         self.log_text: tk.Text | None = None
         self.history_tree: ttk.Treeview | None = None
@@ -120,9 +124,20 @@ class View(tk.Tk):
         self.exp_combo.bind("<<ComboboxSelected>>", self._on_experiment_combo_changed)
         self.exp_combo.grid(row=1, column=0, sticky="ew", pady=(0, 15))
 
+        # プロッター選択
+        ttk.Label(frame, text="プロッター選択").grid(row=2, column=0, sticky="w", pady=(0, 2))
+        self.plotter_combo = ttk.Combobox(frame, values=[], state="readonly")
+        self.plotter_combo.bind("<<ComboboxSelected>>", self._on_plotter_combo_changed)
+        self.plotter_combo.grid(row=3, column=0, sticky="ew", pady=(0, 15))
+
+        # プロッターパラメータフレーム
+        self.plotter_params_frame = ttk.Labelframe(frame, text="プロッターパラメータ", padding=10)
+        self.plotter_params_frame.grid(row=4, column=0, sticky="nsew")
+        self.plotter_params_frame.columnconfigure(1, weight=1)
+
         # 実験パラメータフレーム
         self.params_frame = ttk.Labelframe(frame, text="実験パラメータ", padding=10)
-        self.params_frame.grid(row=2, column=0, sticky="nsew")
+        self.params_frame.grid(row=5, column=0, sticky="nsew")
         self.params_frame.columnconfigure(1, weight=1)
 
         # デフォルトのパラメータ
@@ -130,7 +145,7 @@ class View(tk.Tk):
 
         # ボタンフレーム
         button_frame = ttk.Frame(frame, padding=(0, 20, 0, 0))
-        button_frame.grid(row=3, column=0, sticky="ew")
+        button_frame.grid(row=6, column=0, sticky="ew")
         button_frame.columnconfigure((0, 1), weight=1)
 
         self.start_button = ttk.Button(
@@ -253,6 +268,12 @@ class View(tk.Tk):
             selected = self.exp_combo.get()
             self.on_experiment_selected(selected)
 
+    def _on_plotter_combo_changed(self, event):
+        """プロッター選択コンボボックスが変更されたとき"""
+        if self.on_plotter_selected:
+            selected = self.plotter_combo.get()
+            self.on_plotter_selected(selected)
+
     def _on_start_clicked(self):
         """実験開始ボタンがクリックされたとき"""
         if self.on_start_experiment:
@@ -301,7 +322,7 @@ class View(tk.Tk):
                 elif isinstance(widget, ttk.Combobox):
                     # コンボボックスの場合
                     value = widget.get()
-                    field = self.param_fields[name]
+                    field = self.param_fields.get(name) if hasattr(self, "param_fields") else None
                     if field and isinstance(field, SelectField):
                         # choicesの型を推測
                         if field.choices and isinstance(field.choices[0], int):
@@ -339,20 +360,154 @@ class View(tk.Tk):
                         else:
                             params[name] = value
                     else:
-                        params[name] = value
-                    if "." in value:
-                        params[name] = float(value)
-                    else:
-                        try:
-                            params[name] = int(value)
-                        except ValueError:
-                            params[name] = value  # 文字列として保存
+                        # フィールド情報がない場合は値から型を推測
+                        if "." in value:
+                            try:
+                                params[name] = float(value)
+                            except ValueError:
+                                params[name] = value
+                        else:
+                            try:
+                                params[name] = int(value)
+                            except ValueError:
+                                params[name] = value  # 文字列として保存
                 else:
                     # その他のウィジェットの場合
                     params[name] = widget.get() if hasattr(widget, "get") else None
             except (ValueError, AttributeError):
                 params[name] = None
         return params
+
+    def get_plotter_parameters(self) -> dict[str, Any]:
+        """現在のプロッターパラメータを取得"""
+        params = {}
+        for name, widget in self.plotter_param_entries.items():
+            try:
+                if isinstance(widget, ttk.Checkbutton):
+                    # チェックボックスの場合
+                    params[name] = widget.var.get()
+                elif isinstance(widget, ttk.Combobox):
+                    # コンボボックスの場合
+                    value = widget.get()
+                    field = (
+                        self.plotter_param_fields.get(name)
+                        if hasattr(self, "plotter_param_fields")
+                        else None
+                    )
+                    if field and isinstance(field, SelectField):
+                        # choicesの型を推測
+                        if field.choices and isinstance(field.choices[0], int):
+                            try:
+                                params[name] = int(value)
+                            except ValueError:
+                                params[name] = value
+                        elif field.choices and isinstance(field.choices[0], float):
+                            try:
+                                params[name] = float(value)
+                            except ValueError:
+                                params[name] = value
+                        else:
+                            params[name] = value
+                    else:
+                        params[name] = value
+                elif isinstance(widget, ttk.Entry):
+                    # エントリーの場合
+                    value = widget.get()
+                    # plotter_param_fieldsの型に応じて変換
+                    field = (
+                        self.plotter_param_fields.get(name)
+                        if hasattr(self, "plotter_param_fields")
+                        else None
+                    )
+                    if field:
+                        if isinstance(field, FloatField):
+                            try:
+                                params[name] = float(value)
+                            except ValueError:
+                                params[name] = value
+                        elif isinstance(field, IntField):
+                            try:
+                                params[name] = int(value)
+                            except ValueError:
+                                params[name] = value
+                        elif isinstance(field, BoolField):
+                            params[name] = bool(value)
+                        else:
+                            params[name] = value
+                    else:
+                        # フィールド情報がない場合は値から型を推測
+                        if "." in value:
+                            try:
+                                params[name] = float(value)
+                            except ValueError:
+                                params[name] = value
+                        else:
+                            try:
+                                params[name] = int(value)
+                            except ValueError:
+                                params[name] = value  # 文字列として保存
+                else:
+                    # その他のウィジェットの場合
+                    params[name] = widget.get() if hasattr(widget, "get") else None
+            except (ValueError, AttributeError):
+                params[name] = None
+        return params
+        return params
+
+    def set_plotter_list(self, plotter_names: list[str]):
+        """プロッターリストを設定"""
+        if self.plotter_combo:
+            self.plotter_combo["values"] = plotter_names
+            if plotter_names:
+                self.plotter_combo.current(0)
+
+    def set_plotter_parameters(self, fields: dict[str, Any]):
+        """プロッターパラメータUIを設定"""
+        # フィールド情報を保存
+        self.plotter_param_fields = fields
+        
+        # 既存のウィジェットを削除
+        for widget in self.plotter_params_frame.winfo_children():
+            widget.destroy()
+        self.plotter_param_entries.clear()
+
+        row = 0
+        for field_name, field in fields.items():
+            # ラベルを作成
+            label_text = field_name.replace("_", " ").title()
+            ttk.Label(self.plotter_params_frame, text=f"{label_text}:").grid(
+                row=row, column=0, sticky="w", pady=2
+            )
+
+            # フィールドの型に応じてウィジェットを作成
+            if isinstance(field, BoolField):
+                var = tk.BooleanVar(value=field.default)
+                widget = ttk.Checkbutton(self.plotter_params_frame, variable=var)
+                widget.var = var
+                # パラメータ変更時にコールバックを呼び出し
+                widget.configure(command=self._on_plotter_parameter_changed)
+            elif isinstance(field, SelectField):
+                widget = ttk.Combobox(
+                    self.plotter_params_frame, values=field.choices, state="readonly"
+                )
+                widget.current(field.default_index)
+                # パラメータ変更時にコールバックを呼び出し
+                widget.bind("<<ComboboxSelected>>", lambda e: self._on_plotter_parameter_changed())
+            else:
+                widget = ttk.Entry(self.plotter_params_frame)
+                widget.insert(0, str(field.default))
+                # パラメータ変更時にコールバックを呼び出し（Enterキーまたはフォーカス離脱時）
+                widget.bind("<Return>", lambda e: self._on_plotter_parameter_changed())
+                widget.bind("<FocusOut>", lambda e: self._on_plotter_parameter_changed())
+
+            widget.grid(row=row, column=1, sticky="ew", pady=2)
+            self.plotter_param_entries[field_name] = widget
+            row += 1
+
+    def _on_plotter_parameter_changed(self):
+        """プロッターパラメータが変更されたときの処理"""
+        if self.on_plotter_parameter_changed:
+            self.on_plotter_parameter_changed()
 
     def set_experiment_parameters(self, param_fields: dict[str, OptionField]):
         """実験パラメータフィールドを動的に設定"""

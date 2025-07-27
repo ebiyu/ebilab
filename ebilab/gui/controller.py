@@ -81,6 +81,7 @@ class ExperimentController:
     def __init__(self, experiment_classes: list[type[BaseExperiment]]):
         self.experiment_classes = experiment_classes
         self.current_experiment_class: type[BaseExperiment] | None = None
+        self.current_plotter_class: type[BasePlotter] | None = None
         self.service: ExperimentService = ExperimentService()  # 単一のサービスインスタンス
         self.app: View | None = None
 
@@ -121,6 +122,8 @@ class ExperimentController:
 
         # UIからのコールバックを設定
         self.app.on_experiment_selected = self.on_experiment_selected
+        self.app.on_plotter_selected = self.on_plotter_selected
+        self.app.on_plotter_parameter_changed = self.on_plotter_parameter_changed
         self.app.on_start_experiment = self.on_start_experiment
         self.app.on_stop_experiment = self.on_stop_experiment
         self.app.on_history_selected = self.on_experiment_history_selected
@@ -147,10 +150,6 @@ class ExperimentController:
         handler.setFormatter(formatter)
 
         logger = logging.getLogger("ebilab")
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
-
-        logger = logging.getLogger(__name__)
         logger.addHandler(handler)
         logger.setLevel(logging.DEBUG)
 
@@ -236,6 +235,77 @@ class ExperimentController:
             logger.warning("No plotters available, using default plotter.")
             self.available_plotters = [DefaultPlotter]
 
+        # UIのプロッターリストを更新
+        self._update_plotter_ui()
+
+    def _update_plotter_ui(self):
+        """プロッターUIの更新"""
+        if not self.app:
+            return
+
+        # プロッターリストを設定
+        plotter_names = [plotter.name for plotter in self.available_plotters]
+        self.app.set_plotter_list(plotter_names)
+
+        # 最初のプロッターを選択
+        if plotter_names:
+            self.on_plotter_selected(plotter_names[0])
+
+    def on_plotter_selected(self, plotter_name: str):
+        """プロッターが選択されたときの処理"""
+        for plotter_class in self.available_plotters:
+            if plotter_class.name == plotter_name:
+                self.current_plotter_class = plotter_class
+                break
+
+        # プロッターパラメータUIを更新
+        self._update_plotter_parameter_ui()
+
+        # 実験中でもプロッターを即座に切り替え
+        if self.app and self.app.figure:
+            self._initialize_plotter()
+            # 既存のデータでプロットを更新
+            if self.experiment_data:
+                self._update_plot()
+
+        logger.info(f"Selected plotter '{plotter_name}'")
+
+    def on_plotter_parameter_changed(self):
+        """プロッターパラメータが変更されたときの処理"""
+        if self.current_plotter and self.app:
+            # 現在のプロッターのパラメータを更新
+            plotter_params = self.app.get_plotter_parameters()
+            for key, value in plotter_params.items():
+                if hasattr(self.current_plotter, key):
+                    # 型変換を行う
+                    field = getattr(self.current_plotter_class, key, None)
+                    if field:
+                        try:
+                            if hasattr(field, "default"):
+                                # フィールドの型に基づいて適切に変換
+                                if isinstance(field.default, float):
+                                    value = float(value)
+                                elif isinstance(field.default, int):
+                                    value = int(value)
+                                elif isinstance(field.default, bool):
+                                    value = bool(value)
+                            setattr(self.current_plotter, key, value)
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Failed to set plotter parameter '{key}': {e}")
+
+            # プロットを再描画
+            if self.experiment_data:
+                self._update_plot()
+
+            logger.debug("Plotter parameters updated")
+
+    def _update_plotter_parameter_ui(self):
+        """プロッターパラメータUIの更新"""
+        if not self.current_plotter_class or not self.app:
+            return
+
+        self.app.set_plotter_parameters(self.current_plotter_class._get_option_fields())
+
     def _update_parameter_ui(self):
         """実験パラメータUIの更新"""
         if not self.current_experiment_class or not self.app:
@@ -287,13 +357,32 @@ class ExperimentController:
 
     def _initialize_plotter(self):
         """プロッターを初期化"""
-        if not self.available_plotters or not self.app or not self.app.figure:
+        if not self.current_plotter_class or not self.app or not self.app.figure:
             return
 
-        # 最初のプロッターを使用
-        plotter_class = self.available_plotters[0]
-        self.current_plotter = plotter_class()
+        # プロッターのインスタンスを作成
+        self.current_plotter = self.current_plotter_class()
         self.current_plotter.fig = self.app.figure
+
+        # プロッターパラメータを設定
+        plotter_params = self.app.get_plotter_parameters()
+        for key, value in plotter_params.items():
+            if hasattr(self.current_plotter, key):
+                # 型変換を行う
+                field = getattr(self.current_plotter_class, key, None)
+                if field:
+                    try:
+                        if hasattr(field, "default"):
+                            # フィールドの型に基づいて適切に変換
+                            if isinstance(field.default, float):
+                                value = float(value)
+                            elif isinstance(field.default, int):
+                                value = int(value)
+                            elif isinstance(field.default, bool):
+                                value = bool(value)
+                        setattr(self.current_plotter, key, value)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Failed to set plotter parameter '{key}': {e}")
 
         # プロッターのセットアップを実行
         try:

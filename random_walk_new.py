@@ -95,22 +95,6 @@ class HistgramPlotter(BasePlotter):
 
 
 if __name__ == "__main__":
-    import logging
-
-    # Setup logging
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-    handler.setFormatter(formatter)
-
-    logger = logging.getLogger("ebilab")
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-
-    logger = logging.getLogger(__name__)
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-
     # This is a sample code to run the experiment
     # You can run this file directly to see the experiment in action
     launch_gui([RandomWalkExperiment])
