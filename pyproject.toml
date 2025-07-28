@@ -57,6 +57,19 @@ dev = [
     "ruff>=0.12.5",
 ]
 
+[tool.ruff]
+target-version = "py38"
+exclude = [
+    "sample",
+    "docs",
+    "setup.py",
+]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "FA"]
+# TODO: B, SIM, D
+
 [tool.ebilab.data]
 csv_base_dir = "data"
 filename_format = "{name}-{timestamp}"
