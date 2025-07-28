@@ -69,6 +69,7 @@ class View(tk.Tk):
         self.canvas: FigureCanvasTkAgg | None = None
 
         self._create_ui()
+        self._setup_keyboard_shortcuts()
 
     def _append_log_to_text(self, message: str):
         """ログテキストウィジェットにメッセージを追加"""
@@ -149,12 +150,12 @@ class View(tk.Tk):
         button_frame.columnconfigure((0, 1), weight=1)
 
         self.start_button = ttk.Button(
-            button_frame, text="実験開始", command=self._on_start_clicked
+            button_frame, text="実験開始 (F5)", command=self._on_start_clicked
         )
         self.start_button.grid(row=0, column=0, sticky="ew", padx=2)
 
         self.stop_button = ttk.Button(
-            button_frame, text="中断", state="disabled", command=self._on_stop_clicked
+            button_frame, text="中断 (F9)", state="disabled", command=self._on_stop_clicked
         )
         self.stop_button.grid(row=0, column=1, sticky="ew", padx=2)
 
@@ -631,6 +632,41 @@ class View(tk.Tk):
             self.ax.set_title(title)
             self.ax.grid(True)
             self.canvas.draw()
+
+    def _setup_keyboard_shortcuts(self):
+        """キーボードショートカットを設定"""
+        # ウィンドウにフォーカスがある時にキーバインドが動作するよう設定
+        self.focus_set()
+
+        # 実験開始のショートカット: F5, Alt+R, Ctrl+R
+        self.bind("<F5>", self._keyboard_start_experiment)
+        self.bind("<Alt-r>", self._keyboard_start_experiment)
+        self.bind("<Control-r>", self._keyboard_start_experiment)
+
+        # 実験停止のショートカット: F9, Alt+S, Ctrl+S
+        self.bind("<F9>", self._keyboard_stop_experiment)
+        self.bind("<Alt-s>", self._keyboard_stop_experiment)
+        self.bind("<Control-s>", self._keyboard_stop_experiment)
+
+        # ウィンドウ全体でキーイベントを受け取れるようにする
+        self.bind_all("<F5>", self._keyboard_start_experiment)
+        self.bind_all("<Alt-r>", self._keyboard_start_experiment)
+        self.bind_all("<Control-r>", self._keyboard_start_experiment)
+        self.bind_all("<F9>", self._keyboard_stop_experiment)
+        self.bind_all("<Alt-s>", self._keyboard_stop_experiment)
+        self.bind_all("<Control-s>", self._keyboard_stop_experiment)
+
+    def _keyboard_start_experiment(self, event=None):
+        """キーボードから実験開始を実行"""
+        # 開始ボタンが有効な場合のみ実行
+        if self.start_button and self.start_button["state"] != "disabled":
+            self._on_start_clicked()
+
+    def _keyboard_stop_experiment(self, event=None):
+        """キーボードから実験停止を実行"""
+        # 停止ボタンが有効な場合のみ実行
+        if self.stop_button and self.stop_button["state"] != "disabled":
+            self._on_stop_clicked()
 
 
 if __name__ == "__main__":
