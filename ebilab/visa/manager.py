@@ -52,7 +52,11 @@ class VisaManager:
     def __init__(self) -> None:
         logger.debug("Initializing VisaManager")
         # omajinai
-        os.add_dll_directory("C:\\Program Files\\Keysight\\IO Libraries Suite\\bin")  # type: ignore
+        try:
+            os.add_dll_directory("C:\\Program Files\\Keysight\\IO Libraries Suite\\bin")  # type: ignore
+        except FileNotFoundError:
+            logger.info("Tried to load Keysight IO Libraries, but directory not found.")
+
 
         rm = pyvisa.ResourceManager()
         logger.info(f"Resource manager initialized: {str(rm)}")
