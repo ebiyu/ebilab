@@ -76,3 +76,25 @@ filename_format = "{name}-{timestamp}"
 timestamp_format = "%Y%m%d-%H%M%S"
 use_date_subfolder = true
 date_folder_format = "%y%m%d"
+
+[tool.mypy]
+exclude = [
+    "^sample",
+    "^docs",
+]
+disable_error_code = ["import-untyped", "unused-ignore"]
+warn_redundant_casts = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
