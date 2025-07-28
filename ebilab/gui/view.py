@@ -465,7 +465,7 @@ class View(tk.Tk):
         """プロッターパラメータUIを設定"""
         # フィールド情報を保存
         self.plotter_param_fields = fields
-        
+
         # 既存のウィジェットを削除
         for widget in self.plotter_params_frame.winfo_children():
             widget.destroy()

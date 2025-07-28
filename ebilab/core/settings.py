@@ -5,11 +5,9 @@ Settings management for ebilab.
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 
 from pydantic import BaseModel, Field
-
 
 if sys.version_info >= (3, 11):
     import tomllib
