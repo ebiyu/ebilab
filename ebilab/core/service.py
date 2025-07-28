@@ -214,15 +214,13 @@ class ExperimentService:
 
         try:
             exp.logger.info(f"[system] Starting experiment: {exp.name}")
-            setup_start_time = time.perf_counter()
+            start_time = time.perf_counter()
             await exp.setup()
             exp.logger.info(
                 f"[system] Setup complete for experiment: {exp.name}, "
-                f"took {time.perf_counter() - setup_start_time:.2f} seconds."
+                f"took {time.perf_counter() - start_time:.2f} seconds."
             )
             exp.logger.info("[system] Running steps...")
-
-            start_time = time.perf_counter()
 
             async for data in exp.steps():
                 # Check if the stop event is set
