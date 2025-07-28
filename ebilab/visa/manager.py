@@ -69,8 +69,8 @@ class VisaManager:
                 except:  # noqa: E722
                     logger.debug(f"No response to *IDN? from {addr}")
                     inst.close()
-            except:  # noqa: E722
-                pass
+            except:
+                logger.exception(f"Failed to open resource {addr}, skipping")
 
     def get_inst(self, pattern: str) -> Any | None:
         """
