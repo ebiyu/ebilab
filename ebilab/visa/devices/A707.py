@@ -3,7 +3,7 @@ from __future__ import annotations
 from time import sleep
 from typing import Any
 
-from ..visa import VisaDevice
+from ..manager import VisaDevice
 
 
 class A707(VisaDevice):

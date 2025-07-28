@@ -6,7 +6,7 @@ from typing import Any, overload
 
 from typing_extensions import deprecated
 
-from ..visa import VisaDevice
+from ..manager import VisaDevice
 
 
 class E4980(VisaDevice):

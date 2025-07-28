@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..visa import VisaDevice
+from ..manager import VisaDevice
 
 
 class K34411A(VisaDevice):
