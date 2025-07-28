@@ -656,19 +656,6 @@ class View(tk.Tk):
         # ウィンドウにフォーカスがある時にキーバインドが動作するよう設定
         self.focus_set()
 
-        # 実験開始のショートカット: F5, Alt+R, Ctrl+R
-        self.bind("<F5>", self._keyboard_start_experiment)
-        self.bind("<Alt-r>", self._keyboard_start_experiment)
-        self.bind("<Control-r>", self._keyboard_start_experiment)
-
-        # 実験停止のショートカット: F9, Alt+S, Ctrl+S
-        self.bind("<F9>", self._keyboard_stop_experiment)
-        self.bind("<Alt-s>", self._keyboard_stop_experiment)
-        self.bind("<Control-s>", self._keyboard_stop_experiment)
-
-        # Syncのショートカット: F7
-        self.bind("<F7>", self._keyboard_sync)
-
         # ウィンドウ全体でキーイベントを受け取れるようにする
         self.bind_all("<F5>", self._keyboard_start_experiment)
         self.bind_all("<Alt-r>", self._keyboard_start_experiment)
