@@ -50,6 +50,7 @@ class View(tk.Tk):
         self.on_plotter_parameter_changed: Callable[[], None] | None = None
         self.on_start_experiment: Callable[[dict[str, Any]], None] | None = None
         self.on_stop_experiment: Callable[[], None] | None = None
+        self.on_sync: Callable[[], None] | None = None
         self.on_history_selected: Callable[[str], None] | None = None
 
         # UI要素の参照
@@ -57,6 +58,7 @@ class View(tk.Tk):
         self.plotter_combo: ttk.Combobox | None = None
         self.start_button: ttk.Button | None = None
         self.stop_button: ttk.Button | None = None
+        self.sync_button: ttk.Button | None = None
         self.param_entries: dict[str, ttk.Entry] = {}
         self.plotter_param_entries: dict[str, ttk.Entry] = {}
         self.result_tree: ttk.Treeview | None = None
@@ -147,7 +149,7 @@ class View(tk.Tk):
         # ボタンフレーム
         button_frame = ttk.Frame(frame, padding=(0, 20, 0, 0))
         button_frame.grid(row=6, column=0, sticky="ew")
-        button_frame.columnconfigure((0, 1), weight=1)
+        button_frame.columnconfigure((0, 1, 2), weight=1)
 
         self.start_button = ttk.Button(
             button_frame, text="実験開始 (F5)", command=self._on_start_clicked
@@ -158,6 +160,11 @@ class View(tk.Tk):
             button_frame, text="中断 (F9)", state="disabled", command=self._on_stop_clicked
         )
         self.stop_button.grid(row=0, column=1, sticky="ew", padx=2)
+
+        self.sync_button = ttk.Button(
+            button_frame, text="Sync (F7)", state="disabled", command=self._on_sync_clicked
+        )
+        self.sync_button.grid(row=0, column=2, sticky="ew", padx=2)
 
         return frame
 
@@ -286,6 +293,11 @@ class View(tk.Tk):
         """実験中断ボタンがクリックされたとき"""
         if self.on_stop_experiment:
             self.on_stop_experiment()
+
+    def _on_sync_clicked(self):
+        """Syncボタンがクリックされたとき"""
+        if self.on_sync:
+            self.on_sync()
 
     def _on_history_selected(self, event):
         """実験履歴が選択されたとき"""
@@ -564,11 +576,15 @@ class View(tk.Tk):
                 self.start_button.config(state="disabled")
             if self.stop_button:
                 self.stop_button.config(state="normal")
+            if self.sync_button:
+                self.sync_button.config(state="normal")
             self.add_log_message("実験が開始されました。")
 
         elif state == "stopping":
             if self.stop_button:
                 self.stop_button.config(state="disabled", text="停止中...")
+            if self.sync_button:
+                self.sync_button.config(state="disabled")
             self.add_log_message("実験を停止しています...")
 
         elif state in ["finished", "idle"]:
@@ -576,6 +592,8 @@ class View(tk.Tk):
                 self.start_button.config(state="normal")
             if self.stop_button:
                 self.stop_button.config(state="disabled", text="中断")
+            if self.sync_button:
+                self.sync_button.config(state="disabled")
             if state == "finished":
                 self.add_log_message("実験が完了しました。")
 
@@ -648,6 +666,9 @@ class View(tk.Tk):
         self.bind("<Alt-s>", self._keyboard_stop_experiment)
         self.bind("<Control-s>", self._keyboard_stop_experiment)
 
+        # Syncのショートカット: F7
+        self.bind("<F7>", self._keyboard_sync)
+
         # ウィンドウ全体でキーイベントを受け取れるようにする
         self.bind_all("<F5>", self._keyboard_start_experiment)
         self.bind_all("<Alt-r>", self._keyboard_start_experiment)
@@ -655,6 +676,7 @@ class View(tk.Tk):
         self.bind_all("<F9>", self._keyboard_stop_experiment)
         self.bind_all("<Alt-s>", self._keyboard_stop_experiment)
         self.bind_all("<Control-s>", self._keyboard_stop_experiment)
+        self.bind_all("<F7>", self._keyboard_sync)
 
     def _keyboard_start_experiment(self, event=None):
         """キーボードから実験開始を実行"""
@@ -667,6 +689,12 @@ class View(tk.Tk):
         # 停止ボタンが有効な場合のみ実行
         if self.stop_button and self.stop_button["state"] != "disabled":
             self._on_stop_clicked()
+
+    def _keyboard_sync(self, event=None):
+        """キーボードからSyncを実行"""
+        # Syncボタンが有効な場合のみ実行
+        if self.sync_button and self.sync_button["state"] != "disabled":
+            self._on_sync_clicked()
 
 
 if __name__ == "__main__":

@@ -126,6 +126,7 @@ class ExperimentController:
         self.app.on_plotter_parameter_changed = self.on_plotter_parameter_changed
         self.app.on_start_experiment = self.on_start_experiment
         self.app.on_stop_experiment = self.on_stop_experiment
+        self.app.on_sync = self.on_sync
         self.app.on_history_selected = self.on_experiment_history_selected
 
     def _after_callback_update(self):
@@ -425,6 +426,14 @@ class ExperimentController:
 
         # サービス経由で実験を停止
         self.service.stop_experiment()
+
+    def on_sync(self):
+        """Syncボタンが押されたときの処理"""
+        if not self.service or not self.app:
+            return
+
+        # サービス経由でSyncマーカーを記録
+        self.service.sync()
 
     def on_experiment_history_selected(self, experiment_id: str):
         """実験履歴が選択されたときの処理"""

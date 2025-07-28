@@ -41,6 +41,7 @@ class ExperimentService:
         self.loop: asyncio.AbstractEventLoop = None
         self.loop_thread: threading.Thread = None
         self._experiment_active = False
+        self._experiment_start_time: float | None = None
 
         # データ保存関連
         self.data_saver: ExperimentDataSaver | None = None
@@ -207,6 +208,25 @@ class ExperimentService:
         self._set_status(ExperimentStatus.STOPPING)
         self.stop_event.set()
 
+    def sync(self):
+        """Syncマーカーを記録する。"""
+        if self.status != ExperimentStatus.RUNNING:
+            logger.warning("Cannot sync: experiment is not running")
+            return
+
+        # 現在の時刻とtを計算してキューに送信
+        current_time = time.perf_counter()
+        if hasattr(self, "_experiment_start_time") and self._experiment_start_time:
+            t = current_time - self._experiment_start_time
+        else:
+            t = 0.0
+
+        # record log
+        if self.experiment_logger:
+            self.experiment_logger.info(f"[sync] Sync marker at t={t:.3f}s")
+
+        logger.info(f"Service: Sync marker recorded at t={t:.3f}s")
+
     async def _run_lifecycle(self, exp: BaseExperiment):
         """実験のsetup -> steps -> cleanupのライフサイクルを管理する内部メソッド。"""
 
@@ -215,6 +235,7 @@ class ExperimentService:
         try:
             exp.logger.info(f"[system] Starting experiment: {exp.name}")
             start_time = time.perf_counter()
+            self._experiment_start_time = start_time  # 開始時刻を記録
             await exp.setup()
             exp.logger.info(
                 f"[system] Setup complete for experiment: {exp.name}, "
