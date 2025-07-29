@@ -136,8 +136,9 @@ class ExperimentController:
 
         try:
             self._on_timer_update_log()
-            self.on_timer_update_experiment_data()
-            self._update_plot()
+            has_new_data = self.on_timer_update_experiment_data()
+            if has_new_data:
+                self._update_plot()
         finally:
             # 再度呼び出す
             self.app.after(100, self._after_callback_update)
@@ -183,17 +184,22 @@ class ExperimentController:
             except queue.Empty:
                 break
 
-    def on_timer_update_experiment_data(self):
+    def on_timer_update_experiment_data(self) -> bool:
+        """実験データを更新し、新しいデータがあったかどうかを返す"""
         if self.service.data_queue is None:
-            return
+            return False
 
+        has_new_data = False
         for _ in range(50):
             try:
                 data = self.service.data_queue.get_nowait()
                 self.experiment_data.append(data)
                 self._update_ui_with_data(data)
+                has_new_data = True
             except queue.Empty:
                 break
+        
+        return has_new_data
 
     def on_experiment_selected(self, experiment_name: str):
         """実験が選択されたときの処理"""
