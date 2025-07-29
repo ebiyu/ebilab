@@ -137,6 +137,7 @@ class ExperimentController:
         try:
             self._on_timer_update_log()
             self.on_timer_update_experiment_data()
+            self._update_plot()
         finally:
             # 再度呼び出す
             self.app.after(100, self._after_callback_update)
@@ -415,9 +416,6 @@ class ExperimentController:
 
         # 結果テーブルに行を追加
         self.app.add_result_row(data)
-
-        # プロットを更新
-        self._update_plot()
 
     def on_stop_experiment(self):
         """実験中断ボタンが押されたときの処理"""
