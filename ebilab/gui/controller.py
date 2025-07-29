@@ -169,7 +169,7 @@ class ExperimentController:
         if not self.app or not self.experiment_classes:
             return
 
-        experiment_names = [cls.__name__ for cls in self.experiment_classes]
+        experiment_names = [cls.name for cls in self.experiment_classes]
         self.app.set_experiment_list(experiment_names)
 
         # 最初の実験を選択
@@ -204,7 +204,7 @@ class ExperimentController:
     def on_experiment_selected(self, experiment_name: str):
         """実験が選択されたときの処理"""
         for exp_class in self.experiment_classes:
-            if exp_class.__name__ == experiment_name:
+            if exp_class.name == experiment_name:
                 self.current_experiment_class = exp_class
                 break
 
