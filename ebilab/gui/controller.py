@@ -408,7 +408,10 @@ class ExperimentController:
             return
 
         try:
-            df = pd.DataFrame(self.experiment_data)
+            df = pd.DataFrame(self.experiment_data, columns=["time", "t"] + self.current_experiment_class.columns)
+            if df.empty:
+                logger.debug("No data to plot")
+                return
             self.current_plotter.update(df)
             if self.app.canvas:
                 self.app.canvas.draw()
