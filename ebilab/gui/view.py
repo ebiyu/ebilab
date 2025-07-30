@@ -162,7 +162,7 @@ class View(tk.Tk):
         self.stop_button.grid(row=0, column=1, sticky="ew", padx=2)
 
         self.sync_button = ttk.Button(
-            button_frame, text="Sync (F7)", state="disabled", command=self._on_sync_clicked
+            button_frame, text="Sync (F12)", state="disabled", command=self._on_sync_clicked
         )
         self.sync_button.grid(row=0, column=2, sticky="ew", padx=2)
 
@@ -663,7 +663,7 @@ class View(tk.Tk):
         self.bind_all("<F9>", self._keyboard_stop_experiment)
         self.bind_all("<Alt-s>", self._keyboard_stop_experiment)
         self.bind_all("<Control-s>", self._keyboard_stop_experiment)
-        self.bind_all("<F7>", self._keyboard_sync)
+        self.bind_all("<F12>", self._keyboard_sync)
 
     def _keyboard_start_experiment(self, event=None):
         """キーボードから実験開始を実行"""
