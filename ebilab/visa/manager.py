@@ -57,7 +57,6 @@ class VisaManager:
         except FileNotFoundError:
             logger.info("Tried to load Keysight IO Libraries, but directory not found.")
 
-
         rm = pyvisa.ResourceManager()
         logger.info(f"Resource manager initialized: {str(rm)}")
         visa_list = rm.list_resources()

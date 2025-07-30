@@ -8,8 +8,10 @@ from ebilab.api import BaseExperiment, BasePlotter, FloatField, SelectField
 from ebilab.gui.controller import launch_gui
 from ebilab.visa import K34411A
 
+
 class K34465A(K34411A):
     _idn_pattern = "34465A"
+
 
 class Experiment(BaseExperiment):
     columns = ["R"]

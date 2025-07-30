@@ -198,7 +198,7 @@ class ExperimentController:
                 has_new_data = True
             except queue.Empty:
                 break
-        
+
         return has_new_data
 
     def on_experiment_selected(self, experiment_name: str):
@@ -408,7 +408,9 @@ class ExperimentController:
             return
 
         try:
-            df = pd.DataFrame(self.experiment_data, columns=["time", "t"] + self.current_experiment_class.columns)
+            df = pd.DataFrame(
+                self.experiment_data, columns=["time", "t"] + self.current_experiment_class.columns
+            )
             if df.empty:
                 logger.debug("No data to plot")
                 return
