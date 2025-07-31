@@ -67,6 +67,20 @@ class ExperimentLoggerManager:
         logger.debug(f"Created experiment log handler: {self.log_path}")
         logger.debug(f"Created experiment debug log handler: {self.log_path_debug}")
 
+    def cleanup(self):
+        """Clean up file handlers and close log files."""
+        if self.file_handler:
+            self.experiment_logger.removeHandler(self.file_handler)
+            self.file_handler.close()
+            self.file_handler = None
+            logger.debug(f"Closed experiment log handler: {self.log_path}")
+
+        if self.file_handler_debug:
+            self.experiment_logger.removeHandler(self.file_handler_debug)
+            self.file_handler_debug.close()
+            self.file_handler_debug = None
+            logger.debug(f"Closed experiment debug log handler: {self.log_path_debug}")
+
 
 class ExperimentDataSaver:
     """実験データをCSVファイルに保存するクラス"""

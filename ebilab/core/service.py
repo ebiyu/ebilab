@@ -7,7 +7,7 @@ import queue
 import threading
 import time
 from enum import Enum, auto
-from logging import FileHandler, getLogger
+from logging import getLogger
 from typing import Any
 
 from ..api.experiment import BaseExperiment
@@ -46,7 +46,7 @@ class ExperimentService:
         # データ保存関連
         self.data_saver: ExperimentDataSaver | None = None
         self.experiment_logger: getLogger | None = None
-        self.experiment_file_handler: FileHandler | None = None
+        self.experiment_logger_manager: ExperimentLoggerManager | None = None
 
         # デバッグモードフラグ
         self.debug_mode: bool = False
@@ -316,12 +316,11 @@ class ExperimentService:
             self.data_saver = None
 
         # 実験ロガーのクリーンアップ
-        if self.experiment_logger and self.experiment_file_handler:
+        if hasattr(self, "experiment_logger_manager") and self.experiment_logger_manager:
             self.experiment_logger.info("Experiment completed")
-            self.experiment_logger.removeHandler(self.experiment_file_handler)
-            self.experiment_file_handler.close()
+            self.experiment_logger_manager.cleanup()
+            self.experiment_logger_manager = None
             self.experiment_logger = None
-            self.experiment_file_handler = None
 
     async def _shutdown_after_delay(self):
         """実験終了後、少し遅延してスレッドを停止"""
