@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import queue
+import traceback
 from logging import Handler, LogRecord, getLogger
 from typing import Any
 
@@ -49,20 +50,28 @@ class DefaultPlotter(BasePlotter):
 
 
 class TkinterLogHandler(Handler):
-    """A simple handler to add log to Queue"""
+    """tkinterのTextウィジェットにログを出力するハンドラー（例外情報対応版）"""
 
     def __init__(self):
         super().__init__()
         self.log_queue = queue.Queue()
 
     def emit(self, record: LogRecord):
-        """ログレコードをキューに追加するだけ"""
+        """ログレコードをキューに追加（例外情報も含める）"""
         try:
             # ログメッセージをフォーマット
             timestamp = datetime.datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
             level = record.levelname
             message = record.getMessage()
-            formatted_message = f"{timestamp} - {level} - {message}\n"
+            formatted_message = f"{timestamp} - {level} - {message}"
+
+            # 例外情報がある場合は追加
+            if record.exc_info:
+                formatted_message += (
+                    "\n" + "".join(traceback.format_exception(*record.exc_info)).rstrip()
+                )
+
+            formatted_message += "\n"
 
             # キューにメッセージを追加
             self.log_queue.put(formatted_message)
@@ -163,7 +172,7 @@ class ExperimentController:
         root_logger = logging.getLogger()
         root_logger.addHandler(self.log_handler)
 
-        logger.info("Loggging initialized for ebilab GUI.")
+        logger.info("Logging initialized for ebilab GUI.")
 
     def _populate_experiment_list(self):
         """実験リストをUIに設定"""

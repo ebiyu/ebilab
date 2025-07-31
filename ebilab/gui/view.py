@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import datetime
-import queue
 import tkinter as tk
-from logging import Handler, LogRecord, getLogger
+from logging import getLogger
 from tkinter import ttk
 from typing import Any, Callable
 
@@ -13,29 +11,6 @@ from matplotlib.figure import Figure
 from ..api.fields import BoolField, FloatField, IntField, OptionField, SelectField, StrField
 
 logger = getLogger(__name__)
-
-
-class TkinterLogHandler(Handler):
-    """tkinterのTextウィジェットにログを出力するシンプルなハンドラー"""
-
-    def __init__(self, log_queue: queue.Queue):
-        super().__init__()
-        self.log_queue = log_queue
-
-    def emit(self, record: LogRecord):
-        """ログレコードをキューに追加するだけ"""
-        try:
-            # ログメッセージをフォーマット
-            timestamp = datetime.datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
-            level = record.levelname
-            message = record.getMessage()
-            formatted_message = f"{timestamp} - {level} - {message}\n"
-
-            # キューにメッセージを追加
-            self.log_queue.put(formatted_message)
-        except Exception:
-            # ハンドラー内でエラーが発生してもアプリケーションを止めない
-            pass
 
 
 class View(tk.Tk):

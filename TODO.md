@@ -2,7 +2,8 @@
 
 - [x] `samples` を新APIへ更新する
 - [x] 実験が終了しても実験ごとのログファイルが閉じられない問題を修正
-- [ ] ログビューに例外の内容が表示されないバグを修正
+- [x] ログビューに `logger.exception` 時の例外の内容が表示されないバグを修正
+  **実装方針**: 元のTkinterLogHandlerベースで例外情報を含めるように修正した。TkinterLogHandler.emit()メソッドでrecord.exc_infoをチェックし、traceback.format_exception()を使ってスタックトレースを含む完全な例外情報を表示するようにした。view.pyの重複クラスも削除済み。
 - [ ] 実験がエラー終了したらエラーダイアログで通知するようにする。
 - [ ] ログビューの改善。
     - TreeViewにして見やすく。
