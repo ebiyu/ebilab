@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run mypy .)",
+      "Bash(uvx ruff format)",
+      "Bash(uvx ruff check)",
+      "Bash(uvx ruff check --fix)"
+    ]
+  }
+}
