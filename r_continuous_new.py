@@ -1,6 +1,4 @@
 # sample of GUI app
-import asyncio
-import random
 
 import matplotlib.pyplot as plt
 
