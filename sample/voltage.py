@@ -1,43 +1,63 @@
-# Sample of voltage measurement and real-time plot in single thread
+# Sample of voltage measurement and real-time plot using new API
 
-from datetime import datetime
+import asyncio
 
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.lines import Line2D
-
-from ebilab.experiment.devices import K34411A
+from ebilab.api import BaseExperiment, BasePlotter, FloatField, SelectField
+from ebilab.gui.controller import launch_gui
+from ebilab.visa import K34411A
 
 
-class VoltagePlotter:
-    _fig: Figure
-    _line1: Line2D
+class VoltageMeasurement(BaseExperiment):
+    name = "voltage"
+    columns = ["V"]
 
-    def __init__(self):
-        self._fig, self._ax = plt.subplots(1, 1)
-        plt.pause(0.01)
+    nplc = SelectField(
+        choices=["0.001", "0.002", "0.006", "0.02", "0.06", "0.2", "1", "2", "10", "100"],
+        default_index=1,
+    )
+    range = SelectField(
+        choices=["auto", "0.1", "1", "10", "100", "1000"],
+        default_index=0,
+    )
+    interval = FloatField(default=0.1, min=0.001, max=10.0)
 
-    def update(self, df: pd.DataFrame):
-        self._ax.cla()
+    async def setup(self):
+        self.logger.info("Connecting to multimeter...")
+        self.multimeter = K34411A()
+        self.logger.info("Connected to multimeter.")
 
-        self._ax.plot(df["t"], df["V"])
-        self._ax.set_xlabel("Time")
-        self._ax.set_ylabel("Voltage")
-        self._ax.grid()
+    async def steps(self):
+        while True:
+            v = self.multimeter.measure_voltage(nplc=self.nplc, range=self.range)
+            self.logger.debug(f"Voltage: {v}")
+            yield {"V": v}
+            await asyncio.sleep(self.interval)
 
-        plt.gcf().canvas.draw_idle()
-        plt.gcf().canvas.flush_events()
+    async def cleanup(self):
+        self.logger.info("Voltage measurement finished.")
+
+
+@VoltageMeasurement.register_plotter
+class VoltagePlotter(BasePlotter):
+    name = "voltage"
+
+    max_voltage = FloatField(default=10.0, min=0)
+    min_voltage = FloatField(default=-10.0, max=0)
+
+    def setup(self):
+        if self.fig:
+            self._ax = self.fig.add_subplot(111)
+
+    def update(self, df):
+        if hasattr(self, "_ax") and not df.empty:
+            self._ax.clear()
+
+            self._ax.plot(df["t"], df["V"])
+            self._ax.set_xlabel("Time / s")
+            self._ax.set_ylabel("Voltage / V")
+            self._ax.set_ylim(self.min_voltage, self.max_voltage)
+            self._ax.grid(True)
 
 
 if __name__ == "__main__":
-    multimeter = K34411A()
-    plotter = VoltagePlotter()
-    data = []
-    started_at = datetime.now()
-    while True:
-        v = multimeter.measure_voltage(nplc="0.002")
-        t = (datetime.now() - started_at).total_seconds()
-        print(v)
-        data.append({"t": t, "V": v})
-        plotter.update(pd.DataFrame(data))
+    launch_gui([VoltageMeasurement])
