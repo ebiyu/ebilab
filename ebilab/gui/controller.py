@@ -125,6 +125,7 @@ class ExperimentController:
         self.app.on_plotter_selected = self.on_plotter_selected
         self.app.on_plotter_parameter_changed = self.on_plotter_parameter_changed
         self.app.on_start_experiment = self.on_start_experiment
+        self.app.on_debug_experiment = self.on_debug_experiment
         self.app.on_stop_experiment = self.on_stop_experiment
         self.app.on_sync = self.on_sync
         self.app.on_history_selected = self.on_experiment_history_selected
@@ -345,6 +346,21 @@ class ExperimentController:
 
         # サービス経由で実験を開始
         self.service.start_experiment(self.current_experiment_class, params)
+
+    def on_debug_experiment(self, params: dict[str, Any]):
+        """デバッグ実行ボタンが押されたときの処理"""
+        if not self.current_experiment_class or not self.app:
+            return
+
+        # 結果をクリア
+        self._initialize_experiment_result_table()
+        self.experiment_data.clear()
+
+        # プロッターを初期化
+        self._initialize_plotter()
+
+        # サービス経由でデバッグモードで実験を開始
+        self.service.start_experiment(self.current_experiment_class, params, debug_mode=True)
 
     def _on_status_changed(self, status):
         """サービスのステータス変更時の処理"""

@@ -48,6 +48,9 @@ class ExperimentService:
         self.experiment_logger: getLogger | None = None
         self.experiment_file_handler: FileHandler | None = None
 
+        # デバッグモードフラグ
+        self.debug_mode: bool = False
+
         # ステータス変更コールバック
         self._status_callbacks = []
 
@@ -133,14 +136,18 @@ class ExperimentService:
             self.status = status
             self._notify_status_change()
 
-    def start_experiment(self, experiment_cls: type[BaseExperiment], params: dict[str, Any]):
+    def start_experiment(
+        self, experiment_cls: type[BaseExperiment], params: dict[str, Any], debug_mode: bool = False
+    ):
         """
         新しい実験を開始する。
 
         Args:
             experiment_cls: 実行する実験クラス
             params: Experimentのフィールドに渡すパラメータの辞書。
+            debug_mode: デバッグモードで実行するかどうか
         """
+        self.debug_mode = debug_mode
         if self.status == ExperimentStatus.RUNNING:
             logger.warning("Experiment is already running.")
             return
@@ -160,8 +167,12 @@ class ExperimentService:
 
         experiment_instance = experiment_cls(params)
 
-        # データ保存の準備
-        self._setup_data_saving(experiment_instance)
+        # デバッグモードでない場合のみデータ保存の準備
+        if not self.debug_mode:
+            self._setup_data_saving(experiment_instance)
+        else:
+            logger.info("Data saving is disabled in debug mode")
+            self.data_saver = None
 
         # 実験ロガーのセットアップ
         self._setup_experiment_logging(experiment_instance)
@@ -257,15 +268,17 @@ class ExperimentService:
                     data["time"] = datetime.datetime.now().isoformat()
 
                 # Save data to file
-                if not self.data_saver:
-                    logger.error("Data saver is not initialized")
-                    raise RuntimeError("Data saver is not initialized")
+                # デバッグモードでない場合のみデータ保存
+                if not self.debug_mode:
+                    if not self.data_saver:
+                        logger.error("Data saver is not initialized")
+                        raise RuntimeError("Data saver is not initialized")
 
-                try:
-                    self.data_saver.write_data(data)
-                except Exception:
-                    logger.exception("Failed to save data to file")
-                    raise
+                    try:
+                        self.data_saver.write_data(data)
+                    except Exception:
+                        logger.exception("Failed to save data to file")
+                        raise
 
                 # Add to queue (Send to UI)
                 self.data_queue.put(data)
