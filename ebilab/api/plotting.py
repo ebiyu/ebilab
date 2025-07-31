@@ -22,6 +22,9 @@ class BasePlotter:
         # matplotlib figure (コントローラーから設定される)
         self.fig = None
 
+        # experiment instance (コントローラーから設定される)
+        self.experiment = None
+
     @classmethod
     def _get_option_fields(cls) -> dict[str, Any]:
         """Return dict of field which inherits OptionField"""

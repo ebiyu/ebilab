@@ -32,6 +32,7 @@ class ExperimentService:
 
     def __init__(self):
         self.current_experiment_cls: type[BaseExperiment] = None
+        self.current_experiment_instance: BaseExperiment = None
         self.status = ExperimentStatus.IDLE
         self.data_queue = None
         self.stop_event = None
@@ -121,6 +122,10 @@ class ExperimentService:
         """最後に発生したエラーを取得"""
         return self._last_error
 
+    def get_current_experiment_instance(self) -> BaseExperiment | None:
+        """現在実行中の実験インスタンスを取得"""
+        return self.current_experiment_instance
+
     def is_running(self) -> bool:
         """実験が実行中かどうかを判定"""
         return self.status == ExperimentStatus.RUNNING
@@ -175,6 +180,7 @@ class ExperimentService:
         self.stop_event = threading.Event()  # マルチスレッドセーフなthreading.Eventを使用
 
         experiment_instance = experiment_cls(params)
+        self.current_experiment_instance = experiment_instance
 
         # デバッグモードでない場合のみデータ保存の準備
         if not self.debug_mode:
@@ -309,6 +315,9 @@ class ExperimentService:
 
             if self.status != ExperimentStatus.ERROR:
                 self._set_status(ExperimentStatus.FINISHED)
+
+            # 実験インスタンスをクリア
+            self.current_experiment_instance = None
 
             # ワーカースレッドの終了を通知
             self._worker_task = None

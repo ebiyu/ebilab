@@ -91,6 +91,14 @@ class HistgramPlotter(BasePlotter):
             self._ax.hist(df["v"], bins=int(self.bins))
             self._ax.set_xlabel("Value")
             self._ax.set_ylabel("Count")
+            
+            # 実験インスタンスにアクセスしてパラメータを表示
+            if self.experiment:
+                title = f"Histogram (step={self.experiment.step}, initial={self.experiment.initial})"
+                self._ax.set_title(title)
+                # ログに出力してテスト
+                self.experiment.logger.info(f"Plotter accessed experiment parameters: step={self.experiment.step}")
+            
             self._ax.grid(True)
 
 

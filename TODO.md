@@ -17,7 +17,12 @@
     4. TkinterLogHandler を修正して構造化されたログレコード情報をキューに送信
     5. コントローラーのログ更新処理（_on_timer_update_log）をTreeView用に修正
     6. ログエントリを保存して、フィルタ設定変更時に既存ログも再フィルタリング可能にした
-- [ ] Plotterから `Experiment` クラスにアクセスできるように。
+- [x] Plotterから `Experiment` クラスにアクセスできるように。
+  **実装方針**: 
+  1. `BasePlotter` クラスに `experiment` 属性を追加し、`self.experiment` でExperimentインスタンスにアクセス可能にする
+  2. `ExperimentController._initialize_plotter()` でPlotterにExperimentインスタンスを注入する
+  3. 実験実行中はExperimentインスタンスが利用可能、実験停止中は `None` に設定して安全性を確保
+  4. 使用例: `self.experiment.some_parameter` でパラメータアクセス、`self.experiment.logger.info()` でログ出力
 - [ ] 実験スレッドが `await` 中でも中止できるように。
 - [ ] 長時間実験するとPlotterが重くなる問題をなんとかする。
     - 適宜な待機時間を設けるなど？

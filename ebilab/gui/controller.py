@@ -359,6 +359,11 @@ class ExperimentController:
         # サービス経由で実験を開始
         self.service.start_experiment(self.current_experiment_class, params)
 
+        # 実験インスタンスを注入
+        experiment_instance = self.service.get_current_experiment_instance()
+        if hasattr(self, "current_plotter") and self.current_plotter:
+            self.current_plotter.experiment = experiment_instance
+
     def on_debug_experiment(self, params: dict[str, Any]):
         """デバッグ実行ボタンが押されたときの処理"""
         if not self.current_experiment_class or not self.app:
@@ -373,6 +378,11 @@ class ExperimentController:
 
         # サービス経由でデバッグモードで実験を開始
         self.service.start_experiment(self.current_experiment_class, params, debug_mode=True)
+
+        # 実験インスタンスを注入
+        experiment_instance = self.service.get_current_experiment_instance()
+        if hasattr(self, "current_plotter") and self.current_plotter:
+            self.current_plotter.experiment = experiment_instance
 
     def _on_status_changed(self, status):
         """サービスのステータス変更時の処理"""
@@ -394,6 +404,11 @@ class ExperimentController:
         # エラー状態の場合はエラーダイアログを表示
         if status == ExperimentStatus.ERROR:
             self.app.after(0, self._show_error_dialog)
+
+        # 実験終了時（FINISHED、ERROR、IDLE）にプロッターのexperiment属性をクリア
+        if status in (ExperimentStatus.FINISHED, ExperimentStatus.ERROR, ExperimentStatus.IDLE):
+            if hasattr(self, "current_plotter") and self.current_plotter:
+                self.current_plotter.experiment = None
 
     def _show_error_dialog(self):
         """エラーダイアログを表示"""
@@ -418,6 +433,9 @@ class ExperimentController:
         # プロッターのインスタンスを作成
         self.current_plotter = self.current_plotter_class()
         self.current_plotter.fig = self.app.figure
+
+        # 実験インスタンスを注入
+        self.current_plotter.experiment = self.service.get_current_experiment_instance()
 
         # プロッターパラメータを設定
         plotter_params = self.app.get_plotter_parameters()
