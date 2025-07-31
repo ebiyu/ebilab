@@ -39,8 +39,14 @@ class View(tk.Tk):
         self.param_entries: dict[str, ttk.Entry] = {}
         self.plotter_param_entries: dict[str, ttk.Entry] = {}
         self.result_tree: ttk.Treeview | None = None
-        self.log_text: tk.Text | None = None
+        self.log_tree: ttk.Treeview | None = None
+        self.current_log_level: tk.StringVar | None = None
+        self.log_level_buttons: dict[str, ttk.Button] = {}
+        self.exp_only_var: tk.BooleanVar | None = None
         self.history_tree: ttk.Treeview | None = None
+
+        # ログデータの保存（フィルタリング用）
+        self.log_entries: list[dict[str, Any]] = []
 
         # matplotlib関連
         self.figure: Figure | None = None
@@ -50,19 +56,92 @@ class View(tk.Tk):
         self._create_ui()
         self._setup_keyboard_shortcuts()
 
-    def _append_log_to_text(self, message: str):
-        """ログテキストウィジェットにメッセージを追加"""
+    def add_log_entry(self, log_info: dict[str, Any]):
+        """ログTreeViewにログエントリを追加"""
         try:
-            if self.log_text:
-                self.log_text.insert("end", message)
-                self.log_text.see("end")
+            if not self.log_tree:
+                return
 
-                # 行数が多くなりすぎた場合は古い行を削除
-                lines = int(self.log_text.index("end-1c").split(".")[0])
-                if lines > 1000:  # 1000行を超えたら古い行を削除
-                    self.log_text.delete("1.0", "100.0")
+            # ログデータを保存（フィルタ再適用のため）
+            self.log_entries.append(log_info)
+
+            # 行数制限（1000行を超えたら古いエントリを削除）
+            if len(self.log_entries) > 1000:
+                self.log_entries = self.log_entries[-900:]  # 900行残す
+
+            # フィルタリング処理
+            if not self._should_show_log(log_info):
+                return
+
+            self._add_log_to_tree(log_info)
+
         except Exception:
             pass
+
+    def _add_log_to_tree(self, log_info: dict[str, Any]):
+        """ログエントリをTreeViewに追加（内部使用）"""
+        # メッセージに例外情報があれば追加
+        message = log_info["message"]
+        if "exception" in log_info:
+            message += f"\n{log_info['exception']}"
+
+        # TreeViewに追加
+        level = log_info["level"]
+        item_id = self.log_tree.insert(
+            "",
+            "end",
+            values=(log_info["timestamp"], level, log_info["logger_name"], message),
+            tags=(level,),  # ログレベルをタグとして設定
+        )
+
+        # 最新エントリまでスクロール
+        self.log_tree.see(item_id)
+
+    def _should_show_log(self, log_info: dict[str, Any]) -> bool:
+        """ログをフィルタリングして表示するかどうかを判定"""
+        # ログレベルフィルタ
+        if self.current_log_level:
+            selected_level = self.current_log_level.get()
+            level_map = {
+                "DEBUG": 10,
+                "INFO": 20,
+                "WARNING": 30,
+                "ERROR": 40,
+                "CRITICAL": 50,
+            }
+            min_level = level_map.get(selected_level, 20)  # デフォルトはINFO
+            if log_info["level_no"] < min_level:
+                return False
+
+        # 実験ログのみフィルタ
+        if self.exp_only_var and self.exp_only_var.get():
+            logger_name = log_info["logger_name"]
+            # 実験関連のロガー名パターンをチェック
+            if not logger_name.startswith("ebilab.experiment"):
+                return False
+
+        return True
+
+    def clear_log(self):
+        """ログをクリア"""
+        if self.log_tree:
+            for item in self.log_tree.get_children():
+                self.log_tree.delete(item)
+        self.log_entries.clear()
+
+    def _refresh_log_display(self):
+        """現在のフィルタ設定でログ表示を更新"""
+        if not self.log_tree:
+            return
+
+        # TreeViewをクリア
+        for item in self.log_tree.get_children():
+            self.log_tree.delete(item)
+
+        # 保存されたログエントリを再フィルタリングして表示
+        for log_info in self.log_entries:
+            if self._should_show_log(log_info):
+                self._add_log_to_tree(log_info)
 
     def _create_ui(self):
         """UIの構築"""
@@ -222,11 +301,96 @@ class View(tk.Tk):
         log_tab = ttk.Frame(result_log_notebook, padding=5)
         result_log_notebook.add(log_tab, text="ログ")
 
-        self.log_text = tk.Text(log_tab, height=10)
-        self.log_text.pack(side="left", fill="both", expand=True)
-        log_scrollbar = ttk.Scrollbar(log_tab, orient="vertical", command=self.log_text.yview)
-        self.log_text.configure(yscrollcommand=log_scrollbar.set)
+        # ログフィルターフレーム
+        log_filter_frame = ttk.Frame(log_tab)
+        log_filter_frame.pack(fill="x", pady=(0, 5))
+
+        # ログレベルフィルタ（ボタン形式）
+        ttk.Label(log_filter_frame, text="レベル:").pack(side="left", padx=(0, 5))
+
+        # ログレベルボタンフレーム
+        level_button_frame = ttk.Frame(log_filter_frame)
+        level_button_frame.pack(side="left", padx=(0, 15))
+
+        self.current_log_level = tk.StringVar(value="INFO")  # デフォルト値
+        self.log_level_buttons = {}
+
+        levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        # ログレベル別の色設定（ログメッセージと同じ色）
+        level_colors = {
+            "DEBUG": {"bg": "#f5f5f5", "fg": "black"},  # グレー
+            "INFO": {"bg": "#e3f2fd", "fg": "black"},  # 薄青
+            "WARNING": {"bg": "#ffc107", "fg": "black"},  # 黄
+            "ERROR": {"bg": "#dc3545", "fg": "white"},  # 赤
+            "CRITICAL": {"bg": "#6f42c1", "fg": "white"},  # 紫
+        }
+
+        for level in levels:
+            colors = level_colors[level]
+            btn = tk.Button(
+                level_button_frame,
+                text=level,
+                width=8,
+                bg=colors["bg"],
+                fg=colors["fg"],
+                activebackground=colors["bg"],  # クリック時の背景色
+                activeforeground=colors["fg"],  # クリック時の文字色
+                relief="raised",
+                bd=1,
+                command=lambda lvl=level: self._set_log_level(lvl),
+            )
+            btn.pack(side="left", padx=1)
+            self.log_level_buttons[level] = btn
+
+        # 初期選択状態を設定
+        self._update_level_button_styles()
+
+        # 実験ログのみ表示フィルタ
+        self.exp_only_var = tk.BooleanVar(value=True)  # デフォルトON
+        exp_only_check = ttk.Checkbutton(
+            log_filter_frame,
+            text="実験ログのみ表示",
+            variable=self.exp_only_var,
+            command=self._on_log_filter_changed,
+        )
+        exp_only_check.pack(side="left", padx=(0, 15))
+
+        # ログクリアボタン
+        clear_log_btn = ttk.Button(log_filter_frame, text="ログクリア", command=self.clear_log)
+        clear_log_btn.pack(side="right")
+
+        # ログTreeView
+        log_frame = ttk.Frame(log_tab)
+        log_frame.pack(fill="both", expand=True)
+
+        log_columns = ("timestamp", "level", "logger", "message")
+        self.log_tree = ttk.Treeview(log_frame, columns=log_columns, show="headings", height=8)
+        self.log_tree.heading("timestamp", text="時刻")
+        self.log_tree.heading("level", text="レベル")
+        self.log_tree.heading("logger", text="ロガー")
+        self.log_tree.heading("message", text="メッセージ")
+
+        # 列幅調整
+        self.log_tree.column("timestamp", width=80, anchor="center")
+        self.log_tree.column("level", width=70, anchor="center")
+        self.log_tree.column("logger", width=120, anchor="w")
+        self.log_tree.column("message", width=300, anchor="w")
+
+        # ログレベル別のタグ設定（色分け用）
+        self.log_tree.tag_configure("ERROR", foreground="white", background="#dc3545")  # 赤
+        self.log_tree.tag_configure("WARNING", foreground="black", background="#ffc107")  # 黄
+        self.log_tree.tag_configure("INFO", foreground="black", background="#e3f2fd")  # 薄青
+        self.log_tree.tag_configure("DEBUG", foreground="black", background="#f5f5f5")  # グレー
+        self.log_tree.tag_configure("CRITICAL", foreground="white", background="#6f42c1")  # 紫
+
+        self.log_tree.pack(side="left", fill="both", expand=True)
+
+        log_scrollbar = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_tree.yview)
+        self.log_tree.configure(yscrollcommand=log_scrollbar.set)
         log_scrollbar.pack(side="right", fill="y")
+
+        # 初期状態でロガー列の表示を設定
+        self._update_logger_column_visibility()
 
         # -- タブ2: 結果テーブル --
         result_tab = ttk.Frame(result_log_notebook, padding=5)
@@ -303,6 +467,46 @@ class View(tk.Tk):
             values = self.history_tree.item(item, "values")
             if self.on_history_selected and values:
                 self.on_history_selected(values[0])
+
+    def _set_log_level(self, level: str):
+        """ログレベルを設定"""
+        self.current_log_level.set(level)
+        self._update_level_button_styles()
+        self._on_log_filter_changed()
+
+    def _update_level_button_styles(self):
+        """ログレベルボタンのスタイルを更新（選択状態の表示）"""
+        if not self.current_log_level:
+            return
+
+        current_level = self.current_log_level.get()
+        for level, button in self.log_level_buttons.items():
+            if level == current_level:
+                # 選択されたボタンのスタイル（押し込まれた見た目）
+                button.configure(text=level, relief="sunken")
+            else:
+                # 非選択ボタンのスタイル（通常表示）
+                button.configure(text=level, relief="raised")
+
+    def _on_log_filter_changed(self, event=None):
+        """ログフィルタが変更されたときの処理"""
+        # ロガー列の表示/非表示を切り替え
+        self._update_logger_column_visibility()
+
+        # 既存のログ表示を現在のフィルタ設定で更新
+        self._refresh_log_display()
+
+    def _update_logger_column_visibility(self):
+        """実験ログのみ表示設定に応じてロガー列の表示を切り替え"""
+        if not self.log_tree or not self.exp_only_var:
+            return
+
+        if self.exp_only_var.get():
+            # 実験ログのみ表示の場合、ロガー列を削除
+            self.log_tree["displaycolumns"] = ("timestamp", "level", "message")
+        else:
+            # 全ログ表示の場合、ロガー列を表示
+            self.log_tree["displaycolumns"] = ("timestamp", "level", "logger", "message")
 
     # パブリックメソッド（コントローラーから呼び出される）
     def set_experiment_list(self, experiment_names: list[str]):
@@ -569,14 +773,14 @@ class View(tk.Tk):
                 self.stop_button.config(state="normal")
             if self.sync_button:
                 self.sync_button.config(state="normal")
-            self.add_log_message("実験が開始されました。")
+            logger.info("実験が開始されました。")
 
         elif state == "stopping":
             if self.stop_button:
                 self.stop_button.config(state="disabled", text="停止中...")
             if self.sync_button:
                 self.sync_button.config(state="disabled")
-            self.add_log_message("実験を停止しています...")
+            logger.info("実験を停止しています...")
 
         elif state == "error":
             if self.start_button:
@@ -587,7 +791,7 @@ class View(tk.Tk):
                 self.stop_button.config(state="disabled", text="中断")
             if self.sync_button:
                 self.sync_button.config(state="disabled")
-            self.add_log_message("実験がエラーで終了しました。")
+            logger.error("実験がエラーで終了しました。")
 
         elif state in ["finished", "idle"]:
             if self.start_button:
@@ -599,7 +803,7 @@ class View(tk.Tk):
             if self.sync_button:
                 self.sync_button.config(state="disabled")
             if state == "finished":
-                self.add_log_message("実験が完了しました。")
+                logger.info("実験が完了しました。")
 
     def add_result_row(self, data: dict[str, Any]):
         """結果テーブルに新しい行を追加"""
@@ -614,10 +818,6 @@ class View(tk.Tk):
             children = self.result_tree.get_children()
             if children:
                 self.result_tree.see(children[-1])
-
-    def add_log_message(self, message: str):
-        """ログメッセージを追加（loggerを使用）"""
-        logger.info(message)
 
     def show_error_dialog(self, experiment_name: str, error_message: str = None):
         """実験エラー時にダイアログを表示"""

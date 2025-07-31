@@ -50,31 +50,34 @@ class DefaultPlotter(BasePlotter):
 
 
 class TkinterLogHandler(Handler):
-    """tkinterのTextウィジェットにログを出力するハンドラー（例外情報対応版）"""
+    """tkinterのTreeViewウィジェットにログを出力するハンドラー（構造化ログレコード対応版）"""
 
     def __init__(self):
         super().__init__()
         self.log_queue = queue.Queue()
 
     def emit(self, record: LogRecord):
-        """ログレコードをキューに追加（例外情報も含める）"""
+        """ログレコードをキューに追加（構造化された情報として）"""
         try:
-            # ログメッセージをフォーマット
-            timestamp = datetime.datetime.fromtimestamp(record.created).strftime("%H:%M:%S")
-            level = record.levelname
-            message = record.getMessage()
-            formatted_message = f"{timestamp} - {level} - {message}"
+            # 構造化されたログ情報を作成
+            log_info = {
+                "timestamp": datetime.datetime.fromtimestamp(record.created).strftime(
+                    "%H:%M:%S.%f"
+                )[:-3],
+                "level": record.levelname,
+                "logger_name": record.name,
+                "message": record.getMessage(),
+                "level_no": record.levelno,  # フィルタリング用
+            }
 
             # 例外情報がある場合は追加
             if record.exc_info:
-                formatted_message += (
-                    "\n" + "".join(traceback.format_exception(*record.exc_info)).rstrip()
-                )
+                log_info["exception"] = "".join(
+                    traceback.format_exception(*record.exc_info)
+                ).rstrip()
 
-            formatted_message += "\n"
-
-            # キューにメッセージを追加
-            self.log_queue.put(formatted_message)
+            # キューにログ情報を追加
+            self.log_queue.put(log_info)
         except Exception:
             # ハンドラー内でエラーが発生してもアプリケーションを止めない
             pass
@@ -189,8 +192,8 @@ class ExperimentController:
     def _on_timer_update_log(self):
         for _ in range(50):
             try:
-                message = self.log_handler.log_queue.get_nowait()
-                self.app._append_log_to_text(message)
+                log_info = self.log_handler.log_queue.get_nowait()
+                self.app.add_log_entry(log_info)
             except queue.Empty:
                 break
 
