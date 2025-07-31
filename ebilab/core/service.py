@@ -54,6 +54,9 @@ class ExperimentService:
         # ステータス変更コールバック
         self._status_callbacks = []
 
+        # エラー情報（最後に発生したエラー）
+        self._last_error: Exception | None = None
+
     def initialize(self):
         """サービスの初期化（軽量な初期化のみ）"""
         logger.info("Service: Service initialized (per-experiment threading mode)")
@@ -114,6 +117,10 @@ class ExperimentService:
         """現在の実験ステータスを取得"""
         return self.status
 
+    def get_last_error(self) -> Exception | None:
+        """最後に発生したエラーを取得"""
+        return self._last_error
+
     def is_running(self) -> bool:
         """実験が実行中かどうかを判定"""
         return self.status == ExperimentStatus.RUNNING
@@ -159,6 +166,8 @@ class ExperimentService:
 
         logger.info("Service: Starting experiment...")
         self.current_experiment_cls = experiment_cls
+        # 前回のエラー情報をクリア
+        self._last_error = None
         self._set_status(ExperimentStatus.RUNNING)
 
         # 新しいキューとイベントを作成（実験ごとに新規作成）
@@ -283,11 +292,12 @@ class ExperimentService:
                 # Add to queue (Send to UI)
                 self.data_queue.put(data)
 
-        except Exception:
+        except Exception as e:
             logger.exception("Error during experiment execution")
             exp.logger.exception("[system] Error during experiment execution")
+            # エラーを保存
+            self._last_error = e
             self._set_status(ExperimentStatus.ERROR)
-            # TODO: open dialogue
         finally:
             logger.info("Service: Executing cleanup...")
             exp.logger.info("[system] Experiment finished. Cleaning up...")

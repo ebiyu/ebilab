@@ -388,6 +388,25 @@ class ExperimentController:
         ui_status = status_map.get(status, "idle")
         self.app.after(0, lambda: self.app.update_experiment_state(ui_status))
 
+        # エラー状態の場合はエラーダイアログを表示
+        if status == ExperimentStatus.ERROR:
+            self.app.after(0, self._show_error_dialog)
+
+    def _show_error_dialog(self):
+        """エラーダイアログを表示"""
+        if not self.app or not self.current_experiment_class:
+            return
+
+        experiment_name = self.current_experiment_class.name
+        error_message = None
+
+        # サービスから最後のエラーを取得
+        last_error = self.service.get_last_error()
+        if last_error:
+            error_message = str(last_error)
+
+        self.app.show_error_dialog(experiment_name, error_message)
+
     def _initialize_plotter(self):
         """プロッターを初期化"""
         if not self.current_plotter_class or not self.app or not self.app.figure:

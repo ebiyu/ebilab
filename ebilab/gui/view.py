@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tkinter as tk
 from logging import getLogger
-from tkinter import ttk
+from tkinter import messagebox, ttk
 from typing import Any, Callable
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -578,6 +578,17 @@ class View(tk.Tk):
                 self.sync_button.config(state="disabled")
             self.add_log_message("実験を停止しています...")
 
+        elif state == "error":
+            if self.start_button:
+                self.start_button.config(state="normal")
+            if self.debug_button:
+                self.debug_button.config(state="normal")
+            if self.stop_button:
+                self.stop_button.config(state="disabled", text="中断")
+            if self.sync_button:
+                self.sync_button.config(state="disabled")
+            self.add_log_message("実験がエラーで終了しました。")
+
         elif state in ["finished", "idle"]:
             if self.start_button:
                 self.start_button.config(state="normal")
@@ -607,6 +618,22 @@ class View(tk.Tk):
     def add_log_message(self, message: str):
         """ログメッセージを追加（loggerを使用）"""
         logger.info(message)
+
+    def show_error_dialog(self, experiment_name: str, error_message: str = None):
+        """実験エラー時にダイアログを表示"""
+        title = "実験エラー"
+        if error_message:
+            message = (
+                f"実験 '{experiment_name}' の実行中にエラーが発生しました。\n\n"
+                f"{error_message}\n\n詳細はログファイルを確認してください。"
+            )
+        else:
+            message = (
+                f"実験 '{experiment_name}' の実行中にエラーが発生しました。\n\n"
+                "詳細はログファイルを確認してください。"
+            )
+
+        messagebox.showerror(title, message)
 
     def clear_results(self):
         """結果をクリア"""
