@@ -37,6 +37,7 @@ class ExperimentService:
         self.data_queue = None
         self.stop_event = None
         self._worker_task = None
+        self._steps_task = None  # 実験のsteps()を実行するタスク
 
         # 実験ごとのリソース管理（実験開始時に作成）
         self.loop: asyncio.AbstractEventLoop = None
@@ -234,6 +235,11 @@ class ExperimentService:
         self._set_status(ExperimentStatus.STOPPING)
         self.stop_event.set()
 
+        # steps()タスクをキャンセル
+        if self._steps_task and not self._steps_task.done():
+            logger.info("Service: Cancelling steps task...")
+            self.loop.call_soon_threadsafe(self._steps_task.cancel)
+
     def sync(self):
         """Syncマーカーを記録する。"""
         if self.status != ExperimentStatus.RUNNING:
@@ -253,6 +259,37 @@ class ExperimentService:
 
         logger.info(f"Service: Sync marker recorded at t={t:.3f}s")
 
+    async def _run_steps(self, exp: BaseExperiment, start_time: float):
+        """実験のsteps()を実行し、データを処理する"""
+        async for data in exp.steps():
+            # Check if the stop event is set
+            if self.stop_event.is_set():
+                logger.info("Service: Stop detected, breaking steps loop.")
+                break
+
+            # Save data to queue
+            if isinstance(data, dict):
+                data = data.copy()
+                current_time = time.perf_counter()
+                data["t"] = current_time - start_time
+                data["time"] = datetime.datetime.now().isoformat()
+
+            # Save data to file
+            # デバッグモードでない場合のみデータ保存
+            if not self.debug_mode:
+                if not self.data_saver:
+                    logger.error("Data saver is not initialized")
+                    raise RuntimeError("Data saver is not initialized")
+
+                try:
+                    self.data_saver.write_data(data)
+                except Exception:
+                    logger.exception("Failed to save data to file")
+                    raise
+
+            # Add to queue (Send to UI)
+            self.data_queue.put(data)
+
     async def _run_lifecycle(self, exp: BaseExperiment):
         """実験のsetup -> steps -> cleanupのライフサイクルを管理する内部メソッド。"""
 
@@ -269,35 +306,14 @@ class ExperimentService:
             )
             exp.logger.info("[system] Running steps...")
 
-            async for data in exp.steps():
-                # Check if the stop event is set
-                if self.stop_event.is_set():
-                    logger.info("Service: Stop detected, breaking steps loop.")
-                    break
+            # steps()をタスクとして実行
+            self._steps_task = asyncio.create_task(self._run_steps(exp, start_time))
+            await self._steps_task
 
-                # Save data to queue
-                if isinstance(data, dict):
-                    data = data.copy()
-                    current_time = time.perf_counter()
-                    data["t"] = current_time - start_time
-                    data["time"] = datetime.datetime.now().isoformat()
-
-                # Save data to file
-                # デバッグモードでない場合のみデータ保存
-                if not self.debug_mode:
-                    if not self.data_saver:
-                        logger.error("Data saver is not initialized")
-                        raise RuntimeError("Data saver is not initialized")
-
-                    try:
-                        self.data_saver.write_data(data)
-                    except Exception:
-                        logger.exception("Failed to save data to file")
-                        raise
-
-                # Add to queue (Send to UI)
-                self.data_queue.put(data)
-
+        except asyncio.CancelledError:
+            logger.info("Service: Experiment was cancelled")
+            exp.logger.info("[system] Experiment was cancelled by user")
+            # キャンセルは正常な中断として扱う
         except Exception as e:
             logger.exception("Error during experiment execution")
             exp.logger.exception("[system] Error during experiment execution")
