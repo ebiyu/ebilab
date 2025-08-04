@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import csv
 import datetime
+import json
 import logging
 from logging import FileHandler, Formatter, getLogger
 from pathlib import Path
@@ -120,7 +121,32 @@ class ExperimentDataSaver:
         )
 
         self.csv_path = save_dir / f"{filename}.csv"
+        self.metadata_path = save_dir / f"{filename}.json"
         logger.info(f"Data will be saved to: {self.csv_path}")
+
+    def save_metadata(
+        self,
+        experiment_class_name: str,
+        parameters: dict[str, Any],
+        plotter_names: list[str] | None = None,
+    ):
+        """実験のメタデータをJSONファイルに保存"""
+        metadata = {
+            "experiment_name": self.experiment_name,
+            "experiment_class": experiment_class_name,
+            "parameters": parameters,
+            "plotters": plotter_names or [],
+            "start_time": datetime.datetime.now().isoformat(),
+            "columns": self.columns,
+            "csv_file": self.csv_path.name,
+        }
+
+        try:
+            with open(self.metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            logger.info(f"Metadata saved to: {self.metadata_path}")
+        except Exception as e:
+            logger.error(f"Failed to save metadata: {e}")
 
     def start_writing(self):
         """CSVファイルの書き込みを開始"""

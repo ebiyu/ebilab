@@ -267,11 +267,6 @@ class View(tk.Tk):
         self.history_tree.configure(yscrollcommand=scrollbar.set)
         scrollbar.grid(row=0, column=1, sticky="ns")
 
-        plot_button = ttk.Button(
-            frame, text="選択した実験のグラフを表示", command=self._on_plot_history_clicked
-        )
-        plot_button.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
-
         return frame
 
     def _create_display_panel(self, parent):
@@ -455,18 +450,10 @@ class View(tk.Tk):
     def _on_history_selected(self, event):
         """実験履歴が選択されたとき"""
         if self.history_tree and self.history_tree.selection():
-            item = self.history_tree.selection()[0]
-            values = self.history_tree.item(item, "values")
-            if self.on_history_selected and values:
-                self.on_history_selected(values[0])  # timestampを使用
-
-    def _on_plot_history_clicked(self):
-        """履歴プロットボタンがクリックされたとき"""
-        if self.history_tree and self.history_tree.selection():
-            item = self.history_tree.selection()[0]
-            values = self.history_tree.item(item, "values")
-            if self.on_history_selected and values:
-                self.on_history_selected(values[0])
+            item_id = self.history_tree.selection()[0]
+            # item_idが実験ID（iidとして設定したもの）
+            if self.on_history_selected:
+                self.on_history_selected(item_id)
 
     def _set_log_level(self, level: str):
         """ログレベルを設定"""
@@ -835,6 +822,10 @@ class View(tk.Tk):
 
         messagebox.showerror(title, message)
 
+    def show_general_error_dialog(self, title: str, message: str):
+        """汎用的なエラーダイアログを表示"""
+        messagebox.showerror(title, message)
+
     def clear_results(self):
         """結果をクリア"""
         if self.result_tree:
@@ -870,6 +861,30 @@ class View(tk.Tk):
             self.ax.set_title(title)
             self.ax.grid(True)
             self.canvas.draw()
+
+    def get_plot_figure(self) -> Figure | None:
+        """プロット用のFigureオブジェクトを取得"""
+        return self.figure
+
+    def update_plot_display(self):
+        """プロット表示を更新（再描画）"""
+        if self.canvas:
+            self.canvas.draw()
+
+    def update_experiment_history(self, history_items: list[dict[str, str]]):
+        """実験履歴を更新"""
+        if not self.history_tree:
+            return
+
+        # 既存の項目をクリア
+        for item in self.history_tree.get_children():
+            self.history_tree.delete(item)
+
+        # 新しい項目を追加
+        for item in history_items:
+            self.history_tree.insert(
+                "", "end", iid=item["id"], values=(item["timestamp"], item["name"], item["comment"])
+            )
 
     def _setup_keyboard_shortcuts(self):
         """キーボードショートカットを設定"""

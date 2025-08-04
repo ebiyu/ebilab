@@ -10,6 +10,7 @@ import pandas as pd
 
 from ..api.experiment import BaseExperiment
 from ..api.plotting import BasePlotter
+from ..core.history import ExperimentHistoryManager
 from ..core.service import ExperimentService, ExperimentStatus
 from .view import View
 
@@ -104,6 +105,9 @@ class ExperimentController:
         self.current_plotter: BasePlotter | None = None
         self.available_plotters: list[type[BasePlotter]] = []
 
+        # 履歴管理
+        self.history_manager = ExperimentHistoryManager()
+
     def initialize(self):
         """コントローラーの初期化"""
         # サービスを初期化（軽量初期化）
@@ -126,6 +130,9 @@ class ExperimentController:
 
         # 実験リストの初期化
         self._populate_experiment_list()
+
+        # 実験履歴の初期化
+        self._populate_experiment_history()
 
     def _setup_event_handlers(self):
         """イベントハンドラーの設定"""
@@ -410,6 +417,10 @@ class ExperimentController:
             if hasattr(self, "current_plotter") and self.current_plotter:
                 self.current_plotter.experiment = None
 
+        # 実験が正常終了した場合は履歴を更新
+        if status == ExperimentStatus.FINISHED:
+            self.app.after(0, self._update_experiment_history_on_completion)
+
     def _show_error_dialog(self):
         """エラーダイアログを表示"""
         if not self.app or not self.current_experiment_class:
@@ -521,14 +532,95 @@ class ExperimentController:
         if not self.app:
             return
 
-        # 模擬的な履歴データ
-        import random
+        try:
+            # データを読み込む
+            df, metadata = self.history_manager.load_experiment_data(experiment_id)
 
-        times = list(range(50))
-        values = [random.random() * 10 for _ in times]
+            if df is None:
+                self.app.show_general_error_dialog("エラー", "実験データファイルが見つかりません。")
+                return
 
-        self.app.update_plot(times, values, "Time", "Value", f"履歴データ: {experiment_id}")
-        logger.info(f"履歴データ '{experiment_id}' をプロットしました。")
+            # 実験名を取得
+            experiment_name = self.history_manager.get_experiment_name_from_id(experiment_id)
+
+            # 該当する実験クラスを探す
+            experiment_class = None
+            for exp_cls in self.experiment_classes:
+                if exp_cls.name == experiment_name:
+                    experiment_class = exp_cls
+                    break
+
+            if (
+                experiment_class
+                and hasattr(experiment_class, "_plotters")
+                and experiment_class._plotters
+            ):
+                # 実験クラスにプロッターが登録されている場合
+                # 最初のプロッターを使用
+                plotter_class = experiment_class._plotters[0]
+                plotter = plotter_class()
+
+                # figureを設定
+                fig = self.app.get_plot_figure()
+                if fig:
+                    fig.clear()
+                    plotter.fig = fig
+                    plotter.setup()
+                    plotter.update(df)
+                    self.app.update_plot_display()
+                    logger.info(
+                        f"プロッター '{plotter_class.name}' で履歴データをプロットしました。"
+                    )
+            else:
+                # デフォルトプロッターを使用
+                plotter = DefaultPlotter()
+                fig = self.app.get_plot_figure()
+                if fig:
+                    fig.clear()
+                    plotter.fig = fig
+                    plotter.setup()
+                    plotter.update(df)
+                    self.app.update_plot_display()
+                    logger.info("デフォルトプロッターで履歴データをプロットしました。")
+
+        except Exception as e:
+            logger.error(f"履歴データの読み込み中にエラーが発生しました: {e}")
+            self.app.show_general_error_dialog(
+                "エラー", f"データの読み込みに失敗しました:\n{str(e)}"
+            )
+
+    def _populate_experiment_history(self):
+        """実験履歴をTreeViewに追加"""
+        if not self.app:
+            return
+
+        # 履歴データを取得
+        histories = self.history_manager.get_experiment_history()
+
+        # TreeView用のデータに変換
+        history_items = []
+        for history in histories:
+            history_items.append(
+                {
+                    "id": history.id,
+                    "timestamp": history.timestamp_str,
+                    "name": history.name,
+                    "comment": history.comment,
+                }
+            )
+
+        # TreeViewに追加
+        self.app.update_experiment_history(history_items)
+
+    def _update_experiment_history_on_completion(self):
+        """実験完了時に履歴を更新"""
+        logger.info("実験が完了したため、履歴を更新します。")
+
+        # キャッシュをクリアして最新の状態を取得
+        self.history_manager.refresh_cache()
+
+        # 履歴を再読み込み
+        self._populate_experiment_history()
 
     def run(self):
         """アプリケーションの実行"""

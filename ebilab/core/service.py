@@ -210,6 +210,17 @@ class ExperimentService:
         )
         self.data_saver.start_writing()
 
+        # メタデータを保存
+        plotter_names = []
+        if hasattr(experiment_instance.__class__, "_plotters"):
+            plotter_names = [p.name for p in experiment_instance.__class__._plotters]
+
+        self.data_saver.save_metadata(
+            experiment_class_name=experiment_instance.__class__.__name__,
+            parameters=experiment_instance._options,
+            plotter_names=plotter_names,
+        )
+
         logger.info("Data saving initialized successfully")
 
     def _setup_experiment_logging(self, experiment_instance: BaseExperiment):
