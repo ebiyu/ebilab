@@ -159,7 +159,7 @@ class ExperimentDataSaver:
             self.csv_writer = csv.writer(self.csv_file)
 
             # ヘッダー行を書き込み（時間カラムを自動追加）
-            headers = ["t", "time"] + self.columns
+            headers = ["t", "sync_t", "time"] + self.columns
             self.csv_writer.writerow(headers)
 
             # すぐにフラッシュして確実に書き込み
@@ -183,7 +183,7 @@ class ExperimentDataSaver:
 
         try:
             # ヘッダーと同じ順序でデータを整理
-            headers = ["t", "time"] + self.columns
+            headers = ["t", "sync_t", "time"] + self.columns
             row = []
 
             for header in headers:
