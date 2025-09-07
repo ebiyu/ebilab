@@ -52,7 +52,10 @@ class ContinuousResistancePlotter(BasePlotter):
             }
         ):
             t_max = df.max()["t"]
-            t_min = t_max - self.duration
+            if self.experiment.is_running:
+                t_min = t_max - self.duration
+            else:
+                t_min = df.min()["t"]
             df = df.query(f"t > {t_min}")
             self._ax.cla()
             self._ax.plot(df["t"], df["R"])

@@ -32,6 +32,7 @@ class BaseExperiment:
 
     def __init__(self, options):
         self._setup_option_value(options)
+        self.is_running = False  # 実験が実行中かどうかを示すフラグ
 
     @classmethod
     def _get_option_fields(cls) -> dict[str, Any]:

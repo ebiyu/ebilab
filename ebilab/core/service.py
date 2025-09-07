@@ -185,6 +185,7 @@ class ExperimentService:
 
         experiment_instance = experiment_cls(params)
         self.current_experiment_instance = experiment_instance
+        experiment_instance.is_running = True  # 実験開始時にフラグを設定
 
         # デバッグモードでない場合のみデータ保存の準備
         if not self.debug_mode:
@@ -358,6 +359,9 @@ class ExperimentService:
             if self.status != ExperimentStatus.ERROR:
                 self._set_status(ExperimentStatus.FINISHED)
 
+            # 実験インスタンスの実行フラグをクリア
+            if self.current_experiment_instance:
+                self.current_experiment_instance.is_running = False
             # 実験インスタンスをクリア
             self.current_experiment_instance = None
 
