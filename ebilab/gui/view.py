@@ -6,7 +6,7 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any, Callable
 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 from PIL import Image, ImageTk
 
@@ -57,6 +57,7 @@ class View(tk.Tk):
         self.figure: Figure | None = None
         self.ax = None
         self.canvas: FigureCanvasTkAgg | None = None
+        self.toolbar: NavigationToolbar2Tk | None = None
 
         # アイコンを読み込み（適切なサイズで）
         icon_size = self._calculate_icon_size()
@@ -395,6 +396,13 @@ class View(tk.Tk):
         self.canvas = FigureCanvasTkAgg(self.figure, master=plot_frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True, padx=5, pady=(10, 5))
+
+        # NavigationToolbar2Tkを追加
+        toolbar_frame = ttk.Frame(plot_frame)
+        toolbar_frame.pack(side="bottom", fill="x", padx=5, pady=(0, 5))
+        self.toolbar = NavigationToolbar2Tk(self.canvas, toolbar_frame)
+        self.toolbar.update()
+
         display_pane.add(plot_frame, weight=3)
 
         # -- 下半分: 結果とログと実験履歴を切り替えるタブ --
