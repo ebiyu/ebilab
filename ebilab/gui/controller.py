@@ -570,6 +570,19 @@ class ExperimentController:
                 plotter_class = experiment_class._plotters[0]
                 plotter = plotter_class()
 
+                # フィールドのデフォルト値を実際の値として設定
+                for attr_name in dir(plotter_class):
+                    attr_value = getattr(plotter_class, attr_name)
+                    if hasattr(attr_value, "default"):
+                        if hasattr(attr_value, "choices") and hasattr(attr_value, "default_index"):
+                            # SelectField の場合
+                            setattr(
+                                plotter, attr_name, attr_value.choices[attr_value.default_index]
+                            )
+                        else:
+                            # その他のフィールドの場合
+                            setattr(plotter, attr_name, attr_value.default)
+
                 # figureを設定
                 fig = self.app.get_plot_figure()
                 if fig:
