@@ -131,6 +131,9 @@ class ExperimentHistoryManager:
                                 f"メタデータの読み込みまたは解析に失敗しました: {filename}, {e}"
                             )
 
+            # 実験開始時刻でソート（新しい順）
+            history_items.sort(key=lambda h: h.timestamp, reverse=True)
+
             logger.info(f"実験履歴を{len(history_items)}件読み込みました。")
             return history_items
 
