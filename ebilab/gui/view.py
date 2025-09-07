@@ -182,9 +182,6 @@ class View(tk.Tk):
         settings_tab = self._create_settings_tab(notebook)
         notebook.add(settings_tab, text="実験設定")
 
-        history_tab = self._create_history_tab(notebook)
-        notebook.add(history_tab, text="実験履歴")
-
         return frame
 
     def _create_settings_tab(self, parent_notebook):
@@ -261,30 +258,6 @@ class View(tk.Tk):
         self.param_entries["steps"].grid(row=2, column=1, sticky="ew")
         self.param_entries["steps"].insert(0, "10")
 
-    def _create_history_tab(self, parent_notebook):
-        """「実験履歴」タブの中身を作成する"""
-        frame = ttk.Frame(parent_notebook, padding=5)
-        frame.rowconfigure(0, weight=1)
-        frame.columnconfigure(0, weight=1)
-
-        columns = ("timestamp", "name", "comment")
-        self.history_tree = ttk.Treeview(frame, columns=columns, show="headings")
-        self.history_tree.heading("timestamp", text="実行日時")
-        self.history_tree.heading("name", text="実験名")
-        self.history_tree.heading("comment", text="コメント")
-        self.history_tree.column("timestamp", width=80, anchor="center")
-        self.history_tree.column("name", width=80, anchor="center")
-        self.history_tree.insert("", "end", values=("12:15:30", "IV測定", "良好な結果"))
-        self.history_tree.bind("<<TreeviewSelect>>", self._on_history_selected)
-        self.history_tree.bind("<Double-Button-1>", self._on_history_double_click)
-        self.history_tree.grid(row=0, column=0, sticky="nsew")
-
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.history_tree.yview)
-        self.history_tree.configure(yscrollcommand=scrollbar.set)
-        scrollbar.grid(row=0, column=1, sticky="ns")
-
-        return frame
-
     def _create_display_panel(self, parent):
         """右側の表示エリア（プロット＋結果/ログタブ）を作成する"""
         display_pane = ttk.PanedWindow(parent, orient="vertical")
@@ -305,7 +278,7 @@ class View(tk.Tk):
         self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True, padx=5, pady=(10, 5))
         display_pane.add(plot_frame, weight=3)
 
-        # -- 下半分: 結果とログを切り替えるタブ --
+        # -- 下半分: 結果とログと実験履歴を切り替えるタブ --
         result_log_notebook = ttk.Notebook(display_pane)
         display_pane.add(result_log_notebook, weight=1)
 
@@ -424,6 +397,29 @@ class View(tk.Tk):
         )
         self.result_tree.configure(yscrollcommand=result_scrollbar.set)
         result_scrollbar.pack(side="right", fill="y")
+
+        # -- タブ3: 実験履歴 --
+        history_tab = ttk.Frame(result_log_notebook, padding=5)
+        result_log_notebook.add(history_tab, text="実験履歴")
+        history_tab.rowconfigure(0, weight=1)
+        history_tab.columnconfigure(0, weight=1)
+
+        columns = ("timestamp", "name", "comment")
+        self.history_tree = ttk.Treeview(history_tab, columns=columns, show="headings")
+        self.history_tree.heading("timestamp", text="実行日時")
+        self.history_tree.heading("name", text="実験名")
+        self.history_tree.heading("comment", text="コメント")
+        self.history_tree.column("timestamp", width=80, anchor="center")
+        self.history_tree.column("name", width=80, anchor="center")
+        self.history_tree.bind("<<TreeviewSelect>>", self._on_history_selected)
+        self.history_tree.bind("<Double-Button-1>", self._on_history_double_click)
+        self.history_tree.pack(side="left", fill="both", expand=True)
+
+        history_scrollbar = ttk.Scrollbar(
+            history_tab, orient="vertical", command=self.history_tree.yview
+        )
+        self.history_tree.configure(yscrollcommand=history_scrollbar.set)
+        history_scrollbar.pack(side="right", fill="y")
 
         return display_pane
 
