@@ -67,6 +67,7 @@ class TransientPlotter(BasePlotter):
             self._ax.set_xlabel("Time")
             self._ax.set_ylabel("Voltage")
             self._ax.grid(True)
+            self._ax.text(0.05, 0.95, f"step={self.experiment.step}", transform=self._ax.transAxes, verticalalignment='top')
 
 
 #  class to decide how to plot during experiment

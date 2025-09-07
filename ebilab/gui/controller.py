@@ -41,7 +41,6 @@ class DefaultPlotter(BasePlotter):
             for col in numeric_columns:
                 if col != "t":  # 時間列以外
                     self._ax.plot(x_data, df[col], label=col)
-                    break
 
             self._ax.set_xlabel(x_label)
             self._ax.set_ylabel("Value")
@@ -588,6 +587,11 @@ class ExperimentController:
                 if fig:
                     fig.clear()
                     plotter.fig = fig
+                    # experimentインスタンスを設定（メタデータからパラメータを復元）
+                    if experiment_class and metadata:
+                        # メタデータからパラメータを取得（"parameters"キーに格納されている）
+                        params = metadata.get("parameters", {})
+                        plotter.experiment = experiment_class(params)
                     plotter.setup()
                     plotter.update(df)
                     self.app.update_plot_display()
