@@ -17,6 +17,7 @@ dependencies = [
     "GitPython",
     "chardet",
     "pyyaml",
+    "Pillow",
     "pywin32; os_name=='nt'",
     "tomli; python_version<'3.11'",
     "pydantic>=2.10.6",

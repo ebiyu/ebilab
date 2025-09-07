@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import tkinter as tk
 from logging import getLogger
+from pathlib import Path
 from tkinter import messagebox, ttk
 from typing import Any, Callable
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from PIL import Image, ImageTk
 
 from ..api.fields import BoolField, FloatField, IntField, OptionField, SelectField, StrField
 
@@ -56,8 +58,104 @@ class View(tk.Tk):
         self.ax = None
         self.canvas: FigureCanvasTkAgg | None = None
 
+        # アイコンを読み込み（適切なサイズで）
+        icon_size = self._calculate_icon_size()
+        self._load_icons(icon_size)
+
         self._create_ui()
         self._setup_keyboard_shortcuts()
+
+    def _calculate_icon_size(self):
+        return (30, 30)
+        """画面サイズに応じて適切なアイコンサイズを計算する"""
+        try:
+            # 画面の幅と高さを取得
+            screen_width = self.winfo_screenwidth()
+            screen_height = self.winfo_screenheight()
+
+            # 解像度に基づいてアイコンサイズを決定
+            # 一般的なサイズ基準:
+            # - 小さな画面 (1366x768以下): 16px
+            # - 中程度の画面 (1920x1080): 20px
+            # - 大きな画面 (2560x1440以上): 24px
+            # - 4K画面 (3840x2160以上): 32px
+
+            if screen_width <= 1366 or screen_height <= 768:
+                return (16, 16)
+            elif screen_width <= 1920 or screen_height <= 1080:
+                return (20, 20)
+            elif screen_width <= 2560 or screen_height <= 1440:
+                return (24, 24)
+            else:  # 4K or larger
+                return (28, 28)
+
+        except Exception:
+            # エラーの場合はデフォルトサイズを返す
+            return (20, 20)
+
+    def _load_icons(self, icon_size=(20, 20)):
+        """アイコン画像を読み込む"""
+        try:
+            # アイコンディレクトリのパスを取得
+            icons_dir = Path(__file__).parent / "icons"
+
+            # 各アイコンを読み込み、リサイズしてPhotoImageに変換
+            self.play_icon = self._load_and_resize_icon(icons_dir / "play.png", icon_size)
+            self.debug_icon = self._load_and_resize_icon(icons_dir / "debug.png", icon_size)
+            self.stop_icon = self._load_and_resize_icon(icons_dir / "stop.png", icon_size)
+            self.sync_icon = self._load_and_resize_icon(icons_dir / "sync.png", icon_size)
+
+        except Exception as e:
+            logger.warning(f"アイコンの読み込みに失敗しました: {e}")
+            # フォールバック用に None を設定
+            self.play_icon = None
+            self.debug_icon = None
+            self.stop_icon = None
+            self.sync_icon = None
+
+    def _load_and_resize_icon(self, icon_path, size):
+        """アイコンを読み込んでリサイズする"""
+        try:
+            # PILでイメージを開く
+            image = Image.open(icon_path)
+            # リサイズ（アンチエイリアシング付き）
+            image = image.resize(size, Image.Resampling.LANCZOS)
+            # tkinterで使用できるPhotoImageに変換
+            return ImageTk.PhotoImage(image)
+        except Exception as e:
+            logger.warning(f"アイコンのリサイズに失敗しました ({icon_path}): {e}")
+            return None
+
+    def _create_tooltip(self, widget, text):
+        """ウィジェットにツールチップを追加"""
+
+        def on_enter(event):
+            # ツールチップウィンドウを作成
+            tooltip = tk.Toplevel()
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{event.x_root + 10}+{event.y_root + 10}")
+
+            label = tk.Label(
+                tooltip,
+                text=text,
+                background="lightyellow",
+                relief="solid",
+                borderwidth=1,
+                font=("Arial", 9),
+            )
+            label.pack()
+
+            # ツールチップを保存（離脱時に削除するため）
+            widget.tooltip = tooltip
+
+        def on_leave(event):
+            # ツールチップを削除
+            if hasattr(widget, "tooltip"):
+                widget.tooltip.destroy()
+                delattr(widget, "tooltip")
+
+        widget.bind("<Enter>", on_enter)
+        widget.bind("<Leave>", on_leave)
 
     def add_log_entry(self, log_info: dict[str, Any]):
         """ログTreeViewにログエントリを追加"""
@@ -217,27 +315,48 @@ class View(tk.Tk):
         # ボタンフレーム
         button_frame = ttk.Frame(frame, padding=(0, 20, 0, 0))
         button_frame.grid(row=6, column=0, sticky="ew")
-        button_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        button_frame.columnconfigure(0, weight=3)  # メインボタン用（重み大）
+        button_frame.columnconfigure(1, weight=1)  # サブボタン用（重み小）
 
+        # 1段目: 開始ボタン（大）とデバッグボタン（小）
         self.start_button = ttk.Button(
-            button_frame, text="実験開始 (F5)", command=self._on_start_clicked
+            button_frame,
+            image=self.play_icon if self.play_icon else None,
+            text="▶" if not self.play_icon else "",
+            command=self._on_start_clicked,
         )
-        self.start_button.grid(row=0, column=0, sticky="ew", padx=2)
+        self.start_button.grid(row=0, column=0, sticky="ew", padx=(0, 2), pady=(0, 2))
+        self._create_tooltip(self.start_button, "実験開始 (F5)")
 
         self.debug_button = ttk.Button(
-            button_frame, text="デバッグ実行 (F6)", command=self._on_debug_clicked
+            button_frame,
+            image=self.debug_icon if self.debug_icon else None,
+            text="🐛" if not self.debug_icon else "",
+            command=self._on_debug_clicked,
         )
-        self.debug_button.grid(row=0, column=1, sticky="ew", padx=2)
+        self.debug_button.grid(row=0, column=1, sticky="ew", padx=(2, 0), pady=(0, 2))
+        self._create_tooltip(self.debug_button, "デバッグ実行 (F6)")
 
+        # 2段目: 中断ボタン（大）と同期ボタン（小）
         self.stop_button = ttk.Button(
-            button_frame, text="中断 (F9)", state="disabled", command=self._on_stop_clicked
+            button_frame,
+            image=self.stop_icon if self.stop_icon else None,
+            text="⏹" if not self.stop_icon else "",
+            state="disabled",
+            command=self._on_stop_clicked,
         )
-        self.stop_button.grid(row=0, column=2, sticky="ew", padx=2)
+        self.stop_button.grid(row=1, column=0, sticky="ew", padx=(0, 2), pady=(2, 0))
+        self._create_tooltip(self.stop_button, "実験中断 (F9)")
 
         self.sync_button = ttk.Button(
-            button_frame, text="Sync (F12)", state="disabled", command=self._on_sync_clicked
+            button_frame,
+            image=self.sync_icon if self.sync_icon else None,
+            text="🔄" if not self.sync_icon else "",
+            state="disabled",
+            command=self._on_sync_clicked,
         )
-        self.sync_button.grid(row=0, column=3, sticky="ew", padx=2)
+        self.sync_button.grid(row=1, column=1, sticky="ew", padx=(2, 0), pady=(2, 0))
+        self._create_tooltip(self.sync_button, "同期 (F12)")
 
         return frame
 
@@ -839,7 +958,7 @@ class View(tk.Tk):
 
         elif state == "stopping":
             if self.stop_button:
-                self.stop_button.config(state="disabled", text="停止中...")
+                self.stop_button.config(state="disabled")
             if self.sync_button:
                 self.sync_button.config(state="disabled")
             logger.info("実験を停止しています...")
@@ -850,7 +969,7 @@ class View(tk.Tk):
             if self.debug_button:
                 self.debug_button.config(state="normal")
             if self.stop_button:
-                self.stop_button.config(state="disabled", text="中断")
+                self.stop_button.config(state="disabled")
             if self.sync_button:
                 self.sync_button.config(state="disabled")
             logger.error("実験がエラーで終了しました。")
@@ -861,7 +980,7 @@ class View(tk.Tk):
             if self.debug_button:
                 self.debug_button.config(state="normal")
             if self.stop_button:
-                self.stop_button.config(state="disabled", text="中断")
+                self.stop_button.config(state="disabled")
             if self.sync_button:
                 self.sync_button.config(state="disabled")
             if state == "finished":
