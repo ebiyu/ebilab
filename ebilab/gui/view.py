@@ -46,6 +46,7 @@ class View(tk.Tk):
         self.exp_only_var: tk.BooleanVar | None = None
         self.history_tree: ttk.Treeview | None = None
         self.comment_edit_entry: ttk.Entry | None = None  # コメント編集用Entry
+        self.top_debug_warning_label: tk.Label | None = None  # トップレベル警告ラベル
 
         # ログデータの保存（フィルタリング用）
         self.log_entries: list[dict[str, Any]] = []
@@ -147,6 +148,18 @@ class View(tk.Tk):
 
     def _create_ui(self):
         """UIの構築"""
+        # --- トップレベルデバッグ警告（初期状態では非表示）---
+        self.top_debug_warning_label = tk.Label(
+            self,
+            text="⚠ デバッグモード実行中 - データは保存されません ⚠",
+            bg="#dc3545",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            pady=3,
+            height=1,
+        )
+        # 初期状態では非表示
+
         # --- メインの2カラム構成 ---
         main_pane = ttk.PanedWindow(self, orient="horizontal")
         main_pane.pack(fill="both", expand=True)
@@ -278,6 +291,7 @@ class View(tk.Tk):
 
         # -- 上半分: プロットエリア --
         plot_frame = ttk.Frame(display_pane)
+
         self.figure = Figure(figsize=(5, 4), dpi=100)
         self.ax = self.figure.add_subplot(111)
         self.ax.set_title("Real-time Plot")
@@ -870,6 +884,18 @@ class View(tk.Tk):
             children = self.result_tree.get_children()
             if children:
                 self.result_tree.see(children[-1])
+
+    def show_debug_warning(self, show: bool):
+        """デバッグモード警告の表示/非表示を切り替える"""
+        if self.top_debug_warning_label:
+            if show:
+                self.top_debug_warning_label.pack(
+                    side="top",
+                    fill="x",
+                    before=self.winfo_children()[1] if len(self.winfo_children()) > 1 else None,
+                )
+            else:
+                self.top_debug_warning_label.pack_forget()
 
     def show_error_dialog(self, experiment_name: str, error_message: str = None):
         """実験エラー時にダイアログを表示"""

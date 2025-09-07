@@ -367,6 +367,9 @@ class ExperimentController:
         # サービス経由で実験を開始
         self.service.start_experiment(self.current_experiment_class, params)
 
+        # デバッグ警告を非表示
+        self.app.show_debug_warning(False)
+
         # 実験インスタンスを注入
         experiment_instance = self.service.get_current_experiment_instance()
         if hasattr(self, "current_plotter") and self.current_plotter:
@@ -386,6 +389,9 @@ class ExperimentController:
 
         # サービス経由でデバッグモードで実験を開始
         self.service.start_experiment(self.current_experiment_class, params, debug_mode=True)
+
+        # デバッグ警告を表示
+        self.app.show_debug_warning(True)
 
         # 実験インスタンスを注入
         experiment_instance = self.service.get_current_experiment_instance()
@@ -417,6 +423,8 @@ class ExperimentController:
         if status in (ExperimentStatus.FINISHED, ExperimentStatus.ERROR, ExperimentStatus.IDLE):
             if hasattr(self, "current_plotter") and self.current_plotter:
                 self.current_plotter.experiment = None
+            # デバッグ警告も非表示にする
+            self.app.show_debug_warning(False)
 
         # 実験が正常終了した場合は履歴を更新
         if status == ExperimentStatus.FINISHED:
