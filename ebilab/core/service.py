@@ -228,17 +228,24 @@ class ExperimentService:
 
     def _setup_experiment_logging(self, experiment_instance: BaseExperiment):
         """実験ロガーのセットアップ"""
-        # Create a logger and file handler for the experiment
-        self.experiment_logger_manager = ExperimentLoggerManager(experiment_instance.name)
-        self.experiment_logger = self.experiment_logger_manager.experiment_logger
+        if not self.debug_mode:
+            # Create a logger and file handler for the experiment
+            self.experiment_logger_manager = ExperimentLoggerManager(experiment_instance.name)
+            self.experiment_logger = self.experiment_logger_manager.experiment_logger
+            logger.info(
+                f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, "
+                f"{self.experiment_logger_manager.log_path_debug}"
+            )
+        else:
+            # Debug mode: create logger without file handlers
+            from logging import getLogger
+
+            self.experiment_logger = getLogger(f"ebilab.experiment.{experiment_instance.name}")
+            self.experiment_logger_manager = None
+            logger.info("Experiment logging disabled in debug mode")
 
         # inject logger into the experiment instance
         experiment_instance.logger = self.experiment_logger
-
-        logger.info(
-            f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, "
-            f"{self.experiment_logger_manager.log_path_debug}"
-        )
 
     def stop_experiment(self):
         """実行中の実験を中断する。"""
@@ -374,6 +381,9 @@ class ExperimentService:
             self.experiment_logger.info("Experiment completed")
             self.experiment_logger_manager.cleanup()
             self.experiment_logger_manager = None
+            self.experiment_logger = None
+        elif hasattr(self, "experiment_logger") and self.experiment_logger:
+            # Debug mode: just clear the logger reference
             self.experiment_logger = None
 
     async def _shutdown_after_delay(self):
