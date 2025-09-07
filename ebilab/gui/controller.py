@@ -148,6 +148,7 @@ class ExperimentController:
         self.app.on_stop_experiment = self.on_stop_experiment
         self.app.on_sync = self.on_sync
         self.app.on_history_selected = self.on_experiment_history_selected
+        self.app.on_history_comment_updated = self.on_experiment_history_comment_updated
 
     def _after_callback_update(self):
         """定期的にUIを更新するためのコールバック"""
@@ -612,6 +613,18 @@ class ExperimentController:
 
         # TreeViewに追加
         self.app.update_experiment_history(history_items)
+
+    def on_experiment_history_comment_updated(self, experiment_id: str, new_comment: str):
+        """実験履歴のコメントが更新されたとき"""
+        # コメントを保存
+        success = self.history_manager.update_comment(experiment_id, new_comment)
+        if success:
+            logger.info(f"コメントを更新しました: {experiment_id}")
+        else:
+            logger.error(f"コメントの更新に失敗しました: {experiment_id}")
+            # エラーダイアログを表示
+            if self.app:
+                self.app.show_general_error_dialog("エラー", "コメントの保存に失敗しました。")
 
     def _update_experiment_history_on_completion(self):
         """実験完了時に履歴を更新"""

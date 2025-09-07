@@ -28,6 +28,7 @@ class View(tk.Tk):
         self.on_stop_experiment: Callable[[], None] | None = None
         self.on_sync: Callable[[], None] | None = None
         self.on_history_selected: Callable[[str], None] | None = None
+        self.on_history_comment_updated: Callable[[str, str], None] | None = None
 
         # UI要素の参照
         self.exp_combo: ttk.Combobox | None = None
@@ -44,6 +45,7 @@ class View(tk.Tk):
         self.log_level_buttons: dict[str, ttk.Button] = {}
         self.exp_only_var: tk.BooleanVar | None = None
         self.history_tree: ttk.Treeview | None = None
+        self.comment_edit_entry: ttk.Entry | None = None  # コメント編集用Entry
 
         # ログデータの保存（フィルタリング用）
         self.log_entries: list[dict[str, Any]] = []
@@ -261,6 +263,7 @@ class View(tk.Tk):
         self.history_tree.column("name", width=80, anchor="center")
         self.history_tree.insert("", "end", values=("12:15:30", "IV測定", "良好な結果"))
         self.history_tree.bind("<<TreeviewSelect>>", self._on_history_selected)
+        self.history_tree.bind("<Double-Button-1>", self._on_history_double_click)
         self.history_tree.grid(row=0, column=0, sticky="nsew")
 
         scrollbar = ttk.Scrollbar(frame, orient="vertical", command=self.history_tree.yview)
@@ -454,6 +457,68 @@ class View(tk.Tk):
             # item_idが実験ID（iidとして設定したもの）
             if self.on_history_selected:
                 self.on_history_selected(item_id)
+
+    def _on_history_double_click(self, event):
+        """実験履歴をダブルクリックしたとき（コメント編集）"""
+        if not self.history_tree:
+            return
+
+        # クリックされた位置の項目を取得
+        item = self.history_tree.identify("item", event.x, event.y)
+        column = self.history_tree.identify("column", event.x, event.y)
+
+        # コメント列（#3）がダブルクリックされた場合
+        if item and column == "#3":
+            # 既存のコメントを取得
+            values = self.history_tree.item(item, "values")
+            if not values or len(values) < 3:
+                return
+
+            current_comment = values[2]
+
+            # Entryウィジェットを作成して配置
+            bbox = self.history_tree.bbox(item, column)
+            if bbox:
+                # Entryウィジェットを作成
+                self.comment_edit_entry = ttk.Entry(self.history_tree)
+                self.comment_edit_entry.insert(0, current_comment)
+
+                # Entryを表示
+                self.comment_edit_entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+
+                # フォーカスを設定
+                self.comment_edit_entry.focus_set()
+                self.comment_edit_entry.select_range(0, tk.END)
+
+                # イベントハンドラーをバインド
+                self.comment_edit_entry.bind("<Return>", lambda e: self._save_comment_edit(item))
+                self.comment_edit_entry.bind("<Escape>", lambda e: self._cancel_comment_edit())
+                self.comment_edit_entry.bind("<FocusOut>", lambda e: self._save_comment_edit(item))
+
+    def _save_comment_edit(self, item_id):
+        """コメント編集を保存"""
+        if not self.comment_edit_entry:
+            return
+
+        new_comment = self.comment_edit_entry.get()
+
+        # TreeViewの表示を更新
+        values = list(self.history_tree.item(item_id, "values"))
+        values[2] = new_comment
+        self.history_tree.item(item_id, values=values)
+
+        # コールバックを呼び出してデータを保存
+        if self.on_history_comment_updated:
+            self.on_history_comment_updated(item_id, new_comment)
+
+        # Entryを削除
+        self._cancel_comment_edit()
+
+    def _cancel_comment_edit(self):
+        """コメント編集をキャンセル"""
+        if self.comment_edit_entry:
+            self.comment_edit_entry.destroy()
+            self.comment_edit_entry = None
 
     def _set_log_level(self, level: str):
         """ログレベルを設定"""

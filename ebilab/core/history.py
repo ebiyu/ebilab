@@ -109,6 +109,9 @@ class ExperimentHistoryManager:
                             experiment_name = metadata["experiment_name"]
                             timestamp = datetime.datetime.fromisoformat(metadata["start_time"])
 
+                            # コメントを取得（存在しない場合は空文字列）
+                            comment = metadata.get("comment", "")
+
                             # ExperimentHistoryオブジェクトを作成
                             history = ExperimentHistory(
                                 id=filename,
@@ -116,7 +119,7 @@ class ExperimentHistoryManager:
                                 timestamp=timestamp,
                                 csv_path=csv_file,
                                 metadata_path=metadata_path,
-                                comment="",  # コメント機能は後で実装
+                                comment=comment,
                             )
 
                             # キャッシュに保存
@@ -168,3 +171,48 @@ class ExperimentHistoryManager:
         """キャッシュをクリアして再読み込みを促す"""
         self._history_cache.clear()
         logger.info("実験履歴のキャッシュをクリアしました。")
+
+    def update_comment(self, experiment_id: str, comment: str) -> bool:
+        """
+        指定された実験のコメントを更新する
+
+        Args:
+            experiment_id: 実験ID（ファイル名）
+            comment: 新しいコメント
+
+        Returns:
+            bool: 更新成功の場合True、失敗の場合False
+        """
+        # キャッシュから実験履歴を取得
+        if experiment_id not in self._history_cache:
+            logger.error(f"実験履歴がキャッシュに見つかりません: {experiment_id}")
+            return False
+
+        history = self._history_cache[experiment_id]
+
+        # メタデータファイルがない場合はエラー
+        if not history.metadata_path or not history.metadata_path.exists():
+            logger.error(f"メタデータファイルが存在しません: {history.metadata_path}")
+            return False
+
+        try:
+            # 既存のメタデータを読み込む
+            with open(history.metadata_path, encoding="utf-8") as f:
+                metadata = json.load(f)
+
+            # コメントを更新
+            metadata["comment"] = comment
+
+            # メタデータファイルに書き込む
+            with open(history.metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+            # キャッシュも更新
+            history.comment = comment
+
+            logger.info(f"コメントを更新しました: {experiment_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"コメントの更新中にエラーが発生しました: {e}")
+            return False
