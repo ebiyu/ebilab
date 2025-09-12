@@ -32,6 +32,10 @@ class View(tk.Tk):
         self.on_history_selected: Callable[[str], None] | None = None
         self.on_history_comment_updated: Callable[[str, str], None] | None = None
 
+        # Camera callbacks
+        self.on_camera_preview_toggle: Callable[[], None] | None = None
+        self.on_refresh_cameras: Callable[[], None] | None = None
+
         # UI要素の参照
         self.exp_combo: ttk.Combobox | None = None
         self.plotter_combo: ttk.Combobox | None = None
@@ -49,6 +53,14 @@ class View(tk.Tk):
         self.history_tree: ttk.Treeview | None = None
         self.comment_edit_entry: ttk.Entry | None = None  # コメント編集用Entry
         self.top_debug_warning_label: tk.Label | None = None  # トップレベル警告ラベル
+
+        # Camera related UI elements
+        self.camera_combo: ttk.Combobox | None = None
+        self.preview_button: ttk.Button | None = None
+        self.record_checkbox: tk.BooleanVar | None = None
+        self.camera_canvas: tk.Canvas | None = None
+        self.recording_indicator: tk.Label | None = None
+        self.preview_active = False
 
         # ログデータの保存（フィルタリング用）
         self.log_entries: list[dict[str, Any]] = []
@@ -281,6 +293,9 @@ class View(tk.Tk):
         settings_tab = self._create_settings_tab(notebook)
         notebook.add(settings_tab, text="実験設定")
 
+        camera_tab = self._create_camera_tab(notebook)
+        notebook.add(camera_tab, text="カメラ")
+
         return frame
 
     def _create_settings_tab(self, parent_notebook):
@@ -358,6 +373,93 @@ class View(tk.Tk):
         )
         self.sync_button.grid(row=1, column=1, sticky="ew", padx=(2, 0), pady=(2, 0))
         self._create_tooltip(self.sync_button, "同期 (F12)")
+
+        return frame
+
+    def _create_camera_tab(self, parent_notebook):
+        """「カメラ」タブの中身を作成する"""
+        frame = ttk.Frame(parent_notebook, padding=5)
+        frame.columnconfigure(0, weight=1)
+
+        # Camera selection
+        ttk.Label(frame, text="カメラ選択").grid(row=0, column=0, sticky="w", pady=(0, 2))
+        self.camera_combo = ttk.Combobox(frame, values=[], state="readonly")
+        self.camera_combo.grid(row=1, column=0, sticky="ew", pady=(0, 10))
+
+        # Preview area
+        preview_frame = ttk.LabelFrame(frame, text="プレビュー", padding=5)
+        preview_frame.grid(row=2, column=0, sticky="nsew", pady=(0, 10))
+        preview_frame.columnconfigure(0, weight=1)
+        preview_frame.rowconfigure(0, weight=1)
+
+        # Canvas for camera preview (320x240)
+        self.camera_canvas = tk.Canvas(preview_frame, width=320, height=240, bg="black")
+        self.camera_canvas.grid(row=0, column=0, sticky="nsew")
+
+        # Control buttons frame
+        control_frame = ttk.Frame(frame)
+        control_frame.grid(row=3, column=0, sticky="ew", pady=(0, 10))
+        control_frame.columnconfigure(0, weight=1)
+        control_frame.columnconfigure(1, weight=1)
+
+        # Preview button
+        self.preview_button = ttk.Button(
+            control_frame, text="プレビュー開始", command=self._on_preview_clicked
+        )
+        self.preview_button.grid(row=0, column=0, sticky="ew", padx=(0, 2))
+
+        # Refresh cameras button
+        refresh_button = ttk.Button(
+            control_frame, text="カメラ更新", command=self._on_refresh_cameras_clicked
+        )
+        refresh_button.grid(row=0, column=1, sticky="ew", padx=(2, 0))
+
+        # Camera settings frame
+        settings_frame = ttk.LabelFrame(frame, text="カメラ設定", padding=10)
+        settings_frame.grid(row=4, column=0, sticky="ew", pady=(0, 10))
+        settings_frame.columnconfigure(1, weight=1)
+
+        # Resolution selection
+        ttk.Label(settings_frame, text="解像度:").grid(row=0, column=0, sticky="w", padx=(0, 5))
+        self.resolution_combo = ttk.Combobox(settings_frame, state="readonly", width=15)
+        self.resolution_combo.grid(row=0, column=1, sticky="w", pady=(0, 5))
+
+        # Common resolutions with CameraConfig default as first option
+        common_resolutions = [
+            "640x480 (デフォルト)",
+            "320x240",
+            "800x600",
+            "1024x768",
+            "1280x720",
+            "1920x1080",
+        ]
+        self.resolution_combo["values"] = common_resolutions
+        self.resolution_combo.current(0)  # Set default
+
+        # Show timestamp checkbox
+        self.show_timestamp_var = tk.BooleanVar(value=True)  # Default from CameraConfig
+        timestamp_check = ttk.Checkbutton(
+            settings_frame, text="タイムスタンプを表示", variable=self.show_timestamp_var
+        )
+        timestamp_check.grid(row=1, column=0, columnspan=2, sticky="w", pady=(5, 0))
+
+        # Recording options frame
+        record_frame = ttk.LabelFrame(frame, text="録画設定", padding=10)
+        record_frame.grid(row=5, column=0, sticky="ew", pady=(0, 10))
+
+        # Record checkbox
+        self.record_checkbox = tk.BooleanVar(value=False)
+        record_check = ttk.Checkbutton(
+            record_frame, text="実験開始時に録画を開始する", variable=self.record_checkbox
+        )
+        record_check.grid(row=0, column=0, sticky="w")
+
+        # Recording indicator
+        self.recording_indicator = tk.Label(
+            record_frame, text="● 録画中", fg="red", font=("", 10, "bold")
+        )
+        self.recording_indicator.grid(row=1, column=0, sticky="w", pady=(5, 0))
+        self.recording_indicator.grid_remove()  # Initially hidden
 
         return frame
 
@@ -1138,6 +1240,107 @@ class View(tk.Tk):
         # Syncボタンが有効な場合のみ実行
         if self.sync_button and self.sync_button["state"] != "disabled":
             self._on_sync_clicked()
+
+    # Camera-related methods
+    def _on_preview_clicked(self):
+        """プレビューボタンがクリックされたときの処理"""
+        if self.on_camera_preview_toggle:
+            self.on_camera_preview_toggle()
+        else:
+            print("DEBUG: View._on_preview_clicked called but no controller callback set")
+
+    def _on_refresh_cameras_clicked(self):
+        """カメラ更新ボタンがクリックされたときの処理"""
+        if self.on_refresh_cameras:
+            self.on_refresh_cameras()
+        else:
+            print("DEBUG: View._on_refresh_cameras_clicked called but no controller callback set")
+
+    def start_camera_preview(self):
+        """カメラプレビューを開始"""
+        self.preview_active = True
+        if self.preview_button:
+            self.preview_button.configure(text="プレビュー停止")
+
+    def stop_camera_preview(self):
+        """カメラプレビューを停止"""
+        self.preview_active = False
+        if self.preview_button:
+            self.preview_button.configure(text="プレビュー開始")
+        # Clear canvas
+        if self.camera_canvas:
+            self.camera_canvas.delete("all")
+
+    def update_camera_frame(self, image_data):
+        """カメラフレームを更新"""
+        if self.camera_canvas and image_data:
+            # Convert OpenCV image to PhotoImage and display
+            # This will be handled properly by controller
+            pass
+
+    def set_camera_list(self, cameras: list[tuple[int, str]]):
+        """利用可能なカメラリストを設定"""
+        if self.camera_combo:
+            camera_names = [f"{name} (ID: {device_id})" for device_id, name in cameras]
+            self.camera_combo["values"] = camera_names
+            if camera_names:
+                self.camera_combo.current(0)
+
+    def get_selected_camera_id(self) -> int | None:
+        """選択されているカメラIDを取得"""
+        if not self.camera_combo:
+            return None
+
+        current = self.camera_combo.current()
+        if current < 0:
+            return None
+
+        # Extract ID from the selection text
+        text = self.camera_combo.get()
+        if "ID: " in text:
+            try:
+                id_str = text.split("ID: ")[1].rstrip(")")
+                return int(id_str)
+            except (IndexError, ValueError):
+                pass
+        return 0  # Default to first camera
+
+    def get_selected_resolution(self) -> tuple[int, int]:
+        """選択されている解像度を取得"""
+        if not hasattr(self, "resolution_combo") or not self.resolution_combo:
+            return (640, 480)  # CameraConfig default
+
+        resolution_text = self.resolution_combo.get()
+        if not resolution_text:
+            return (640, 480)
+
+        # Extract resolution from text like "640x480 (デフォルト)" or "1280x720"
+        try:
+            resolution_part = resolution_text.split()[0]  # Get first part before space
+            width, height = map(int, resolution_part.split("x"))
+            return (width, height)
+        except (ValueError, IndexError):
+            return (640, 480)  # Fallback to default
+
+    def get_show_timestamp(self) -> bool:
+        """タイムスタンプ表示設定を取得"""
+        if not hasattr(self, "show_timestamp_var") or not self.show_timestamp_var:
+            return True  # CameraConfig default
+        return self.show_timestamp_var.get()
+
+    def is_recording_enabled(self) -> bool:
+        """録画が有効かどうかを取得"""
+        if self.record_checkbox:
+            return self.record_checkbox.get()
+        return False
+
+    def show_recording_indicator(self, show: bool):
+        """録画インジケーターの表示/非表示"""
+        if self.recording_indicator:
+            if show:
+                self.recording_indicator.grid()
+            else:
+                self.recording_indicator.grid_remove()
 
 
 if __name__ == "__main__":

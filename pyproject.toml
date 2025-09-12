@@ -21,6 +21,7 @@ dependencies = [
     "pywin32; os_name=='nt'",
     "tomli; python_version<'3.11'",
     "pydantic>=2.10.6",
+    "opencv-python>=4.8.0",
 ]
 dynamic = ["version"]
 classifiers = [
@@ -58,6 +59,9 @@ dev = [
     "ruff>=0.12.5",
 ]
 
+[tool.uv]
+default-groups = "all"
+
 [tool.ruff]
 target-version = "py38"
 exclude = [
@@ -77,6 +81,16 @@ filename_format = "{name}-{timestamp}"
 timestamp_format = "%Y%m%d-%H%M%S"
 use_date_subfolder = true
 date_folder_format = "%y%m%d"
+
+[tool.ebilab.camera]
+default_device_id = 0
+recording_fps = 30.0
+preview_fps = 15.0
+resolution_width = 640
+resolution_height = 480
+codec = "mp4v"
+show_timestamp = true
+timestamp_format = "%H:%M:%S.%%f"
 
 [tool.mypy]
 exclude = [

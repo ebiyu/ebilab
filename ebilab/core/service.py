@@ -8,10 +8,12 @@ import threading
 import time
 from enum import Enum, auto
 from logging import getLogger
+from pathlib import Path
 from typing import Any
 
 from ..api.experiment import BaseExperiment
 from .data_saver import ExperimentDataSaver, ExperimentLoggerManager
+from .video_recorder import VideoRecorder, get_video_recorder
 
 logger = getLogger(__name__)
 
@@ -61,6 +63,11 @@ class ExperimentService:
 
         # エラー情報（最後に発生したエラー）
         self._last_error: Exception | None = None
+
+        # ビデオ録画
+        self.video_recorder: VideoRecorder = get_video_recorder()
+        self.recording_enabled = False
+        self.recording_path: Path | None = None
 
     def initialize(self):
         """サービスの初期化（軽量な初期化のみ）"""
@@ -153,7 +160,12 @@ class ExperimentService:
             self._notify_status_change()
 
     def start_experiment(
-        self, experiment_cls: type[BaseExperiment], params: dict[str, Any], debug_mode: bool = False
+        self,
+        experiment_cls: type[BaseExperiment],
+        params: dict[str, Any],
+        debug_mode: bool = False,
+        record_video: bool = False,
+        camera_id: int | None = None,
     ):
         """
         新しい実験を開始する。
@@ -162,8 +174,11 @@ class ExperimentService:
             experiment_cls: 実行する実験クラス
             params: Experimentのフィールドに渡すパラメータの辞書。
             debug_mode: デバッグモードで実行するかどうか
+            record_video: ビデオ録画を行うかどうか
+            camera_id: 使用するカメラのID
         """
         self.debug_mode = debug_mode
+        self.recording_enabled = record_video
         if self.status == ExperimentStatus.RUNNING:
             logger.warning("Experiment is already running.")
             return
@@ -196,6 +211,10 @@ class ExperimentService:
 
         # 実験ロガーのセットアップ
         self._setup_experiment_logging(experiment_instance)
+
+        # ビデオ録画の開始（デバッグモードでない場合のみ）
+        if record_video and not debug_mode:
+            self._start_video_recording(experiment_instance, camera_id)
 
         # Wait for the thread to fully start
         time.sleep(0.1)
@@ -356,6 +375,9 @@ class ExperimentService:
             # データ保存のクリーンアップ
             self._cleanup_data_saving()
 
+            # ビデオ録画の停止
+            self._stop_video_recording()
+
             if self.status != ExperimentStatus.ERROR:
                 self._set_status(ExperimentStatus.FINISHED)
 
@@ -389,6 +411,41 @@ class ExperimentService:
         elif hasattr(self, "experiment_logger") and self.experiment_logger:
             # Debug mode: just clear the logger reference
             self.experiment_logger = None
+
+    def _start_video_recording(
+        self, experiment_instance: BaseExperiment, camera_id: int | None = None
+    ):
+        """ビデオ録画を開始"""
+        save_path = self.data_saver.csv_path.with_suffix(".mp4")
+
+        # Start recording
+        if self.video_recorder.start_recording(save_path, camera_id):
+            self.recording_path = self.video_recorder.save_path
+            logger.info(f"Started video recording: {self.recording_path}")
+
+            # Log to experiment logger
+            if self.experiment_logger:
+                self.experiment_logger.info(
+                    f"[system] Video recording started: {self.recording_path}"
+                )
+        else:
+            logger.error("Failed to start video recording")
+            self.recording_enabled = False
+
+    def _stop_video_recording(self):
+        """ビデオ録画を停止"""
+        if not self.recording_enabled or not self.video_recorder:
+            return
+
+        saved_path = self.video_recorder.stop_recording()
+        if saved_path:
+            logger.info(f"Video saved to: {saved_path}")
+            # Log to experiment logger
+            if self.experiment_logger:
+                self.experiment_logger.info(f"[system] Video recording saved: {saved_path}")
+
+        self.recording_enabled = False
+        self.recording_path = None
 
     async def _shutdown_after_delay(self):
         """実験終了後、少し遅延してスレッドを停止"""

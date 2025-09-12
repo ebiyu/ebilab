@@ -12,6 +12,7 @@ from ..api.experiment import BaseExperiment
 from ..api.plotting import BasePlotter
 from ..core.history import ExperimentHistoryManager
 from ..core.service import ExperimentService, ExperimentStatus
+from ..core.video_recorder import VideoRecorder, get_video_recorder
 from .view import View
 
 logger = getLogger(__name__)
@@ -107,6 +108,11 @@ class ExperimentController:
         # 履歴管理
         self.history_manager = ExperimentHistoryManager()
 
+        # カメラ録画
+        self.video_recorder: VideoRecorder = get_video_recorder()
+        self.camera_preview_active = False
+        self.camera_photo_image = None  # To hold the PhotoImage reference
+
     def initialize(self):
         """コントローラーの初期化"""
         # サービスを初期化（軽量初期化）
@@ -133,6 +139,9 @@ class ExperimentController:
         # 実験履歴の初期化
         self._populate_experiment_history()
 
+        # カメラの初期化
+        self._initialize_camera()
+
     def _setup_event_handlers(self):
         """イベントハンドラーの設定"""
         if not self.app:
@@ -149,6 +158,16 @@ class ExperimentController:
         self.app.on_history_selected = self.on_experiment_history_selected
         self.app.on_history_comment_updated = self.on_experiment_history_comment_updated
 
+        # Camera callbacks
+        self.app.on_camera_preview_toggle = self.on_camera_preview_toggle
+        self.app.on_refresh_cameras = self.on_refresh_cameras
+
+        # Camera settings callbacks (bind to UI element change events)
+        if hasattr(self.app, "resolution_combo") and self.app.resolution_combo:
+            self.app.resolution_combo.bind("<<ComboboxSelected>>", self._on_camera_settings_changed)
+        if hasattr(self.app, "show_timestamp_var") and self.app.show_timestamp_var:
+            self.app.show_timestamp_var.trace_add("write", self._on_camera_settings_changed)
+
     def _after_callback_update(self):
         """定期的にUIを更新するためのコールバック"""
         if not self.app:
@@ -159,9 +178,12 @@ class ExperimentController:
             has_new_data = self.on_timer_update_experiment_data()
             if has_new_data:
                 self._update_plot()
+            # Update camera preview if active
+            if self.camera_preview_active:
+                self._update_camera_preview()
         finally:
-            # 再度呼び出す
-            self.app.after(100, self._after_callback_update)
+            # 再度呼び出す（頻度を上げて50msに）
+            self.app.after(50, self._after_callback_update)
 
     def _setup_logging(self):
         # Setup logging
@@ -363,8 +385,14 @@ class ExperimentController:
         # プロッターを初期化
         self._initialize_plotter()
 
+        # カメラ録画設定を取得
+        record_video = self.app.is_recording_enabled()
+        camera_id = self.app.get_selected_camera_id() if record_video else None
+
         # サービス経由で実験を開始
-        self.service.start_experiment(self.current_experiment_class, params)
+        self.service.start_experiment(
+            self.current_experiment_class, params, record_video=record_video, camera_id=camera_id
+        )
 
         # デバッグ警告を非表示
         self.app.show_debug_warning(False)
@@ -386,8 +414,10 @@ class ExperimentController:
         # プロッターを初期化
         self._initialize_plotter()
 
-        # サービス経由でデバッグモードで実験を開始
-        self.service.start_experiment(self.current_experiment_class, params, debug_mode=True)
+        # サービス経由でデバッグモードで実験を開始（録画は無効）
+        self.service.start_experiment(
+            self.current_experiment_class, params, debug_mode=True, record_video=False
+        )
 
         # デバッグ警告を表示
         self.app.show_debug_warning(True)
@@ -417,6 +447,12 @@ class ExperimentController:
         # エラー状態の場合はエラーダイアログを表示
         if status == ExperimentStatus.ERROR:
             self.app.after(0, self._show_error_dialog)
+
+        # 実験開始時に録画インジケーターを表示
+        if status == ExperimentStatus.RUNNING and self.service.recording_enabled:
+            self.app.show_recording_indicator(True)
+        elif status in (ExperimentStatus.FINISHED, ExperimentStatus.ERROR, ExperimentStatus.IDLE):
+            self.app.show_recording_indicator(False)
 
         # 実験終了時（FINISHED、ERROR、IDLE）にプロッターのexperiment属性をクリア
         if status in (ExperimentStatus.FINISHED, ExperimentStatus.ERROR, ExperimentStatus.IDLE):
@@ -666,8 +702,173 @@ class ExperimentController:
         if self.app:
             self.app.mainloop()
 
+    def _initialize_camera(self):
+        """カメラを初期化"""
+        if not self.app:
+            return
+
+        # Get available cameras
+        cameras = self.video_recorder.get_available_cameras()
+        self.app.set_camera_list(cameras)
+
+        if cameras:
+            logger.info(f"Found {len(cameras)} camera(s)")
+        else:
+            logger.info("No cameras found")
+
+        # Apply initial UI settings to video recorder
+        self._on_camera_settings_changed()
+
+    def on_camera_preview_toggle(self):
+        """カメラプレビューのON/OFF切り替え"""
+        logger.debug("on_camera_preview_toggle called")
+        if not self.app:
+            logger.error("App is None")
+            return
+
+        if self.camera_preview_active:
+            logger.info("Stopping camera preview...")
+            # Stop preview
+            self.video_recorder.stop_preview()
+            self.camera_preview_active = False
+            self.app.stop_camera_preview()
+            logger.info("Camera preview stopped")
+        else:
+            logger.info("Starting camera preview...")
+            # Start preview
+            camera_id = self.app.get_selected_camera_id()
+            logger.debug(f"Selected camera ID: {camera_id}")
+            if self.video_recorder.start_preview(camera_id):
+                self.camera_preview_active = True
+                self.app.start_camera_preview()
+                logger.info(f"Camera preview started on device {camera_id}")
+                # Reset logging flags
+                for attr in [
+                    "_first_frame_logged",
+                    "_preview_update_logged",
+                    "_preview_update_count",
+                    "_first_frame_received",
+                ]:
+                    if hasattr(self, attr):
+                        delattr(self, attr)
+            else:
+                logger.error("Failed to start camera preview")
+                self.app.show_general_error_dialog(
+                    "エラー", "カメラプレビューの開始に失敗しました。"
+                )
+
+    def on_refresh_cameras(self):
+        """カメラリストを更新"""
+        if not self.app:
+            return
+
+        cameras = self.video_recorder.get_available_cameras()
+        self.app.set_camera_list(cameras)
+        logger.info(f"Camera list refreshed: found {len(cameras)} camera(s)")
+
+    def _on_camera_settings_changed(self, *args):
+        """カメラ設定が変更されたときのコールバック"""
+        if not self.app:
+            return
+
+        try:
+            # Get current UI settings
+            resolution = self.app.get_selected_resolution()
+            show_timestamp = self.app.get_show_timestamp()
+
+            # Update video recorder settings
+            self.video_recorder.update_ui_settings(
+                resolution=resolution, show_timestamp=show_timestamp
+            )
+
+            logger.debug(
+                f"Camera settings updated: resolution={resolution}, show_timestamp={show_timestamp}"
+            )
+        except Exception as e:
+            logger.error(f"Error updating camera settings: {e}")
+
+    def _update_camera_preview(self):
+        """カメラプレビューフレームを更新"""
+        if not self.camera_preview_active or not self.app:
+            return
+
+        success, frame = self.video_recorder.get_preview_frame()
+
+        # Counter for debugging
+        if not hasattr(self, "_preview_update_count"):
+            self._preview_update_count = 0
+        self._preview_update_count += 1
+
+        # Log periodically
+        if self._preview_update_count <= 5 or self._preview_update_count % 20 == 0:
+            frame_status = 'exists' if frame is not None else 'None'
+            logger.debug(
+                f"_update_camera_preview #{self._preview_update_count}: "
+                f"success={success}, frame={frame_status}"
+            )
+
+        # Log if first successful frame
+        if success and frame is not None and not hasattr(self, "_first_frame_received"):
+            logger.info("First frame received for preview!")
+            self._first_frame_received = True
+
+        if success and frame is not None:
+            # Convert OpenCV frame to PhotoImage
+            try:
+                import cv2
+                from PIL import Image, ImageTk
+
+                # Log frame info on first frame
+                if not hasattr(self, "_first_frame_logged"):
+                    logger.debug(
+                        f"Got frame from preview queue: shape={frame.shape}, dtype={frame.dtype}"
+                    )
+                    self._first_frame_logged = True
+
+                # Convert BGR to RGB
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # Resize to fit canvas (320x240)
+                height, width = frame_rgb.shape[:2]
+                canvas_width = 320
+                canvas_height = 240
+
+                # Calculate scaling factor to fit in canvas
+                scale = min(canvas_width / width, canvas_height / height)
+                new_width = int(width * scale)
+                new_height = int(height * scale)
+
+                frame_resized = cv2.resize(frame_rgb, (new_width, new_height))
+
+                # Convert to PIL Image and then to PhotoImage
+                image = Image.fromarray(frame_resized)
+                self.camera_photo_image = ImageTk.PhotoImage(image)
+
+                # Update canvas
+                if self.app.camera_canvas:
+                    self.app.camera_canvas.delete("all")
+                    # Center the image on canvas
+                    x = (canvas_width - new_width) // 2
+                    y = (canvas_height - new_height) // 2
+                    self.app.camera_canvas.create_image(
+                        x, y, anchor="nw", image=self.camera_photo_image
+                    )
+
+                    # Update the canvas display
+                    self.app.camera_canvas.update_idletasks()
+            except Exception as e:
+                logger.error(f"Error updating camera preview: {e}", exc_info=True)
+
     def cleanup(self):
         """リソースのクリーンアップ"""
+        # Stop camera preview if active
+        if self.camera_preview_active:
+            self.video_recorder.stop_preview()
+
+        # Clean up video recorder
+        if self.video_recorder:
+            self.video_recorder.cleanup()
+
         # サービスをシャットダウン（実行中の実験も停止される）
         if self.service:
             self.service.shutdown()

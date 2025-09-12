@@ -37,8 +37,34 @@ class DataSettings(BaseModel):
 
 
 # @dataclass
+class CameraSettings(BaseModel):
+    # デフォルトのカメラデバイスID
+    default_device_id: int = 0
+
+    # 録画のFPS
+    recording_fps: float = 30.0
+
+    # プレビューのFPS
+    preview_fps: float = 15.0
+
+    # 解像度 (width, height)
+    resolution_width: int = 640
+    resolution_height: int = 480
+
+    # ビデオコーデック (fourcc)
+    codec: str = "mp4v"
+
+    # タイムスタンプを表示するか
+    show_timestamp: bool = True
+
+    # タイムスタンプのフォーマット
+    timestamp_format: str = "%H:%M:%S.%f"
+
+
+# @dataclass
 class Settings(BaseModel):
     data: DataSettings = Field(default_factory=DataSettings)
+    camera: CameraSettings = Field(default_factory=CameraSettings)
 
 
 class SettingsManager:
