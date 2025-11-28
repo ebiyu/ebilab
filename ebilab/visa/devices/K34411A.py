@@ -35,6 +35,18 @@ class K34411A(VisaDevice):
         "1E+8",
         "1E+9",
     ]
+    _option_i_range = [
+        "auto",
+        "1E-6",
+        "1E-5",
+        "1E-4",
+        "1E-3",
+        "1E-2",
+        "1E-1",
+        "1E+0",
+        "3E+0",
+        "1E+1",
+    ]
     _option_v_range = ["auto", "1E-1", "1E+0", "1E+1", "1E+2", "1E+3"]
 
     def _initialize(self, **kwargs: Any) -> None:
@@ -126,6 +138,38 @@ class K34411A(VisaDevice):
             self.visa_write("VOLT:RANG:AUTO ON")
         else:
             self.visa_write(f"VOLT:RANG {range}")
+
+        val = self.visa_query("READ?")
+        return float(val)
+
+    def measure_current(self, *, nplc: str | None = None, range: str = "auto") -> float:
+        """
+        Measure current once
+
+        Args:
+            nplc (Optional[str]): String from
+            {"0.001", "0.002", "0.006", "0.02", "0.06", "0.2", "1", "2", "10", "100"}
+            range (str): String from
+            {"auto", "1E-6", "1E-5", "1E-4", "1E-3", "1E-2", "1E-1", "1E+0", "3E+0", "1E+1"}
+        Returns:
+            float: Measured current value
+        """
+
+        # validate input
+        if nplc and nplc not in self._option_nplc:
+            raise ValueError(f'NPLC value "{nplc}" is invalid.')
+
+        if range not in self._option_i_range:
+            raise ValueError(f'Range value "{range}" is invalid.')
+
+        self.visa_write("CONF:CURR")
+        if nplc:
+            self.visa_write(f"CURR:NPLC {nplc}")
+
+        if range == "auto":
+            self.visa_write("CURR:RANG:AUTO ON")
+        else:
+            self.visa_write(f"CURR:RANG {range}")
 
         val = self.visa_query("READ?")
         return float(val)
