@@ -57,25 +57,49 @@ class VisaManager:
         except FileNotFoundError:
             logger.info("Tried to load Keysight IO Libraries, but directory not found.")
 
-        rm = pyvisa.ResourceManager()
-        logger.info(f"Resource manager initialized: {str(rm)}")
-        visa_list = rm.list_resources()
+        self._rm = pyvisa.ResourceManager()
+        logger.info(f"Resource manager initialized: {str(self.rm)}")
+        visa_list = self.rm.list_resources()
         logger.debug(f"List resources: {str(visa_list)}")
 
-        for addr in visa_list:
-            try:
-                inst: Any = rm.open_resource(addr)
-                try:
-                    idn = inst.query("*IDN?")
-                    logger.debug(f"*IDN? to {addr}: {idn}")
-                    self._devices[addr] = _VisaManagerDevice(idn, inst)
-                except:  # noqa: E722
-                    logger.debug(f"No response to *IDN? from {addr}")
-                    inst.close()
-            except:  # noqa: E722
-                logger.exception(f"Failed to open resource {addr}, skipping")
+    def get_inst_by_addr(self, addr: str) -> Any:
+        """
+        Get pyvisa instance from address.
 
-    def get_inst(self, pattern: str) -> Any | None:
+        Args:
+            addr (str): VISA address
+
+        Returns:
+            pyvisa Resource
+        """
+        # if cached, return cached instance
+        device = self._devices.get(addr, None)
+        if device is not None:
+            return device.inst
+        
+        # else, try to open resource
+        try:
+            logger.info(f"Opening resource {addr}")
+            inst: Any = self.rm.open_resource(addr)
+            logger.info(f"Opened resource {addr}")
+
+            # try to get IDN
+            idn = None
+            try:
+                idn = inst.query("*IDN?")
+                logger.debug(f"*IDN? to {addr}: {idn}")
+            except:  # noqa: E722
+                logger.debug(f"No response to *IDN? from {addr}")
+
+            # Note: It is ok even if IDN is not available
+
+            self._devices[addr] = _VisaManagerDevice(idn if idn is not None else "", inst)
+            return inst
+        except:  # noqa: E722
+            logger.exception(f"Failed to open resource {addr}, skipping")
+            raise DeviceNotFoundError(f"Failed to open resource {addr}")
+
+    def get_inst_by_idn_pattern(self, pattern: str) -> Any:
         """
         Get pyvisa instance from pattern that matches *IDN? result.
 
@@ -85,11 +109,37 @@ class VisaManager:
         Returns:
             pyvisa Resource
         """
+
+        # search in cached devices
         for addr, device in self._devices.items():
             if re.search(pattern, device.idn):
                 logger.info(f"{device.idn} ({addr}) matched {pattern}")
                 return device.inst
-        return None
+
+        visa_list = self.rm.list_resources()
+        logger.debug(f"List resources: {str(visa_list)}")
+
+        for addr in visa_list:
+            try:
+                logger.info(f"Opening resource {addr}")
+                inst: Any = self.rm.open_resource(addr)
+                logger.info(f"Opened resource {addr}")
+                try:
+                    idn = inst.query("*IDN?")
+                    logger.debug(f"*IDN? to {addr}: {idn}")
+                    if re.search(pattern, idn):
+                        logger.info(f"{idn} ({addr}) matched {pattern}")
+
+                        # add to cache 
+                        self._devices[addr] = _VisaManagerDevice(idn, inst)
+                        return inst
+                except:  # noqa: E722
+                    logger.debug(f"No response to *IDN? from {addr}")
+                    inst.close()
+            except:  # noqa: E722
+                logger.exception(f"Failed to open resource {addr}, skipping")
+
+        raise DeviceNotFoundError(f'Device matching "{pattern}" is not found')
 
 
 # To be singleton
@@ -138,7 +188,7 @@ class VisaDevice:
     def __init__(self, *, addr: str | None = None, **kwargs: Any) -> None:
         if self._idn_pattern is None:
             raise NotImplementedError("idn_pattern is None")
-        inst = get_visa_manager().get_inst(self._idn_pattern)
+        inst = get_visa_manager().get_inst_by_idn_pattern(self._idn_pattern)
         if inst is None:
             raise DeviceNotFoundError(f'Device matching "{self._idn_pattern}" is not found')
         self.pyvisa_inst = inst
