@@ -128,6 +128,13 @@ class VisaDevice:
     _idn_pattern: str | None = None
     pyvisa_inst: Any
 
+    @property
+    def addr(self) -> str:
+        """
+        VISA address of device
+        """
+        return self.pyvisa_inst.resource_name
+
     def __init__(self, *, addr: str | None = None, **kwargs: Any) -> None:
         if self._idn_pattern is None:
             raise NotImplementedError("idn_pattern is None")
