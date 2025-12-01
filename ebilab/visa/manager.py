@@ -76,7 +76,7 @@ class VisaManager:
         device = self._devices.get(addr, None)
         if device is not None:
             return device.inst
-        
+
         # else, try to open resource
         try:
             logger.info(f"Opening resource {addr}")
@@ -130,7 +130,7 @@ class VisaManager:
                     if re.search(pattern, idn):
                         logger.info(f"{idn} ({addr}) matched {pattern}")
 
-                        # add to cache 
+                        # add to cache
                         self._devices[addr] = _VisaManagerDevice(idn, inst)
                         return inst
                 except:  # noqa: E722
