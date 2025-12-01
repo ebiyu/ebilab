@@ -188,9 +188,18 @@ class VisaDevice:
     def __init__(self, *, addr: str | None = None, **kwargs: Any) -> None:
         if self._idn_pattern is None:
             raise NotImplementedError("idn_pattern is None")
-        inst = get_visa_manager().get_inst_by_idn_pattern(self._idn_pattern)
-        if inst is None:
-            raise DeviceNotFoundError(f'Device matching "{self._idn_pattern}" is not found')
+
+        if addr is None:
+            # If addr is not specified, search by idn_pattern
+            inst = get_visa_manager().get_inst_by_idn_pattern(self._idn_pattern)
+        else:
+            # If addr is specified, get instance by addr and check idn_pattern
+            inst = get_visa_manager().get_inst_by_addr(addr)
+            if not re.search(self._idn_pattern, inst.query("*IDN?")):
+                raise DeviceNotFoundError(
+                    f'Device at "{addr}" does not match "{self._idn_pattern}"'
+                )
+
         self.pyvisa_inst = inst
         self.pyvisa_inst.timeout = 10000
         logger.info(f"{self.__class__.__name__} is initializing...")
