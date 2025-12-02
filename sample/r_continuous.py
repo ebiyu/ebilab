@@ -6,11 +6,6 @@ from ebilab.api import BaseExperiment, BasePlotter, FloatField, SelectField
 from ebilab.gui.controller import launch_gui
 from ebilab.visa import K34411A
 
-
-class K34465A(K34411A):
-    _idn_pattern = "34465A"
-
-
 class Experiment(BaseExperiment):
     columns = ["R"]
     name = "r-continuous"
@@ -25,7 +20,7 @@ class Experiment(BaseExperiment):
 
     async def setup(self):
         self.logger.info("Connecting to multimeter...")
-        self.multimeter = K34465A()
+        self.multimeter = K34411A()
         self.logger.info("Connected to multimeter.")
 
     async def steps(self):
