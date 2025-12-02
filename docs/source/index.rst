@@ -26,7 +26,6 @@ Python 3.10 以降で動作確認されています。
 
     installation
     changelog
-    changelog-v3.0.0-pre
 
 .. toctree::
     :maxdepth: 1
