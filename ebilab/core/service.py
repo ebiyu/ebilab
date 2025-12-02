@@ -284,37 +284,49 @@ class ExperimentService:
 
         logger.info(f"Service: Sync marker recorded at t={t:.3f}s")
 
+    def _process_step_data(self, data: Any, start_time: float):
+        """steps()からyieldされたデータを処理する"""
+        # Save data to queue
+        if isinstance(data, dict):
+            data = data.copy()
+            current_time = time.perf_counter()
+            data["t"] = current_time - start_time
+            data["sync_t"] = current_time - self._last_sync_time if self._last_sync_time else -1
+            data["time"] = datetime.datetime.now().isoformat()
+
+        # Save data to file
+        # デバッグモードでない場合のみデータ保存
+        if not self.debug_mode:
+            if not self.data_saver:
+                logger.error("Data saver is not initialized")
+                raise RuntimeError("Data saver is not initialized")
+
+            try:
+                self.data_saver.write_data(data)
+            except Exception:
+                logger.exception("Failed to save data to file")
+                raise
+
+        # Add to queue (Send to UI)
+        self.data_queue.put(data)
+
     async def _run_steps(self, exp: BaseExperiment, start_time: float):
         """実験のsteps()を実行し、データを処理する"""
-        async for data in exp.steps():
-            # Check if the stop event is set
-            if self.stop_event.is_set():
-                logger.info("Service: Stop detected, breaking steps loop.")
-                break
+        import inspect
 
-            # Save data to queue
-            if isinstance(data, dict):
-                data = data.copy()
-                current_time = time.perf_counter()
-                data["t"] = current_time - start_time
-                data["sync_t"] = current_time - self._last_sync_time if self._last_sync_time else -1
-                data["time"] = datetime.datetime.now().isoformat()
+        steps_result = exp.steps()
 
-            # Save data to file
-            # デバッグモードでない場合のみデータ保存
-            if not self.debug_mode:
-                if not self.data_saver:
-                    logger.error("Data saver is not initialized")
-                    raise RuntimeError("Data saver is not initialized")
-
-                try:
-                    self.data_saver.write_data(data)
-                except Exception:
-                    logger.exception("Failed to save data to file")
-                    raise
-
-            # Add to queue (Send to UI)
-            self.data_queue.put(data)
+        # steps()がasync generatorかどうかを判定
+        if inspect.isasyncgen(steps_result):
+            # Async generator: async for で処理
+            async for data in steps_result:
+                if self.stop_event.is_set():
+                    logger.info("Service: Stop detected, breaking steps loop.")
+                    break
+                self._process_step_data(data, start_time)
+        else:
+            # 通常のcoroutine: awaitで実行
+            await steps_result
 
     async def _run_lifecycle(self, exp: BaseExperiment):
         """実験のsetup -> steps -> cleanupのライフサイクルを管理する内部メソッド。"""

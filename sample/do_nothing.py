@@ -19,8 +19,6 @@ class DoNothingExperiment(BaseExperiment):
 
     async def steps(self):
         self.logger.info("Do nothing experiment - doing nothing and finishing.")
-        return
-        yield  # unreachable, but needed for generator
 
     async def cleanup(self):
         self.logger.info("Do nothing experiment finished.")

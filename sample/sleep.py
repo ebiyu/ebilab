@@ -27,8 +27,6 @@ class ContextSleepExperiment(BaseExperiment):
         # you have to use asyncio.sleep instead of time.sleep in order to make STOP button work
         await asyncio.sleep(self.time)
         self.logger.info("Sleep completed.")
-        return
-        yield  # unreachable, but needed for generator
 
     async def cleanup(self):
         self.logger.info("Context sleep experiment finished.")

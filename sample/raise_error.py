@@ -20,7 +20,6 @@ class RaiseErrorExperiment(BaseExperiment):
     async def steps(self):
         self.logger.info("About to raise an error...")
         raise ValueError("Test error")
-        yield  # unreachable, but needed for generator
 
     async def cleanup(self):
         self.logger.info("Raise error experiment finished.")

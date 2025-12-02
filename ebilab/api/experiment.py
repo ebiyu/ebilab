@@ -60,9 +60,14 @@ class BaseExperiment:
         pass
 
     async def steps(self):
-        """Override this method to define the experiment steps."""
-        raise NotImplementedError("You must implement the 'steps' async generator method.")
-        yield
+        """
+        Override this method to define the experiment steps.
+
+        This can be either:
+        - An async generator that yields data dictionaries
+        - A regular async function (coroutine) that doesn't yield anything
+        """
+        pass
 
     async def cleanup(self):
         """Override this method to define the cleanup steps."""
