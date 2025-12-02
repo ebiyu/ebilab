@@ -14,7 +14,7 @@ v2からの移行方法については {doc}`migration-v2-to-v3` を参照して
 
 ### Breaking Changes
 
-APIが大幅に刷新されました。
+より記述しやすいAPIへの大幅な刷新を行いました。
 
 - `ExperimentProtocol` → `BaseExperiment`、`ExperimentPlotter` → `BasePlotter` にクラス名が変更されました。
 - `ebilab.experiment` パッケージは削除され、`ebilab.api` と `ebilab.gui` に分割されました。
@@ -46,13 +46,6 @@ APIが大幅に刷新されました。
 - **新しいデバイス**: K34465A (Keysight 34465A) を追加しました。
 - **ショートカットキー**: F5(実験開始)、F6(デバッグ実行)、F9(実験終了)、F12(sync)を追加しました。
 
-### 自動追加される列
-
-データには以下の列が自動で追加されます:
-
-- `t`: 実験開始からの経過時間（秒）
-- `time`: ISO形式のタイムスタンプ
-- `sync_t`: 最後のsyncボタン押下からの経過時間
 
 v2.9.0 (Jul 17, 2025)
 ---------------------
