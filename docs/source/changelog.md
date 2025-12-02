@@ -1,10 +1,58 @@
 更新履歴
 ========
 
+v3.0.0 (Not released)
+---------------------
+
+v3.0.0をリリースしました。
+
 ```{note}
-v3のプレリリース版のリリースノートは
-{doc}`changelog-v3.0.0-pre` を参照してください。
+v2からの移行方法については {doc}`migration-v2-to-v3` を参照してください。
+
+プレリリース版を含む詳細なリリースノートは {doc}`changelog-v3.0.0-pre` を参照してください。
 ```
+
+### Breaking Changes
+
+APIが大幅に刷新されました。
+
+- `ExperimentProtocol` → `BaseExperiment`、`ExperimentPlotter` → `BasePlotter` にクラス名が変更されました。
+- `ebilab.experiment` パッケージは削除され、`ebilab.api` と `ebilab.gui` に分割されました。
+- `ebilab.experiment.devices` は `ebilab.visa` に移動しました。
+- `ebilab.experiment.options` は `ebilab.api` に統合されました。
+- `ebilab.analysis` / `ebilab.analysis2` パッケージは削除されました。
+- オプション定義が辞書形式からクラス属性形式に変更されました。
+- ライフサイクルメソッドが `steps(ctx)` から `setup()`, `steps()`, `cleanup()` の3メソッドに分割されました。
+- すべてのライフサイクルメソッドが `async def` になりました。
+- データ送信が `ctx.send_row()` から `yield` に変更されました。
+- ログ出力が `ctx.log()` から `self.logger` (Python標準logger) に変更されました。
+- Plotterの初期化メソッドが `prepare(ctx)` から `setup()` に変更されました。
+- Plotterの更新メソッドが `update(df, ctx)` から `update(df)` に変更されました。
+- 起動関数が `launch_experiment()` から `launch_gui()` に変更されました。
+- `ExperimentProtocolGroup` によるグルーピング機能は削除されました。
+- `python -m ebilab experiment` コマンドによるスクリプトの自動discover機能は削除されました。
+
+### Features
+
+- **新しいUI**: モダンなGUIを実装しました。
+- **デバッグモード**: データを保存せずに実験を実行できるようになりました。
+- **sync機能**: 実験中にボタンを押したタイムスタンプを記録できるようになりました。
+- **実験履歴**: GUIから過去の実験データを閲覧できるようになりました。
+- **メタデータ保存**: 実験の設定がJSONファイルにメタデータとして保存されるようになりました。
+- **Plotterから実験インスタンスへのアクセス**: `self.experiment` で実験パラメータにアクセスできるようになりました。
+- **is_running フラグ**: `self.experiment.is_running` で実験中かどうかを判定できるようになりました。
+- **ナビゲーションツールバー**: プロット表示にmatplotlibのナビゲーションツールバーを追加しました。
+- **VISAデバイスのアドレス指定**: `K34411A(addr="GPIB0::22::INSTR")` のようにアドレスを指定して接続できるようになりました。
+- **新しいデバイス**: K34465A (Keysight 34465A) を追加しました。
+- **ショートカットキー**: F5(実験開始)、F6(デバッグ実行)、F9(実験終了)、F12(sync)を追加しました。
+
+### 自動追加される列
+
+データには以下の列が自動で追加されます:
+
+- `t`: 実験開始からの経過時間（秒）
+- `time`: ISO形式のタイムスタンプ
+- `sync_t`: 最後のsyncボタン押下からの経過時間
 
 v2.9.0 (Jul 17, 2025)
 ---------------------
