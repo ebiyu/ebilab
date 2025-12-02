@@ -55,6 +55,13 @@ class View(tk.Tk):
 
         # matplotlib関連
         self.figure: Figure | None = None
+        self.plot_frame: ttk.Frame | None = None  # プロットフレーム参照用
+
+        # フルスクリーンプロット用
+        self.fullscreen_window: tk.Toplevel | None = None
+        self.fullscreen_canvas: FigureCanvasTkAgg | None = None
+        self.fullscreen_toolbar: NavigationToolbar2Tk | None = None
+        self.is_plot_fullscreen: bool = False
         self.ax = None
         self.canvas: FigureCanvasTkAgg | None = None
         self.toolbar: NavigationToolbar2Tk | None = None
@@ -380,10 +387,10 @@ class View(tk.Tk):
 
     def _create_display_panel(self, parent):
         """右側の表示エリア（プロット＋結果/ログタブ）を作成する"""
-        display_pane = ttk.PanedWindow(parent, orient="vertical")
+        self.display_pane = ttk.PanedWindow(parent, orient="vertical")
 
         # -- 上半分: プロットエリア --
-        plot_frame = ttk.Frame(display_pane)
+        self.plot_frame = ttk.Frame(self.display_pane)
 
         self.figure = Figure(figsize=(5, 4), dpi=100)
         self.ax = self.figure.add_subplot(111)
@@ -393,21 +400,21 @@ class View(tk.Tk):
         self.ax.grid(True)
         self.figure.tight_layout()
 
-        self.canvas = FigureCanvasTkAgg(self.figure, master=plot_frame)
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True, padx=5, pady=(10, 5))
 
         # NavigationToolbar2Tkを追加
-        toolbar_frame = ttk.Frame(plot_frame)
-        toolbar_frame.pack(side="bottom", fill="x", padx=5, pady=(0, 5))
-        self.toolbar = NavigationToolbar2Tk(self.canvas, toolbar_frame)
+        self.toolbar_frame = ttk.Frame(self.plot_frame)
+        self.toolbar_frame.pack(side="bottom", fill="x", padx=5, pady=(0, 5))
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbar_frame)
         self.toolbar.update()
 
-        display_pane.add(plot_frame, weight=3)
+        self.display_pane.add(self.plot_frame, weight=3)
 
         # -- 下半分: 結果とログと実験履歴を切り替えるタブ --
-        result_log_notebook = ttk.Notebook(display_pane)
-        display_pane.add(result_log_notebook, weight=1)
+        result_log_notebook = ttk.Notebook(self.display_pane)
+        self.display_pane.add(result_log_notebook, weight=1)
 
         # -- タブ1: ログビュー --
         log_tab = ttk.Frame(result_log_notebook, padding=5)
@@ -548,7 +555,7 @@ class View(tk.Tk):
         self.history_tree.configure(yscrollcommand=history_scrollbar.set)
         history_scrollbar.pack(side="right", fill="y")
 
-        return display_pane
+        return self.display_pane
 
     # イベントハンドラー
     def _on_experiment_combo_changed(self, event):
@@ -1113,6 +1120,7 @@ class View(tk.Tk):
         self.bind_all("<F9>", self._keyboard_stop_experiment)
         self.bind_all("<Alt-s>", self._keyboard_stop_experiment)
         self.bind_all("<Control-s>", self._keyboard_stop_experiment)
+        self.bind_all("<F11>", self._keyboard_toggle_fullscreen_plot)
         self.bind_all("<F12>", self._keyboard_sync)
 
     def _keyboard_start_experiment(self, event=None):
@@ -1138,6 +1146,93 @@ class View(tk.Tk):
         # Syncボタンが有効な場合のみ実行
         if self.sync_button and self.sync_button["state"] != "disabled":
             self._on_sync_clicked()
+
+    def _keyboard_toggle_fullscreen_plot(self, event=None):
+        """キーボードからプロットのフルスクリーン表示を切り替え"""
+        if self.is_plot_fullscreen:
+            self._exit_fullscreen_plot()
+        else:
+            self._enter_fullscreen_plot()
+
+    def _enter_fullscreen_plot(self):
+        """プロットエリアをフルスクリーン表示する"""
+        if not self.canvas or not self.figure:
+            return
+
+        self.is_plot_fullscreen = True
+
+        # 元のキャンバスを保存して非表示にする
+        self._original_canvas = self.canvas
+        self._original_toolbar = self.toolbar
+        self._original_toolbar_frame = self.toolbar_frame
+        self._original_canvas.get_tk_widget().pack_forget()
+        self._original_toolbar_frame.pack_forget()
+
+        # フルスクリーンウィンドウを作成
+        self.fullscreen_window = tk.Toplevel(self)
+        self.fullscreen_window.title("Plot - Full Screen (Press F11 or Escape to exit)")
+        self.fullscreen_window.attributes("-fullscreen", True)
+        self.fullscreen_window.configure(bg="white")
+
+        # 閉じるボタンでもフルスクリーンを終了
+        self.fullscreen_window.protocol("WM_DELETE_WINDOW", self._exit_fullscreen_plot)
+
+        # フルスクリーン用の新しいキャンバスを作成（同じFigureを使用）
+        self.fullscreen_canvas = FigureCanvasTkAgg(self.figure, master=self.fullscreen_window)
+        self.fullscreen_canvas.draw()
+        self.fullscreen_canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        # フルスクリーン用ツールバー
+        self._fullscreen_toolbar_frame = ttk.Frame(self.fullscreen_window)
+        self._fullscreen_toolbar_frame.pack(side="bottom", fill="x")
+        self.fullscreen_toolbar = NavigationToolbar2Tk(
+            self.fullscreen_canvas, self._fullscreen_toolbar_frame
+        )
+        self.fullscreen_toolbar.update()
+
+        # self.canvasをフルスクリーン用に切り替え（リアルタイム更新用）
+        self.canvas = self.fullscreen_canvas
+        self.toolbar = self.fullscreen_toolbar
+        self.toolbar_frame = self._fullscreen_toolbar_frame
+
+        # フルスクリーンウィンドウにフォーカスを設定（キーバインドが効くように）
+        self.fullscreen_window.focus_set()
+
+        # Escapeキーでもフルスクリーンを終了できるようにバインド
+        self.fullscreen_window.bind("<Escape>", lambda e: self._exit_fullscreen_plot())
+
+        logger.info("プロットをフルスクリーン表示に切り替えました")
+
+    def _exit_fullscreen_plot(self):
+        """フルスクリーン表示を終了する"""
+        if not self.is_plot_fullscreen or not self.fullscreen_window:
+            return
+
+        self.is_plot_fullscreen = False
+
+        # フルスクリーンウィンドウを閉じる
+        self.fullscreen_window.destroy()
+        self.fullscreen_window = None
+        self.fullscreen_canvas = None
+        self.fullscreen_toolbar = None
+
+        # 元のキャンバスを再表示し、Figureを再アタッチ
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.plot_frame)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True, padx=5, pady=(10, 5))
+
+        # ツールバーを再作成
+        self.toolbar_frame = ttk.Frame(self.plot_frame)
+        self.toolbar_frame.pack(side="bottom", fill="x", padx=5, pady=(0, 5))
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.toolbar_frame)
+        self.toolbar.update()
+
+        # 元のキャンバスへの参照をクリア
+        self._original_canvas = None
+        self._original_toolbar = None
+        self._original_toolbar_frame = None
+
+        logger.info("フルスクリーン表示を終了しました")
 
 
 if __name__ == "__main__":
