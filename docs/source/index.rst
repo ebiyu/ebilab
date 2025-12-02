@@ -4,10 +4,16 @@ ebilabドキュメント
 
 :code:`ebilab` は研究に使っているコードを整理している python パッケージです。
 
-* :py:mod:`ebilab.experiment` : 実験装置を制御するためのパッケージ
-* :py:mod:`ebilab.analysis` : データ解析のためのパッケージ (未完成)
+* :py:mod:`ebilab.api` : 実験を定義するためのAPI（BaseExperiment, BasePlotter, フィールドクラス）
+* :py:mod:`ebilab.visa` : VISA対応デバイスを制御するためのパッケージ
+* :py:mod:`ebilab.gui` : 実験を実行するためのGUIアプリケーション
 
-Python 3.10.7 で動作確認されています。
+Python 3.10 以降で動作確認されています。
+
+.. warning::
+
+    現在 v3 は開発中のプレリリースバージョンです。
+    APIは変更される可能性があります。
 
 
 ****************************************
@@ -20,6 +26,7 @@ Python 3.10.7 で動作確認されています。
 
     installation
     changelog
+    changelog-v3.0.0-pre
 
 .. toctree::
     :maxdepth: 1
@@ -28,7 +35,6 @@ Python 3.10.7 で動作確認されています。
     tutorial/version
     tutorial/experiment_device
     tutorial/experiment
-    tutorial/analysis
 
 .. toctree::
     :caption: Reference
