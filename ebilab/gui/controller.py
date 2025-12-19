@@ -12,6 +12,7 @@ from ..api.experiment import BaseExperiment
 from ..api.plotting import BasePlotter
 from ..core.history import ExperimentHistoryManager
 from ..core.service import ExperimentService, ExperimentStatus
+from ..core.settings import get_settings
 from .view import View
 
 logger = getLogger(__name__)
@@ -146,6 +147,7 @@ class ExperimentController:
         self.app.on_debug_experiment = self.on_debug_experiment
         self.app.on_stop_experiment = self.on_stop_experiment
         self.app.on_sync = self.on_sync
+        self.app.on_screenshot = self.on_screenshot
         self.app.on_history_selected = self.on_experiment_history_selected
         self.app.on_history_comment_updated = self.on_experiment_history_comment_updated
 
@@ -528,6 +530,34 @@ class ExperimentController:
 
         # サービス経由でSyncマーカーを記録
         self.service.sync()
+
+    def on_screenshot(self):
+        """スクリーンショットを保存する処理（F10キー）"""
+        if not self.app:
+            return
+
+        settings = get_settings()
+        data_settings = settings.data
+
+        # 実験中の場合はCSVと同じベースパスのフォルダに保存
+        if self.service.data_saver and self.service.data_saver.csv_path:
+            csv_path = self.service.data_saver.csv_path
+            # CSVファイル名から拡張子を除いたフォルダを作成
+            screenshot_dir = csv_path.parent / csv_path.stem
+        else:
+            # 実験中でない場合は通常のデータフォルダに保存
+            if data_settings.use_date_subfolder:
+                date_str = datetime.datetime.now().strftime(data_settings.date_folder_format)
+                screenshot_dir = data_settings.csv_base_dir / date_str / "screenshots"
+            else:
+                screenshot_dir = data_settings.csv_base_dir / "screenshots"
+
+        # 撮影時のタイムスタンプでファイル名を生成
+        timestamp = datetime.datetime.now().strftime(data_settings.timestamp_format)
+        save_path = screenshot_dir / f"{timestamp}.png"
+
+        # スクリーンショットを保存
+        self.app.save_screenshot(save_path)
 
     def on_experiment_history_selected(self, experiment_id: str):
         """実験履歴が選択されたときの処理"""

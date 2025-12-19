@@ -29,6 +29,7 @@ class View(tk.Tk):
         self.on_debug_experiment: Callable[[dict[str, Any]], None] | None = None
         self.on_stop_experiment: Callable[[], None] | None = None
         self.on_sync: Callable[[], None] | None = None
+        self.on_screenshot: Callable[[], None] | None = None
         self.on_history_selected: Callable[[str], None] | None = None
         self.on_history_comment_updated: Callable[[str, str], None] | None = None
 
@@ -1120,6 +1121,7 @@ class View(tk.Tk):
         self.bind_all("<F9>", self._keyboard_stop_experiment)
         self.bind_all("<Alt-s>", self._keyboard_stop_experiment)
         self.bind_all("<Control-s>", self._keyboard_stop_experiment)
+        self.bind_all("<F10>", self._keyboard_screenshot)
         self.bind_all("<F11>", self._keyboard_toggle_fullscreen_plot)
         self.bind_all("<F12>", self._keyboard_sync)
 
@@ -1146,6 +1148,37 @@ class View(tk.Tk):
         # Syncボタンが有効な場合のみ実行
         if self.sync_button and self.sync_button["state"] != "disabled":
             self._on_sync_clicked()
+
+    def _keyboard_screenshot(self, event=None):
+        """キーボードからスクリーンショットを保存"""
+        if self.on_screenshot:
+            self.on_screenshot()
+
+    def save_screenshot(self, save_path: Path) -> bool:
+        """プロットのスクリーンショットを指定パスに保存
+
+        Args:
+            save_path: 保存先のファイルパス
+
+        Returns:
+            保存に成功した場合True
+        """
+        if not self.figure:
+            logger.warning("プロットがないためスクリーンショットを保存できません")
+            return False
+
+        try:
+            # 親ディレクトリを作成
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # プロットを保存
+            self.figure.savefig(save_path, dpi=150, bbox_inches="tight")
+            logger.info(f"スクリーンショットを保存しました: {save_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"スクリーンショットの保存に失敗しました: {e}")
+            return False
 
     def _keyboard_toggle_fullscreen_plot(self, event=None):
         """キーボードからプロットのフルスクリーン表示を切り替え"""
