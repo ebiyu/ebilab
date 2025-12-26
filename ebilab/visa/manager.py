@@ -120,6 +120,9 @@ class VisaManager:
         logger.debug(f"List resources: {str(visa_list)}")
 
         for addr in visa_list:
+            if not (addr.startswith("USB") or addr.startswith("TCPIP")):
+                logger.debug(f"Skipping resource {addr} (not USB or TCPIP)")
+                continue
             try:
                 logger.info(f"Opening resource {addr}")
                 inst: Any = self.rm.open_resource(addr)
