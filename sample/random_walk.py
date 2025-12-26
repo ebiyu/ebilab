@@ -49,6 +49,7 @@ class RandomWalkExperiment(BaseExperiment):
 @RandomWalkExperiment.register_plotter
 class TransientPlotter(BasePlotter):
     name = "transient"
+    window_length = 10
 
     def setup(self):
         # this method is executed before starting experiment

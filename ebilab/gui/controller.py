@@ -494,8 +494,22 @@ class ExperimentController:
             return
 
         try:
+            full_len = len(self.experiment_data)
+
+            # window_length の取得と正規化
+            window_len = self.current_plotter.get_window_length()
+            if window_len is not None and window_len <= 0:
+                window_len = None
+
+            # window 適用
+            if window_len is not None:
+                start_idx = max(0, full_len - window_len)
+                data_to_plot = self.experiment_data[start_idx:]
+            else:
+                data_to_plot = self.experiment_data
+
             df = pd.DataFrame(
-                self.experiment_data,
+                data_to_plot,
                 columns=["time", "t", "sync_t"] + self.current_experiment_class.columns,
             )
             if df.empty:

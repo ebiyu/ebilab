@@ -10,9 +10,15 @@ from .fields import OptionField
 class BasePlotter:
     """
     可視化ロジックを定義するための基底クラス。
+
+    Attributes:
+        name: プロッターの表示名
+        window_length: 表示対象のデータ長（末尾から何行分を update() に渡すか）。
+                       None の場合は全履歴を渡す。
     """
 
     name: str = "Unnamed Plotter"
+    window_length: int | None = None
 
     def __init__(self):
         """プロッターの初期化"""
@@ -64,3 +70,12 @@ class BasePlotter:
             df: 実験データのDataFrame。
         """
         raise NotImplementedError("You must implement the 'update' method.")
+
+    def get_window_length(self) -> int | None:
+        """
+        Override to dynamically set window_length.
+
+        Returns:
+            int | None: window_length value. Default returns self.window_length.
+        """
+        return self.window_length
