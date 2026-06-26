@@ -130,6 +130,10 @@ Plotter クラス
 ================================
 
 可視化のロジックは、:py:class:`BasePlotter <ebilab.api.BasePlotter>` を継承して定義します。
+登録方法は2通りあり、併用できます。
+
+**方法1: デコレータでクラスを登録**
+
 :code:`@Experiment.register_plotter` デコレータで実験クラスに関連付けます。
 
 .. literalinclude:: ../../../sample/random_walk.py
@@ -139,6 +143,26 @@ Plotter クラス
 * :code:`name` : プロッターの識別名。GUIのドロップダウンに表示されます。
 * :code:`setup()` : プロットの初期設定。プロッターがアクティブになった際に一度だけ呼ばれます。
 * :code:`update(df)` : データが更新されるたびに呼ばれます。 :code:`df` は :code:`pandas.DataFrame` で、全ての実験データが含まれます。
+
+**方法2: インスタンスのリストとして宣言**
+
+軸名を変えただけのシンプルな可視化なら、 :py:class:`SimpleXYPlotter <ebilab.api.SimpleXYPlotter>` のようなビルトイン Plotter を
+:code:`plotters` クラス変数にインスタンスとして並べるだけで登録できます。
+
+.. code-block:: python
+
+    from ebilab.api import BaseExperiment, SimpleXYPlotter
+
+    class MyExperiment(BaseExperiment):
+        plotters = [
+            SimpleXYPlotter("t", "v"),
+            SimpleXYPlotter("t", ["v", "v2"], name="v and v2"),
+        ]
+
+:code:`y_column` には単独のカラム名 (例: :code:`"v"`) も、複数カラム名のリスト (例: :code:`["v", "v2"]`) も渡せます。
+複数指定すると同じ軸に重ねて描画され、凡例が表示されます。
+
+各インスタンスは「テンプレート」として扱われ、実験開始のたびに :code:`copy.copy()` で複製されてから使われます。
 
 Plotterのパラメータ
 --------------------

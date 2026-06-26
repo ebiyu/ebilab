@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import datetime
 import queue
 import traceback
@@ -94,7 +95,7 @@ class ExperimentController:
     def __init__(self, experiment_classes: list[type[BaseExperiment]]):
         self.experiment_classes = experiment_classes
         self.current_experiment_class: type[BaseExperiment] | None = None
-        self.current_plotter_class: type[BasePlotter] | None = None
+        self.current_plotter_template: BasePlotter | None = None
         self.service: ExperimentService = ExperimentService()  # 単一のサービスインスタンス
         self.app: View | None = None
 
@@ -103,7 +104,7 @@ class ExperimentController:
 
         # プロッター関連
         self.current_plotter: BasePlotter | None = None
-        self.available_plotters: list[type[BasePlotter]] = []
+        self.available_plotters: list[BasePlotter] = []
 
         # 履歴管理
         self.history_manager = ExperimentHistoryManager()
@@ -249,21 +250,16 @@ class ExperimentController:
             self.available_plotters = []
             return
 
-        # 実験クラスに登録されたプロッターを取得
-        if hasattr(self.current_experiment_class, "_plotters"):
-            self.available_plotters = self.current_experiment_class._plotters.copy()
-            logger.info(
-                f"Available plotters for {self.current_experiment_class.__name__}: "
-                f"{[p.name for p in self.available_plotters]}"
-            )
-        else:
-            logger.warning("`_plotters` attribute not found in experiment class.")
-            self.available_plotters = []
+        self.available_plotters = self.current_experiment_class.get_plotter_templates()
+        logger.info(
+            f"Available plotters for {self.current_experiment_class.__name__}: "
+            f"{[p.name for p in self.available_plotters]}"
+        )
 
         # デフォルトプロッターがない場合は、シンプルなプロッターを作成
         if not self.available_plotters:
             logger.warning("No plotters available, using default plotter.")
-            self.available_plotters = [DefaultPlotter]
+            self.available_plotters = [DefaultPlotter()]
 
         # UIのプロッターリストを更新
         self._update_plotter_ui()
@@ -283,9 +279,9 @@ class ExperimentController:
 
     def on_plotter_selected(self, plotter_name: str):
         """プロッターが選択されたときの処理"""
-        for plotter_class in self.available_plotters:
-            if plotter_class.name == plotter_name:
-                self.current_plotter_class = plotter_class
+        for plotter_template in self.available_plotters:
+            if plotter_template.name == plotter_name:
+                self.current_plotter_template = plotter_template
                 break
 
         # プロッターパラメータUIを更新
@@ -308,7 +304,7 @@ class ExperimentController:
             for key, value in plotter_params.items():
                 if hasattr(self.current_plotter, key):
                     # 型変換を行う
-                    field = getattr(self.current_plotter_class, key, None)
+                    field = getattr(type(self.current_plotter), key, None)
                     if field:
                         try:
                             if hasattr(field, "default"):
@@ -331,10 +327,10 @@ class ExperimentController:
 
     def _update_plotter_parameter_ui(self):
         """プロッターパラメータUIの更新"""
-        if not self.current_plotter_class or not self.app:
+        if not self.current_plotter_template or not self.app:
             return
 
-        self.app.set_plotter_parameters(self.current_plotter_class._get_option_fields())
+        self.app.set_plotter_parameters(type(self.current_plotter_template)._get_option_fields())
 
     def _update_parameter_ui(self):
         """実験パラメータUIの更新"""
@@ -448,11 +444,11 @@ class ExperimentController:
 
     def _initialize_plotter(self):
         """プロッターを初期化"""
-        if not self.current_plotter_class or not self.app or not self.app.figure:
+        if not self.current_plotter_template or not self.app or not self.app.figure:
             return
 
-        # プロッターのインスタンスを作成
-        self.current_plotter = self.current_plotter_class()
+        # テンプレートを複製してプロッターのインスタンスを作成
+        self.current_plotter = copy.copy(self.current_plotter_template)
         self.current_plotter.fig = self.app.figure
 
         # 実験インスタンスを注入
@@ -463,7 +459,7 @@ class ExperimentController:
         for key, value in plotter_params.items():
             if hasattr(self.current_plotter, key):
                 # 型変換を行う
-                field = getattr(self.current_plotter_class, key, None)
+                field = getattr(type(self.current_plotter), key, None)
                 if field:
                     try:
                         if hasattr(field, "default"):
@@ -603,15 +599,13 @@ class ExperimentController:
                     experiment_class = exp_cls
                     break
 
-            if (
-                experiment_class
-                and hasattr(experiment_class, "_plotters")
-                and experiment_class._plotters
-            ):
+            templates = experiment_class.get_plotter_templates() if experiment_class else []
+            if templates:
                 # 実験クラスにプロッターが登録されている場合
                 # 最初のプロッターを使用
-                plotter_class = experiment_class._plotters[0]
-                plotter = plotter_class()
+                template = templates[0]
+                plotter = copy.copy(template)
+                plotter_class = type(plotter)
 
                 # フィールドのデフォルト値を実際の値として設定
                 for attr_name in dir(plotter_class):
@@ -639,9 +633,7 @@ class ExperimentController:
                     plotter.setup()
                     plotter.update(df)
                     self.app.update_plot_display()
-                    logger.info(
-                        f"プロッター '{plotter_class.name}' で履歴データをプロットしました。"
-                    )
+                    logger.info(f"プロッター '{plotter.name}' で履歴データをプロットしました。")
             else:
                 # デフォルトプロッターを使用
                 plotter = DefaultPlotter()

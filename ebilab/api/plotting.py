@@ -79,3 +79,57 @@ class BasePlotter:
             int | None: window_length value. Default returns self.window_length.
         """
         return self.window_length
+
+
+class SimpleXYPlotter(BasePlotter):
+    """
+    軸名を指定するだけで使える汎用 Plotter。
+
+    Example:
+        class MyExperiment(BaseExperiment):
+            plotters = [
+                SimpleXYPlotter("t", "v"),
+                SimpleXYPlotter("t", ["v", "v2"]),
+            ]
+    """
+
+    def __init__(
+        self,
+        x_column: str,
+        y_column: str | list[str],
+        *,
+        name: str | None = None,
+        window_length: int | None = None,
+    ):
+        super().__init__()
+        self.x_column = x_column
+        self.y_columns: list[str] = [y_column] if isinstance(y_column, str) else list(y_column)
+        if name is not None:
+            self.name = name
+        elif len(self.y_columns) == 1:
+            self.name = f"simple({x_column}, {self.y_columns[0]})"
+        else:
+            self.name = f"simple({x_column}, [{', '.join(self.y_columns)}])"
+        self.window_length = window_length
+
+    def setup(self):
+        if self.fig:
+            self._ax = self.fig.add_subplot(111)
+
+    def update(self, df):
+        if not hasattr(self, "_ax") or df.empty:
+            return
+        if self.x_column not in df.columns:
+            return
+        available = [c for c in self.y_columns if c in df.columns]
+        if not available:
+            return
+        self._ax.clear()
+        for col in available:
+            self._ax.plot(df[self.x_column], df[col], label=col)
+        self._ax.set_xlabel(self.x_column)
+        if len(available) == 1:
+            self._ax.set_ylabel(available[0])
+        else:
+            self._ax.legend()
+        self._ax.grid(True)

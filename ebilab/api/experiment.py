@@ -17,6 +17,7 @@ class BaseExperiment:
     columns: list[str] = []  # Columns to be saved in CSV files
     name: str = "experiment"  # Base name for the experiment (used in file names)
 
+    plotters: list[BasePlotter] = []  # Plotter instances declared on the experiment class
     _plotters: list[type[BasePlotter]] = []  # This will be set by @register_plotter decorator
 
     @classmethod
@@ -29,6 +30,13 @@ class BaseExperiment:
             cls._plotters = []
         cls._plotters.append(plotter_class)
         return plotter_class
+
+    @classmethod
+    def get_plotter_templates(cls) -> list[BasePlotter]:
+        """Return plotter templates as instances (decorator-registered classes are instantiated)."""
+        result: list[BasePlotter] = list(cls.plotters)
+        result.extend(p_cls() for p_cls in cls._plotters)
+        return result
 
     def __init__(self, options):
         self._setup_option_value(options)

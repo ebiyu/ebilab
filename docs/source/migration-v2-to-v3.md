@@ -184,6 +184,25 @@ class HistgramPlotter(BasePlotter):
 6. **実験インスタンスへのアクセス**: `self.experiment` で実験パラメータにアクセス可能
 7. **実行状態の確認**: `self.experiment.is_running` で実験中かどうかを判定可能
 
+### v3で追加: インスタンス宣言方式
+
+軸名を変えただけのシンプルな可視化のために、`BasePlotter` を継承した汎用クラス
+`SimpleXYPlotter` をビルトインで提供しています。 `@register_plotter` デコレータは引き続き使えますが、
+シンプルなケースでは `plotters` クラス変数にインスタンスを並べるだけで済みます。
+
+```python
+from ebilab.api import BaseExperiment, SimpleXYPlotter
+
+class MyExperiment(BaseExperiment):
+    plotters = [
+        SimpleXYPlotter("t", "v"),
+        SimpleXYPlotter("t", ["v", "v2"], name="v and v2"),
+    ]
+```
+
+`y_column` は単独カラム名でも、複数カラム名のリストでも指定できます。リストを渡すと同じ軸に重ねて描画されます。
+両方式は併用可能で、`plotters` と `@register_plotter` で登録されたものはすべて GUI のプロッター選択肢に並びます。
+
 ## 起動関数の変更
 
 ### v2

@@ -215,9 +215,8 @@ class ExperimentService:
         self.data_saver.start_writing()
 
         # メタデータを保存
-        plotter_names = []
-        if hasattr(experiment_instance.__class__, "_plotters"):
-            plotter_names = [p.name for p in experiment_instance.__class__._plotters]
+        templates = experiment_instance.__class__.get_plotter_templates()
+        plotter_names = [p.name for p in templates]
 
         self.data_saver.save_metadata(
             experiment_class_name=experiment_instance.__class__.__name__,

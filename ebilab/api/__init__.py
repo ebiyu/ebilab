@@ -13,11 +13,12 @@ from .fields import (
     SelectField,
     StrField,
 )
-from .plotting import BasePlotter
+from .plotting import BasePlotter, SimpleXYPlotter
 
 __all__ = [
     "BaseExperiment",
     "BasePlotter",
+    "SimpleXYPlotter",
     "OptionField",
     "FloatField",
     "SelectField",
