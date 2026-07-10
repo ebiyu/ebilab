@@ -46,6 +46,7 @@ class SettingsManager:
 
     def __init__(self, config_file: Path | None = None):
         self.config_file = config_file or self._find_config_file()
+        self._settings = Settings()
         self._load_settings()
 
     def _find_config_file(self) -> Path | None:
