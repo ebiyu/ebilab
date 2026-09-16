@@ -17,6 +17,14 @@ from .settings import DataSettings
 logger = getLogger(__name__)
 
 
+def resolve_save_dir(data_settings: DataSettings) -> Path:
+    """設定に従って、データの保存先ディレクトリを決定する"""
+    if data_settings.use_date_subfolder:
+        date_str = datetime.datetime.now().strftime(data_settings.date_folder_format)
+        return data_settings.csv_base_dir / date_str
+    return data_settings.csv_base_dir
+
+
 class ExperimentLoggerManager:
     """Manages logging for experiments, including file handlers and paths."""
 
@@ -36,9 +44,7 @@ class ExperimentLoggerManager:
         data_settings = self.data_settings
 
         # Create directory if it doesn't exist
-        save_dir = data_settings.csv_base_dir / datetime.datetime.now().strftime(
-            data_settings.date_folder_format
-        )
+        save_dir = resolve_save_dir(data_settings)
         save_dir.mkdir(parents=True, exist_ok=True)
 
         # Create log file path
@@ -101,15 +107,8 @@ class ExperimentDataSaver:
         """保存先パスを準備"""
         data_settings = self.data_settings
 
-        # ベースディレクトリ
-        base_dir = data_settings.csv_base_dir
-
-        # 日付フォルダを使用する場合
-        if data_settings.use_date_subfolder:
-            date_str = datetime.datetime.now().strftime(data_settings.date_folder_format)
-            save_dir = base_dir / date_str
-        else:
-            save_dir = base_dir
+        # 保存先ディレクトリを決定
+        save_dir = resolve_save_dir(data_settings)
 
         # ディレクトリを作成
         save_dir.mkdir(parents=True, exist_ok=True)

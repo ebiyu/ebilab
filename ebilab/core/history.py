@@ -71,6 +71,14 @@ class ExperimentHistoryManager:
         # experiment_id -> ExperimentHistory のキャッシュ
         self._history_cache: dict[str, ExperimentHistory] = {}
 
+    def _find_csv_files(self) -> list[Path]:
+        """データディレクトリ直下と日付フォルダ内のCSVファイルを列挙する"""
+        csv_files = sorted(self.data_dir.glob("*.csv"), reverse=True)
+        for date_folder in sorted(self.data_dir.iterdir(), reverse=True):
+            if date_folder.is_dir():
+                csv_files.extend(sorted(date_folder.glob("*.csv"), reverse=True))
+        return csv_files
+
     def get_experiment_history(self) -> list[ExperimentHistory]:
         """実験履歴の一覧を取得"""
         if not self.data_dir.exists():
@@ -80,56 +88,51 @@ class ExperimentHistoryManager:
         history_items = []
 
         try:
-            for date_folder in sorted(self.data_dir.iterdir(), reverse=True):
-                if not date_folder.is_dir():
-                    continue
+            for csv_file in self._find_csv_files():
+                # ファイル名からメタデータを抽出
+                filename = csv_file.stem  # 拡張子を除いたファイル名
+                parts = filename.split("-")
 
-                # CSVファイルを探す
-                for csv_file in sorted(date_folder.glob("*.csv"), reverse=True):
-                    # ファイル名からメタデータを抽出
-                    filename = csv_file.stem  # 拡張子を除いたファイル名
-                    parts = filename.split("-")
-
-                    if len(parts) >= 3:
-                        try:
-                            # メタデータファイルのパスを確認
-                            metadata_path = csv_file.with_suffix(".json")
-                            if not metadata_path.exists():
-                                # メタデータがない場合はスキップ
-                                logger.debug(
-                                    f"メタデータファイルが存在しないためスキップ: {metadata_path}"
-                                )
-                                continue
-
-                            # メタデータを読み込む
-                            with open(metadata_path, encoding="utf-8") as f:
-                                metadata = json.load(f)
-
-                            # 必須フィールドを取得（KeyErrorの場合はスキップ）
-                            experiment_name = metadata["experiment_name"]
-                            timestamp = datetime.datetime.fromisoformat(metadata["start_time"])
-
-                            # コメントを取得（存在しない場合は空文字列）
-                            comment = metadata.get("comment", "")
-
-                            # ExperimentHistoryオブジェクトを作成
-                            history = ExperimentHistory(
-                                id=filename,
-                                name=experiment_name,
-                                timestamp=timestamp,
-                                csv_path=csv_file,
-                                metadata_path=metadata_path,
-                                comment=comment,
+                if len(parts) >= 3:
+                    try:
+                        # メタデータファイルのパスを確認
+                        metadata_path = csv_file.with_suffix(".json")
+                        if not metadata_path.exists():
+                            # メタデータがない場合はスキップ
+                            logger.debug(
+                                f"メタデータファイルが存在しないためスキップ: {metadata_path}"
                             )
+                            continue
 
-                            # キャッシュに保存
-                            self._history_cache[filename] = history
-                            history_items.append(history)
+                        # メタデータを読み込む
+                        with open(metadata_path, encoding="utf-8") as f:
+                            metadata = json.load(f)
 
-                        except (ValueError, json.JSONDecodeError, KeyError) as e:
-                            logger.warning(
-                                f"メタデータの読み込みまたは解析に失敗しました: {filename}, {e}"
-                            )
+                        # 必須フィールドを取得（KeyErrorの場合はスキップ）
+                        experiment_name = metadata["experiment_name"]
+                        timestamp = datetime.datetime.fromisoformat(metadata["start_time"])
+
+                        # コメントを取得（存在しない場合は空文字列）
+                        comment = metadata.get("comment", "")
+
+                        # ExperimentHistoryオブジェクトを作成
+                        history = ExperimentHistory(
+                            id=filename,
+                            name=experiment_name,
+                            timestamp=timestamp,
+                            csv_path=csv_file,
+                            metadata_path=metadata_path,
+                            comment=comment,
+                        )
+
+                        # キャッシュに保存
+                        self._history_cache[filename] = history
+                        history_items.append(history)
+
+                    except (ValueError, json.JSONDecodeError, KeyError) as e:
+                        logger.warning(
+                            f"メタデータの読み込みまたは解析に失敗しました: {filename}, {e}"
+                        )
 
             # 実験開始時刻でソート（新しい順）
             history_items.sort(key=lambda h: h.timestamp, reverse=True)

@@ -11,6 +11,7 @@ import pandas as pd
 
 from ..api.experiment import BaseExperiment
 from ..api.plotting import BasePlotter
+from ..core.data_saver import resolve_save_dir
 from ..core.history import ExperimentHistoryManager
 from ..core.service import ExperimentService, ExperimentStatus
 from ..core.settings import Settings, load_settings
@@ -561,11 +562,7 @@ class ExperimentController:
             screenshot_dir = csv_path.parent / csv_path.stem
         else:
             # 実験中でない場合は通常のデータフォルダに保存
-            if data_settings.use_date_subfolder:
-                date_str = datetime.datetime.now().strftime(data_settings.date_folder_format)
-                screenshot_dir = data_settings.csv_base_dir / date_str / "screenshots"
-            else:
-                screenshot_dir = data_settings.csv_base_dir / "screenshots"
+            screenshot_dir = resolve_save_dir(data_settings) / "screenshots"
 
         # 撮影時のタイムスタンプでファイル名を生成
         timestamp = datetime.datetime.now().strftime(data_settings.timestamp_format)
