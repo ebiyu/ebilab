@@ -12,6 +12,7 @@ from typing import Any
 
 from ..api.experiment import BaseExperiment
 from .data_saver import ExperimentDataSaver, ExperimentLoggerManager
+from .settings import Settings
 
 logger = getLogger(__name__)
 
@@ -30,7 +31,8 @@ class ExperimentService:
     アプリケーションの起動から終了まで存続し、スレッドやキューの管理を行う。
     """
 
-    def __init__(self):
+    def __init__(self, settings: Settings):
+        self.settings = settings
         self.current_experiment_cls: type[BaseExperiment] = None
         self.current_experiment_instance: BaseExperiment = None
         self.status = ExperimentStatus.IDLE
@@ -210,7 +212,9 @@ class ExperimentService:
         """データ保存の初期化"""
         # CSV保存の準備
         self.data_saver = ExperimentDataSaver(
-            experiment_name=experiment_instance.name, columns=experiment_instance.columns
+            experiment_name=experiment_instance.name,
+            columns=experiment_instance.columns,
+            data_settings=self.settings.data,
         )
         self.data_saver.start_writing()
 
@@ -230,7 +234,9 @@ class ExperimentService:
         """実験ロガーのセットアップ"""
         if not self.debug_mode:
             # Create a logger and file handler for the experiment
-            self.experiment_logger_manager = ExperimentLoggerManager(experiment_instance.name)
+            self.experiment_logger_manager = ExperimentLoggerManager(
+                experiment_instance.name, data_settings=self.settings.data
+            )
             self.experiment_logger = self.experiment_logger_manager.experiment_logger
             logger.info(
                 f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, "

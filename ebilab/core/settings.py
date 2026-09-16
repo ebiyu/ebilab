@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -20,6 +21,8 @@ else:
 
 # @dataclass
 class DataSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     # CSV保存先のベースディレクトリ
     csv_base_dir: Path = Field(default_factory=lambda: Path("data"))
 
@@ -38,14 +41,34 @@ class DataSettings(BaseModel):
 
 # @dataclass
 class Settings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     data: DataSettings = Field(default_factory=DataSettings)
+
+
+def _deep_merge(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+    """overrides を base に再帰的にマージした新しい dict を返す"""
+    result = dict(base)
+    for key, value in overrides.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
 
 
 class SettingsManager:
     """設定の読み込み・保存を管理するクラス"""
 
-    def __init__(self, config_file: Path | None = None):
+    def __init__(self, config_file: Path | None = None, overrides: dict[str, Any] | None = None):
+        """
+        Args:
+            config_file: 設定ファイル。未指定の場合は pyproject.toml を探索する。
+            overrides: 設定ファイルの値を部分的に上書きする dict
+                (例: ``{"data": {"csv_base_dir": "data2"}}``)。
+        """
         self.config_file = config_file or self._find_config_file()
+        self.overrides = overrides or {}
         self._settings = Settings()
         self._load_settings()
 
@@ -60,35 +83,28 @@ class SettingsManager:
         return None
 
     def _load_settings(self):
-        """Load config file from pyproject.toml"""
+        """Load config file from pyproject.toml and apply overrides"""
+        self._settings = Settings.model_validate(
+            _deep_merge(self._read_config_file(), self.overrides)
+        )
+
+    def _read_config_file(self) -> dict[str, Any]:
+        """pyproject.toml の tool.ebilab セクションを読み込む"""
         if not self.config_file or not self.config_file.exists():
-            return
+            return {}
 
         try:
             with open(self.config_file, "rb") as f:
                 config = tomllib.load(f)
         except Exception:
-            return
+            return {}
 
-        config_dict = config.get("tool", {}).get("ebilab", {})
-        self._settings = Settings.model_validate(config_dict)
+        return config.get("tool", {}).get("ebilab", {})
 
     def get_settings(self) -> Settings:
         return self._settings
 
 
-# グローバル設定管理インスタンス
-_settings_manager: SettingsManager | None = None
-
-
-def get_settings_manager() -> SettingsManager:
-    """設定管理インスタンスを取得"""
-    global _settings_manager
-    if _settings_manager is None:
-        _settings_manager = SettingsManager()
-    return _settings_manager
-
-
-def get_settings() -> Settings:
-    """アプリケーション設定を取得"""
-    return get_settings_manager().get_settings()
+def load_settings(overrides: dict[str, Any] | None = None) -> Settings:
+    """設定ファイルを読み込み、overrides を適用した設定を返す"""
+    return SettingsManager(overrides=overrides).get_settings()

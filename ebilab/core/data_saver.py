@@ -12,7 +12,7 @@ from logging import FileHandler, Formatter, getLogger
 from pathlib import Path
 from typing import Any, TextIO
 
-from .settings import get_settings
+from .settings import DataSettings
 
 logger = getLogger(__name__)
 
@@ -20,8 +20,9 @@ logger = getLogger(__name__)
 class ExperimentLoggerManager:
     """Manages logging for experiments, including file handlers and paths."""
 
-    def __init__(self, experiment_name: str):
+    def __init__(self, experiment_name: str, data_settings: DataSettings):
         self.experiment_name = experiment_name
+        self.data_settings = data_settings
         self.file_handler: FileHandler | None = None
         self.file_handler_debug: FileHandler | None = None
         self.log_path: Path | None = None
@@ -32,8 +33,7 @@ class ExperimentLoggerManager:
 
     def _initialize(self):
         """Create a file handler for logging."""
-        settings = get_settings()
-        data_settings = settings.data
+        data_settings = self.data_settings
 
         # Create directory if it doesn't exist
         save_dir = data_settings.csv_base_dir / datetime.datetime.now().strftime(
@@ -86,9 +86,10 @@ class ExperimentLoggerManager:
 class ExperimentDataSaver:
     """実験データをCSVファイルに保存するクラス"""
 
-    def __init__(self, experiment_name: str, columns: list[str]):
+    def __init__(self, experiment_name: str, columns: list[str], data_settings: DataSettings):
         self.experiment_name = experiment_name
         self.columns = columns
+        self.data_settings = data_settings
         self.csv_file: TextIO | None = None
         self.csv_writer: csv.writer | None = None
         self.csv_path: Path | None = None
@@ -98,8 +99,7 @@ class ExperimentDataSaver:
 
     def _prepare_save_path(self):
         """保存先パスを準備"""
-        settings = get_settings()
-        data_settings = settings.data
+        data_settings = self.data_settings
 
         # ベースディレクトリ
         base_dir = data_settings.csv_base_dir

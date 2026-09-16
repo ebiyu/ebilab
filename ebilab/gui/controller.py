@@ -13,7 +13,7 @@ from ..api.experiment import BaseExperiment
 from ..api.plotting import BasePlotter
 from ..core.history import ExperimentHistoryManager
 from ..core.service import ExperimentService, ExperimentStatus
-from ..core.settings import get_settings
+from ..core.settings import Settings, load_settings
 from .view import View
 
 logger = getLogger(__name__)
@@ -92,11 +92,17 @@ class ExperimentController:
     アプリケーションの寿命全体を通じて存続します。
     """
 
-    def __init__(self, experiment_classes: list[type[BaseExperiment]]):
+    def __init__(
+        self,
+        experiment_classes: list[type[BaseExperiment]],
+        settings: Settings,
+    ):
         self.experiment_classes = experiment_classes
+        self.settings = settings
         self.current_experiment_class: type[BaseExperiment] | None = None
         self.current_plotter_template: BasePlotter | None = None
-        self.service: ExperimentService = ExperimentService()  # 単一のサービスインスタンス
+        # 単一のサービスインスタンス
+        self.service: ExperimentService = ExperimentService(settings)
         self.app: View | None = None
 
         # データ記録
@@ -107,7 +113,7 @@ class ExperimentController:
         self.available_plotters: list[BasePlotter] = []
 
         # 履歴管理
-        self.history_manager = ExperimentHistoryManager()
+        self.history_manager = ExperimentHistoryManager(settings.data)
 
     def initialize(self):
         """コントローラーの初期化"""
@@ -546,8 +552,7 @@ class ExperimentController:
         if not self.app:
             return
 
-        settings = get_settings()
-        data_settings = settings.data
+        data_settings = self.settings.data
 
         # 実験中の場合はCSVと同じベースパスのフォルダに保存
         if self.service.data_saver and self.service.data_saver.csv_path:
@@ -710,17 +715,30 @@ class ExperimentController:
 
 
 # 使用例
-def create_controller(experiment_classes: list[type[BaseExperiment]]) -> ExperimentController:
+def create_controller(
+    experiment_classes: list[type[BaseExperiment]],
+    settings: dict[str, Any] | None = None,
+) -> ExperimentController:
     """コントローラーのファクトリー関数"""
-    controller = ExperimentController(experiment_classes)
+    controller = ExperimentController(experiment_classes, load_settings(settings))
     controller.initialize()
     return controller
 
 
 # コンビニエンス関数
-def launch_gui(experiment_classes: list[type[BaseExperiment]]):
-    """GUIアプリケーションを起動"""
-    controller = create_controller(experiment_classes)
+def launch_gui(
+    experiment_classes: list[type[BaseExperiment]],
+    settings: dict[str, Any] | None = None,
+):
+    """
+    GUIアプリケーションを起動
+
+    Args:
+        experiment_classes: GUIに登録する実験クラスのリスト
+        settings: pyproject.toml の `tool.ebilab` の設定を部分的に上書きする dict。
+            例: ``{"data": {"csv_base_dir": Path(__file__).parent / "data"}}``
+    """
+    controller = create_controller(experiment_classes, settings=settings)
 
     try:
         controller.run()

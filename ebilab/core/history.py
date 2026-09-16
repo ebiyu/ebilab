@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from .settings import get_settings
+from .settings import DataSettings
 
 logger = getLogger(__name__)
 
@@ -65,9 +65,9 @@ class ExperimentHistory:
 class ExperimentHistoryManager:
     """過去の実験データの読み込みと管理を行うクラス"""
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.data_dir = self.settings.data.csv_base_dir
+    def __init__(self, data_settings: DataSettings):
+        self.data_settings = data_settings
+        self.data_dir = data_settings.csv_base_dir
         # experiment_id -> ExperimentHistory のキャッシュ
         self._history_cache: dict[str, ExperimentHistory] = {}
 
