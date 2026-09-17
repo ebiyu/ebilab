@@ -1,6 +1,29 @@
 更新履歴
 ========
 
+v3.1.0 (Sep 17, 2026)
+---------------------
+
+### Features
+
+- **Plotterのインスタンス登録**: `plotters = [SimpleXYPlotter("t", "v")]` のように、Plotterをインスタンスのリストとして宣言できるようになりました。従来の `@register_plotter` デコレータ方式と併用可能です。
+- **`SimpleXYPlotter`**: 単純なXYプロットを行うビルトインPlotterを追加しました。Y軸には単独カラム / カラムのリストの両方を指定できます。
+- **`window_length`**: Plotterに `window_length` を指定すると、末尾の指定行数のみを `update()` に渡せるようになりました。`get_window_length()` をオーバーライドすれば動的に変更できます。
+- **設定の上書き**: `launch_gui(experiments, settings={"data": {"csv_base_dir": ...}})` のように、`pyproject.toml` の `tool.ebilab` 設定をスクリプトから部分的に上書きできるようになりました。
+- **デバッグモードの切り替え**: 実験の実行中にデバッグモードを変更できるようになりました。
+- **ショートカットキー**: F10(スクリーンショット保存)、F11(全画面表示)を追加しました。
+
+### Bug Fixes
+
+- `steps()` が `yield` を含まない `async def` 関数の場合に動作しない問題を修正しました。
+- 設定ファイルが存在しない場合に `AttributeError` が発生する問題を修正しました。
+- `use_date_subfolder` が無効な場合でもログファイルが日付フォルダに書き込まれる問題を修正しました。あわせて、この場合にデータディレクトリ直下のCSVが実験履歴に表示されない問題も修正しました。
+
+### Changes
+
+- `VisaManager` でUSB / TCPIP以外のVISAリソースをスキップするようになりました。
+- CSV出力から `sync_t` 列を削除しました。syncボタンによる記録は実験ログの `[sync]` マーカーとして残ります。
+
 v3.0.0 (Dec 02, 2025)
 ---------------------
 
