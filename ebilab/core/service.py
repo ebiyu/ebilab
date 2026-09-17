@@ -64,9 +64,6 @@ class ExperimentService:
         # data_saver の差し替えを、実験スレッドからの書き込みと競合させないためのロック
         self._recording_lock = threading.Lock()
 
-        # sync時刻の管理
-        self._last_sync_time: float | None = None
-
         # エラー情報（最後に発生したエラー）
         self._last_error: Exception | None = None
 
@@ -353,9 +350,6 @@ class ExperimentService:
         else:
             t = 0.0
 
-        # sync時刻を更新
-        self._last_sync_time = current_time
-
         # record log
         if self.experiment_logger:
             self.experiment_logger.info(f"[sync] Sync marker at t={t:.3f}s")
@@ -369,7 +363,6 @@ class ExperimentService:
             data = data.copy()
             current_time = time.perf_counter()
             data["t"] = current_time - start_time
-            data["sync_t"] = current_time - self._last_sync_time if self._last_sync_time else -1
             data["time"] = datetime.datetime.now().isoformat()
 
         # Save data to file
@@ -413,7 +406,6 @@ class ExperimentService:
             exp.logger.info(f"[system] Starting experiment: {exp.name}")
             start_time = time.perf_counter()
             self._experiment_start_time = start_time  # 開始時刻を記録
-            self._last_sync_time = None  # 最初のsyncまではNone
             await exp.setup()
             exp.logger.info(
                 f"[system] Setup complete for experiment: {exp.name}, "

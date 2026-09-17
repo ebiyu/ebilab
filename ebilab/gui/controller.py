@@ -353,7 +353,7 @@ class ExperimentController:
             return
 
         self.app.clear_results()
-        self.app.set_result_columns(["time", "t", "sync_t"] + self.current_experiment_class.columns)
+        self.app.set_result_columns(["time", "t"] + self.current_experiment_class.columns)
 
         self.experiment_data.clear()
 
@@ -527,7 +527,7 @@ class ExperimentController:
 
             df = pd.DataFrame(
                 data_to_plot,
-                columns=["time", "t", "sync_t"] + self.current_experiment_class.columns,
+                columns=["time", "t"] + self.current_experiment_class.columns,
             )
             if df.empty:
                 logger.debug("No data to plot")
