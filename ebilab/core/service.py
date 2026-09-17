@@ -58,6 +58,12 @@ class ExperimentService:
         # ステータス変更コールバック
         self._status_callbacks = []
 
+        # 記録状態変更コールバック
+        self._recording_callbacks = []
+
+        # data_saver の差し替えを、実験スレッドからの書き込みと競合させないためのロック
+        self._recording_lock = threading.Lock()
+
         # sync時刻の管理
         self._last_sync_time: float | None = None
 
@@ -189,15 +195,15 @@ class ExperimentService:
         self.current_experiment_instance = experiment_instance
         experiment_instance.is_running = True  # 実験開始時にフラグを設定
 
-        # デバッグモードでない場合のみデータ保存の準備
-        if not self.debug_mode:
-            self._setup_data_saving(experiment_instance)
-        else:
+        # 実験ロガーのセットアップ（ログファイルは記録を始めるときに作る）
+        self._setup_experiment_logging(experiment_instance)
+
+        # デバッグモードで開始したときは記録しない。実行中に set_debug_mode() で切り替えられる。
+        if self.debug_mode:
             logger.info("Data saving is disabled in debug mode")
             self.data_saver = None
-
-        # 実験ロガーのセットアップ
-        self._setup_experiment_logging(experiment_instance)
+        else:
+            self._start_recording(experiment_instance)
 
         # Wait for the thread to fully start
         time.sleep(0.1)
@@ -208,50 +214,117 @@ class ExperimentService:
             self.loop,
         )
 
-    def _setup_data_saving(self, experiment_instance: BaseExperiment):
-        """データ保存の初期化"""
-        # CSV保存の準備
-        self.data_saver = ExperimentDataSaver(
+    def is_recording(self) -> bool:
+        """記録中（CSV に保存中）かどうかを判定する"""
+        return self.data_saver is not None
+
+    def set_debug_mode(self, debug_mode: bool):
+        """
+        実行中の実験のデバッグモードを切り替える。
+
+        デバッグモードを抜けると記録（CSV とログの保存）を始め、デバッグモードに入ると
+        記録を終える。実験そのものは動き続けるので、装置が安定するのを待ってから記録を
+        始めたり、記録したい区間だけを区切って残したりできる。
+
+        1回の実験実行の中で何度でも切り替えられる。記録ごとに CSV が1本作られる。
+        """
+        if self.status != ExperimentStatus.RUNNING:
+            logger.warning("Cannot change debug mode: experiment is not running")
+            return
+
+        if self.debug_mode == debug_mode:
+            return
+
+        experiment_instance = self.current_experiment_instance
+        if experiment_instance is None:
+            logger.warning("Cannot change debug mode: no experiment instance")
+            return
+
+        self.debug_mode = debug_mode
+        logger.info(f"Service: Debug mode changed to {debug_mode}")
+
+        if debug_mode:
+            self._stop_recording()
+        else:
+            self._start_recording(experiment_instance)
+
+    def add_recording_callback(self, callback):
+        """記録状態が変わったときに呼び出されるコールバックを追加"""
+        self._recording_callbacks.append(callback)
+
+    def _notify_recording_change(self):
+        """記録状態の変化をコールバックに通知"""
+        recording = self.is_recording()
+        for callback in self._recording_callbacks:
+            try:
+                callback(recording)
+            except Exception:
+                logger.exception("Recording callback failed")
+
+    def _start_recording(self, experiment_instance: BaseExperiment):
+        """記録を開始する（状態チェックは呼び出し側の責務）"""
+        data_saver = ExperimentDataSaver(
             experiment_name=experiment_instance.name,
             columns=experiment_instance.columns,
             data_settings=self.settings.data,
         )
-        self.data_saver.start_writing()
+        data_saver.start_writing()
 
         # メタデータを保存
         templates = experiment_instance.__class__.get_plotter_templates()
         plotter_names = [p.name for p in templates]
 
-        self.data_saver.save_metadata(
+        data_saver.save_metadata(
             experiment_class_name=experiment_instance.__class__.__name__,
             parameters=experiment_instance._options,
             plotter_names=plotter_names,
         )
 
-        logger.info("Data saving initialized successfully")
+        with self._recording_lock:
+            self.data_saver = data_saver
+
+        save_path = data_saver.get_save_path()
+        logger.info(f"Service: Recording started: {save_path}")
+        if self.experiment_logger:
+            self.experiment_logger.info(f"[recording] Started: {save_path}")
+        self._notify_recording_change()
+
+    def _stop_recording(self):
+        """記録を終了する（記録中でなければ何もしない）"""
+        with self._recording_lock:
+            data_saver = self.data_saver
+            self.data_saver = None
+
+        if data_saver is None:
+            return
+
+        data_saver.stop_writing()
+
+        save_path = data_saver.get_save_path()
+        logger.info(f"Service: Recording stopped, CSV saved to: {save_path}")
+        if self.experiment_logger:
+            self.experiment_logger.info(f"[recording] Stopped: {save_path}")
+        self._notify_recording_change()
 
     def _setup_experiment_logging(self, experiment_instance: BaseExperiment):
-        """実験ロガーのセットアップ"""
-        if not self.debug_mode:
-            # Create a logger and file handler for the experiment
-            self.experiment_logger_manager = ExperimentLoggerManager(
-                experiment_instance.name, data_settings=self.settings.data
-            )
-            self.experiment_logger = self.experiment_logger_manager.experiment_logger
-            logger.info(
-                f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, "
-                f"{self.experiment_logger_manager.log_path_debug}"
-            )
-        else:
-            # Debug mode: create logger without file handlers
-            from logging import getLogger
+        """
+        実験ロガーのセットアップ。
 
-            self.experiment_logger = getLogger(f"ebilab.experiment.{experiment_instance.name}")
-            self.experiment_logger_manager = None
-            logger.info("Experiment logging disabled in debug mode")
+        ログファイルは記録の有無に関わらず実験ごとに1本作る。デバッグ実行で装置を
+        暖めている間のログも残したいため。
+        """
+        self.experiment_logger_manager = ExperimentLoggerManager(
+            experiment_instance.name, data_settings=self.settings.data
+        )
+        self.experiment_logger = self.experiment_logger_manager.experiment_logger
 
         # inject logger into the experiment instance
         experiment_instance.logger = self.experiment_logger
+
+        logger.info(
+            f"Experiment logging setup complete: {self.experiment_logger_manager.log_path}, "
+            f"{self.experiment_logger_manager.log_path_debug}"
+        )
 
     def stop_experiment(self):
         """実行中の実験を中断する。"""
@@ -300,17 +373,15 @@ class ExperimentService:
             data["time"] = datetime.datetime.now().isoformat()
 
         # Save data to file
-        # デバッグモードでない場合のみデータ保存
-        if not self.debug_mode:
-            if not self.data_saver:
-                logger.error("Data saver is not initialized")
-                raise RuntimeError("Data saver is not initialized")
-
-            try:
-                self.data_saver.write_data(data)
-            except Exception:
-                logger.exception("Failed to save data to file")
-                raise
+        # 記録中だけ CSV に書き出す（記録していなくても UI には流す）
+        with self._recording_lock:
+            data_saver = self.data_saver
+            if data_saver is not None:
+                try:
+                    data_saver.write_data(data)
+                except Exception:
+                    logger.exception("Failed to save data to file")
+                    raise
 
         # Add to queue (Send to UI)
         self.data_queue.put(data)
@@ -392,19 +463,14 @@ class ExperimentService:
 
     def _cleanup_data_saving(self):
         """データ保存のクリーンアップ"""
-        if self.data_saver:
-            self.data_saver.stop_writing()
-            logger.info(f"CSV saved to: {self.data_saver.get_save_path()}")
-            self.data_saver = None
+        # 記録中のまま実験が終わった場合はここで閉じる
+        self._stop_recording()
 
         # 実験ロガーのクリーンアップ
-        if hasattr(self, "experiment_logger_manager") and self.experiment_logger_manager:
+        if self.experiment_logger_manager:
             self.experiment_logger.info("Experiment completed")
             self.experiment_logger_manager.cleanup()
             self.experiment_logger_manager = None
-            self.experiment_logger = None
-        elif hasattr(self, "experiment_logger") and self.experiment_logger:
-            # Debug mode: just clear the logger reference
             self.experiment_logger = None
 
     async def _shutdown_after_delay(self):

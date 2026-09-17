@@ -123,6 +123,7 @@ class ExperimentController:
 
         # ステータス変更コールバックを設定
         self.service.add_status_callback(self._on_status_changed)
+        self.service.add_recording_callback(self._on_recording_changed)
 
         # UIを作成
         self.app = View()
@@ -357,8 +358,13 @@ class ExperimentController:
         self.experiment_data.clear()
 
     def on_start_experiment(self, params: dict[str, Any]):
-        """実験開始ボタンが押されたときの処理"""
+        """実験開始ボタンが押されたときの処理（実験中なら記録の開始）"""
         if not self.current_experiment_class or not self.app:
+            return
+
+        # 実験中はデバッグモードを抜ける = 記録を開始する、として働く
+        if self.service.is_running():
+            self.service.set_debug_mode(False)
             return
 
         # 結果をクリア
@@ -380,8 +386,13 @@ class ExperimentController:
             self.current_plotter.experiment = experiment_instance
 
     def on_debug_experiment(self, params: dict[str, Any]):
-        """デバッグ実行ボタンが押されたときの処理"""
+        """デバッグ実行ボタンが押されたときの処理（実験中なら記録の終了）"""
         if not self.current_experiment_class or not self.app:
+            return
+
+        # 実験中はデバッグモードに入る = 記録を終了する、として働く
+        if self.service.is_running():
+            self.service.set_debug_mode(True)
             return
 
         # 結果をクリア
@@ -396,6 +407,9 @@ class ExperimentController:
 
         # デバッグ警告を表示
         self.app.show_debug_warning(True)
+
+        # デバッグ実行では記録していないので、ボタンの意味をそれに合わせる
+        self.app.update_recording_state(False)
 
         # 実験インスタンスを注入
         experiment_instance = self.service.get_current_experiment_instance()
@@ -547,6 +561,18 @@ class ExperimentController:
 
         # サービス経由でSyncマーカーを記録
         self.service.sync()
+
+    def _on_recording_changed(self, recording: bool):
+        """サービスの記録状態が変わったときの処理"""
+        if not self.app:
+            return
+
+        def update():
+            # 記録していない間はデータが保存されないので警告を出す
+            self.app.show_debug_warning(not recording)
+            self.app.update_recording_state(recording)
+
+        self.app.after(0, update)
 
     def on_screenshot(self):
         """スクリーンショットを保存する処理（F10キー）"""

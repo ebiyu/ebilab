@@ -962,10 +962,8 @@ class View(tk.Tk):
     def update_experiment_state(self, state: str):
         """実験状態に基づいてUIを更新"""
         if state == "running":
-            if self.start_button:
-                self.start_button.config(state="disabled")
-            if self.debug_button:
-                self.debug_button.config(state="disabled")
+            # 開始ボタンとデバッグボタンは update_recording_state() が切り替える。
+
             if self.stop_button:
                 self.stop_button.config(state="normal")
             if self.sync_button:
@@ -1001,6 +999,18 @@ class View(tk.Tk):
                 self.sync_button.config(state="disabled")
             if state == "finished":
                 logger.info("実験が完了しました。")
+
+    def update_recording_state(self, recording: bool):
+        """
+        記録状態に応じて開始ボタンとデバッグボタンを切り替える。
+
+        実験中は、開始ボタンが「記録開始」、デバッグボタンが「記録終了」として働くので、
+        いま押せるほうだけを有効にする。
+        """
+        if self.start_button:
+            self.start_button.config(state="disabled" if recording else "normal")
+        if self.debug_button:
+            self.debug_button.config(state="normal" if recording else "disabled")
 
     def add_result_row(self, data: dict[str, Any]):
         """結果テーブルに新しい行を追加"""
